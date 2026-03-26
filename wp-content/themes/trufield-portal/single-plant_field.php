@@ -28,13 +28,51 @@ $record_status      = get_post_meta( $post_id, 'record_status', true ) ?: 'activ
 $retailer_name      = get_post_meta( $post_id, 'retailer_name', true );
 $farm_name          = get_post_meta( $post_id, 'farm_name', true );
 $field_location     = get_post_meta( $post_id, 'field_location_address', true );
+$phase_1_status     = trufield_get_phase_status( $post_id, 1 );
+$phase_1_verified   = (bool) get_post_meta( $post_id, 'phase_1_verified', true );
+$phase_1_missing    = trufield_get_missing_required_fields( $post_id, 1 );
+$phase_1_required_ok = empty( $phase_1_missing );
+$phase_1_can_edit   = trufield_can_edit_phase( $post_id, 1, $user_id );
 $phase_verified     = [];
 $phase_statuses     = [];
 $step_titles        = [
-1 => __( 'Trial Setup', 'trufield-portal' ),
+1 => __( 'Phase 1 Setup', 'trufield-portal' ),
 2 => __( 'Application & Monitoring', 'trufield-portal' ),
 3 => __( 'Harvest & Engagement', 'trufield-portal' ),
 ];
+
+if ( $phase_1_verified ) {
+	$phase_1_panel_title = __( 'Phase 1 verified', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'This Phase 1 submission has been reviewed by the admin team. No further action is needed right now.', 'trufield-portal' );
+	$phase_1_panel_note  = __( 'Phases 2 and 3 are separate forms and will stay unavailable until a later rollout.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'completed' ) {
+	$phase_1_panel_title = __( 'Awaiting admin verification', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Phase 1 has been submitted and is now read-only while the admin team verifies the record.', 'trufield-portal' );
+	$phase_1_panel_note  = __( 'You can review the submitted details below. Future phases remain placeholders for now.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'in_progress' && $phase_1_required_ok ) {
+	$phase_1_panel_title = __( 'Ready to complete Phase 1', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Review the required setup details, then use Mark Phase 1 Complete to submit this record for admin verification.', 'trufield-portal' );
+	$phase_1_panel_note  = __( 'You can still save your draft and return later if needed.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'in_progress' ) {
+	$phase_1_panel_title = __( 'Phase 1 draft in progress', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Continue filling in the required Phase 1 details for this assigned record. Save progress anytime and return later.', 'trufield-portal' );
+	$phase_1_panel_note  = sprintf(
+		/* translators: %d = number of missing required fields. */
+		_n(
+			'%d required detail still needs attention before Phase 1 can be completed.',
+			'%d required details still need attention before Phase 1 can be completed.',
+			count( $phase_1_missing ),
+			'trufield-portal'
+		),
+		count( $phase_1_missing )
+	);
+} else {
+	$phase_1_panel_title = __( 'Start Phase 1', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Phase 1 is the only active form for this record right now. Complete the setup details below, then mark the phase complete when it is ready.', 'trufield-portal' );
+	$phase_1_panel_note  = $phase_1_can_edit
+		? __( 'Optional details can be added before submission, but Phases 2 and 3 are not available yet.', 'trufield-portal' )
+		: __( 'If this record should be assigned to you for Phase 1 work, contact the admin team.', 'trufield-portal' );
+}
 
 // Only Phase 1 is active in the current rollout.
 foreach ( [ 1 ] as $phase ) {
@@ -48,9 +86,9 @@ $phase_statuses[ $phase ] = trufield_get_phase_status( $post_id, $phase );
 <div class="tf-alert tf-alert--success" role="alert">
 <?php
 if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
-echo esc_html( sprintf( __( 'Step %d submitted.', 'trufield-portal' ), (int) $matches[1] ) );
+	echo esc_html( sprintf( __( 'Phase %d submitted for admin verification.', 'trufield-portal' ), (int) $matches[1] ) );
 } else {
-esc_html_e( 'Changes saved.', 'trufield-portal' );
+	esc_html_e( 'Phase 1 progress saved.', 'trufield-portal' );
 }
 ?>
 </div>
@@ -62,10 +100,12 @@ esc_html_e( 'Changes saved.', 'trufield-portal' );
 
 <div class="tf-record-header">
 <a href="<?php echo esc_url( trufield_dashboard_url() ); ?>" class="tf-back-link">&larr; <?php esc_html_e( 'Dashboard', 'trufield-portal' ); ?></a>
+<p class="tf-record-header__eyebrow"><?php esc_html_e( 'Phase 1 rollout', 'trufield-portal' ); ?></p>
 <div class="tf-record-header__title-row">
 <h1><?php the_title(); ?></h1>
 <span class="tf-status-badge tf-status-badge--<?php echo esc_attr( $record_status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $record_status ) ) ); ?></span>
 </div>
+<p class="tf-record-header__support"><?php esc_html_e( 'Phase 1 is the only active form for this record right now. Phases 2 and 3 are shown below as future timeline placeholders only.', 'trufield-portal' ); ?></p>
 
 <div class="tf-record-meta">
 <?php if ( $assigned_rep ) : ?>
@@ -81,39 +121,48 @@ esc_html_e( 'Changes saved.', 'trufield-portal' );
 <span><strong><?php esc_html_e( 'Location:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $field_location ); ?></span>
 <?php endif; ?>
 </div>
+
+<div class="tf-phase-status-panel">
+<p class="tf-phase-status-panel__eyebrow"><?php esc_html_e( 'What to do next', 'trufield-portal' ); ?></p>
+<h2 class="tf-phase-status-panel__title"><?php echo esc_html( $phase_1_panel_title ); ?></h2>
+<p class="tf-phase-status-panel__copy"><?php echo esc_html( $phase_1_panel_copy ); ?></p>
+<p class="tf-phase-status-panel__note"><?php echo esc_html( $phase_1_panel_note ); ?></p>
+</div>
 </div>
 
-<div class="tf-steps" aria-label="<?php esc_attr_e( 'Progress', 'trufield-portal' ); ?>">
+<div class="tf-steps" aria-label="<?php esc_attr_e( 'Phase timeline', 'trufield-portal' ); ?>">
 <?php foreach ( [ 1, 2, 3 ] as $phase ) : ?>
 <?php
 if ( $phase === 1 ) {
-$verified = $phase_verified[1];
-$status   = $phase_statuses[1];
-if ( $verified ) {
-$state = 'completed-verified';
-$icon  = '✓';
-} elseif ( $status === 'completed' ) {
-$state = 'completed-pending';
-$icon  = '✓';
+	$verified = $phase_verified[1];
+	$status   = $phase_statuses[1];
+	if ( $verified ) {
+		$state = 'completed-verified';
+		$icon  = '✓';
+	} elseif ( $status === 'completed' ) {
+		$state = 'completed-pending';
+		$icon  = '✓';
+	} else {
+		$state = 'active';
+		$icon  = '1';
+	}
 } else {
-$state = 'active';
-$icon  = '1';
-}
-} else {
-// Phase 2 & 3 are not yet part of the current rollout.
-$state = 'upcoming';
-$icon  = '–';
+	// Phase 2 & 3 are not yet part of the current rollout.
+	$state = 'upcoming';
+	$icon  = '–';
 }
 ?>
 <div class="tf-step tf-step--<?php echo esc_attr( $state ); ?>" data-step="<?php echo (int) $phase; ?>">
 <div class="tf-step__circle"><?php echo esc_html( $icon ); ?></div>
 <div class="tf-step__label">
-<span class="tf-step__num"><?php echo esc_html( sprintf( __( 'Step %d', 'trufield-portal' ), $phase ) ); ?></span>
+<span class="tf-step__num"><?php echo esc_html( sprintf( __( 'Phase %d', 'trufield-portal' ), $phase ) ); ?></span>
 <span class="tf-step__name"><?php echo esc_html( $step_titles[ $phase ] ); ?></span>
 <?php if ( $phase === 1 && $state === 'completed-pending' ) : ?>
 <span class="tf-step__note"><?php esc_html_e( 'Awaiting Admin Verification', 'trufield-portal' ); ?></span>
+<?php elseif ( $phase === 1 ) : ?>
+<span class="tf-step__note"><?php esc_html_e( 'Current form', 'trufield-portal' ); ?></span>
 <?php elseif ( $phase > 1 ) : ?>
-<span class="tf-step__note"><?php esc_html_e( 'Not yet active', 'trufield-portal' ); ?></span>
+<span class="tf-step__note"><?php esc_html_e( 'Separate form — not available yet', 'trufield-portal' ); ?></span>
 <?php endif; ?>
 </div>
 </div>
@@ -125,9 +174,9 @@ $icon  = '–';
 
 <?php
 $phase_titles = [
-1 => __( 'Step 1 — Trial Setup', 'trufield-portal' ),
-2 => __( 'Step 2 — Application & Monitoring', 'trufield-portal' ),
-3 => __( 'Step 3 — Harvest & Engagement', 'trufield-portal' ),
+1 => __( 'Phase 1 — Trial Setup', 'trufield-portal' ),
+2 => __( 'Phase 2 — Application & Monitoring', 'trufield-portal' ),
+3 => __( 'Phase 3 — Harvest & Engagement', 'trufield-portal' ),
 ];
 
 // Render the active Phase 1 form.
@@ -151,10 +200,10 @@ foreach ( [ 2, 3 ] as $future_phase ) :
 <div class="tf-phase__header">
 <div class="tf-phase__title-row">
 <h2 class="tf-phase__title"><?php echo esc_html( $phase_titles[ $future_phase ] ); ?></h2>
-<span class="tf-phase__status tf-phase__status--upcoming"><?php esc_html_e( 'Coming Soon', 'trufield-portal' ); ?></span>
+<span class="tf-phase__status tf-phase__status--upcoming"><?php esc_html_e( 'Future Form', 'trufield-portal' ); ?></span>
 </div>
 <p class="tf-phase__upcoming-note">
-<?php esc_html_e( 'This form is a separate submission that will be available in a future rollout phase. No action is needed here right now.', 'trufield-portal' ); ?>
+<?php esc_html_e( 'This is a separate form for a future workflow. It is not available during the current Phase 1 rollout, and no action is needed here right now.', 'trufield-portal' ); ?>
 </p>
 </div>
 </section>

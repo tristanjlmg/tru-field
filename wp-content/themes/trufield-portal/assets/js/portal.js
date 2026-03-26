@@ -69,8 +69,47 @@
     });
   }
 
+  function initNavToggle() {
+    var button = document.querySelector('.tf-nav-toggle');
+    var navId = button && button.getAttribute('aria-controls');
+    var nav = navId ? document.getElementById(navId) : null;
+
+    if (!button || !nav) {
+      return;
+    }
+
+    function setOpen(isOpen, shouldRestoreFocus) {
+      button.setAttribute('aria-expanded', String(isOpen));
+      nav.classList.toggle('is-open', isOpen);
+      nav.setAttribute('data-nav-open', String(isOpen));
+
+      if (!isOpen && shouldRestoreFocus) {
+        button.focus();
+      }
+    }
+
+    setOpen(false, false);
+
+    button.addEventListener('click', function () {
+      setOpen(button.getAttribute('aria-expanded') !== 'true', false);
+    });
+
+    nav.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        setOpen(false, false);
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && button.getAttribute('aria-expanded') === 'true') {
+        setOpen(false, true);
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initAlertDismiss();
+    initNavToggle();
     initShowMore();
   });
 }());

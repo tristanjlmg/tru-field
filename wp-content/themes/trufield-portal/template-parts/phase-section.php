@@ -24,6 +24,7 @@ $missing      = trufield_get_missing_required_fields( $post_id, $phase );
 $required_ok  = empty( $missing );
 $labels       = trufield_field_labels();
 $schema       = trufield_phase_field_schema();
+$phase_label  = sprintf( __( 'Phase %d', 'trufield-portal' ), $phase );
 
 $field_groups = [
 1 => [
@@ -190,9 +191,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 
 <?php if ( $status === 'completed' && ! $is_verified && ! $is_admin ) : ?>
-<p class="tf-phase__blocked-note"><?php esc_html_e( 'Awaiting admin verification before the next step unlocks.', 'trufield-portal' ); ?></p>
+<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( '%s has been submitted and is read-only while the admin team verifies it.', 'trufield-portal' ), $phase_label ) ); ?></p>
 <?php elseif ( ! $prereq_met && ! $is_admin ) : ?>
-<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Step %d must be verified before this step unlocks.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
+<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Phase %d must be verified before this form becomes available.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
 <?php endif; ?>
 
 <?php if ( $is_admin && $status === 'completed' ) : ?>
@@ -209,6 +210,13 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 
 <?php if ( ! $can_edit ) : ?>
 <div class="tf-phase__readonly">
+<?php if ( $is_verified ) : ?>
+<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s is verified. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<?php elseif ( $status === 'completed' ) : ?>
+<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s has been submitted and is waiting for admin verification. You can review the saved details below.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<?php elseif ( ! $prereq_met ) : ?>
+<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s is a separate form for a future workflow and will unlock after the previous phase is verified.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<?php endif; ?>
 <?php if ( ! empty( $readonly_pairs ) ) : ?>
 <dl class="tf-dl">
 <?php foreach ( $readonly_pairs as $field => $value ) : ?>
@@ -223,9 +231,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endforeach; ?>
 </dl>
 <?php elseif ( ! $prereq_met ) : ?>
-<p class="tf-phase__empty"><?php esc_html_e( 'This step is locked until the previous step is verified.', 'trufield-portal' ); ?></p>
+<p class="tf-phase__empty"><?php esc_html_e( 'This separate form stays unavailable until the previous phase is verified and released.', 'trufield-portal' ); ?></p>
 <?php else : ?>
-<p class="tf-phase__empty"><?php esc_html_e( 'No data entered yet.', 'trufield-portal' ); ?></p>
+<p class="tf-phase__empty"><?php echo esc_html( sprintf( __( '%s has not been started yet.', 'trufield-portal' ), $phase_label ) ); ?></p>
 <?php endif; ?>
 </div>
 <?php else : ?>
@@ -235,12 +243,22 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <input type="hidden" name="plant_field_id" value="<?php echo esc_attr( (string) $post_id ); ?>">
 <input type="hidden" name="phase" value="<?php echo esc_attr( (string) $phase ); ?>">
 
-<p class="tf-required-note"><?php esc_html_e( '* Required fields', 'trufield-portal' ); ?></p>
+<div class="tf-phase__intro">
+<p class="tf-phase__intro-copy"><?php esc_html_e( 'Complete only the Phase 1 details for this assigned record right now. Future phases are separate forms and are not part of this submission.', 'trufield-portal' ); ?></p>
+<div class="tf-phase__helper-notes">
+<span class="tf-phase__helper-note"><?php esc_html_e( 'Required fields are marked with *.', 'trufield-portal' ); ?></span>
+<span class="tf-phase__helper-note"><?php esc_html_e( 'Optional details are available under “Show optional fields.”', 'trufield-portal' ); ?></span>
+<span class="tf-phase__helper-note"><?php esc_html_e( 'Media/video upload is not part of Phase 1 at this stage.', 'trufield-portal' ); ?></span>
+</div>
+</div>
+
+<p class="tf-required-note"><?php esc_html_e( '* Required fields must be complete before Phase 1 can be submitted. Optional fields can be saved at any time.', 'trufield-portal' ); ?></p>
 
 <?php if ( ! $required_ok ) : ?>
-<div class="tf-missing-fields">
-<strong><?php echo esc_html( sprintf( _n( '%d required field missing', '%d required fields missing', count( $missing ), 'trufield-portal' ), count( $missing ) ) ); ?></strong>
-— <?php echo esc_html( implode( ', ', $missing ) ); ?>
+<div class="tf-missing-fields" role="status">
+<strong><?php esc_html_e( 'Mark Phase 1 Complete will appear after the remaining required details are filled in.', 'trufield-portal' ); ?></strong>
+<span><?php echo esc_html( implode( ', ', $missing ) ); ?></span>
+<span class="tf-missing-fields__note"><?php esc_html_e( 'If an assigned-record detail is missing and you cannot edit it here, contact the admin team.', 'trufield-portal' ); ?></span>
 </div>
 <?php endif; ?>
 
@@ -264,14 +282,28 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </div>
 </div>
 
+<div class="tf-phase-form__action-help">
+<div class="tf-phase-form__action-help-item">
+<strong><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></strong>
+<span><?php esc_html_e( 'Keep your draft and come back later.', 'trufield-portal' ); ?></span>
+</div>
+<div class="tf-phase-form__action-help-item">
+<strong><?php esc_html_e( 'Mark Phase 1 Complete', 'trufield-portal' ); ?></strong>
+<span><?php esc_html_e( 'Submit this form for admin verification once every required field is ready.', 'trufield-portal' ); ?></span>
+</div>
+</div>
+
 <div class="tf-phase-form__actions">
 <button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary"><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
 <?php if ( $prereq_met && $required_ok ) : ?>
-<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( __( 'Mark this step complete? It will lock until an admin reopens it.', 'trufield-portal' ) ); ?>');">
-<?php esc_html_e( 'Mark Complete', 'trufield-portal' ); ?>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( __( 'Submit Phase 1 for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ) ); ?>');">
+<?php esc_html_e( 'Mark Phase 1 Complete', 'trufield-portal' ); ?>
 </button>
 <?php endif; ?>
 </div>
+<?php if ( $prereq_met && ! $required_ok ) : ?>
+<p class="tf-phase-form__complete-note"><?php esc_html_e( 'Mark Phase 1 Complete is unavailable until all required fields above are filled in.', 'trufield-portal' ); ?></p>
+<?php endif; ?>
 </form>
 <?php endif; ?>
 </section>

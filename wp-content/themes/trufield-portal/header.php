@@ -26,7 +26,20 @@ $current_user = wp_get_current_user();
 			</a>
 
 			<?php if ( is_user_logged_in() ) : ?>
-			<nav class="tf-nav" aria-label="<?php esc_attr_e( 'Portal navigation', 'trufield-portal' ); ?>">
+			<button
+				type="button"
+				class="tf-nav-toggle"
+				aria-expanded="false"
+				aria-controls="tf-portal-nav"
+				aria-label="<?php esc_attr_e( 'Toggle portal navigation', 'trufield-portal' ); ?>"
+			>
+				<span class="tf-nav-toggle__icon" aria-hidden="true">
+					<span></span>
+					<span></span>
+					<span></span>
+				</span>
+			</button>
+			<nav id="tf-portal-nav" class="tf-nav" aria-label="<?php esc_attr_e( 'Portal navigation', 'trufield-portal' ); ?>">
 				<a href="<?php echo esc_url( trufield_dashboard_url() ); ?>"
 				   class="tf-nav__link<?php echo trufield_is_portal_template() && get_page_template_slug() === 'page-templates/dashboard.php' ? ' tf-nav__link--active' : ''; ?>">
 					<?php esc_html_e( 'Dashboard', 'trufield-portal' ); ?>
@@ -35,6 +48,11 @@ $current_user = wp_get_current_user();
 				   class="tf-nav__link<?php echo get_page_template_slug() === 'page-templates/leaderboard.php' ? ' tf-nav__link--active' : ''; ?>">
 					<?php esc_html_e( 'Leaderboard', 'trufield-portal' ); ?>
 				</a>
+				<?php if ( current_user_can( 'manage_options' ) ) : ?>
+					<a href="<?php echo esc_url( admin_url() ); ?>" class="tf-nav__link">
+						<?php esc_html_e( 'WP Admin', 'trufield-portal' ); ?>
+					</a>
+				<?php endif; ?>
 			</nav>
 			<div class="tf-header__user">
 				<span><?php echo esc_html( $current_user->display_name ); ?></span>

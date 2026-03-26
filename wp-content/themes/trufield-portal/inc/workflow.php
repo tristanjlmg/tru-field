@@ -256,17 +256,17 @@ return $missing;
 }
 
 function trufield_verify_phase( int $post_id, int $phase, int $user_id ) {
-if ( ! trufield_user_is_admin( $user_id ) ) {
-return new WP_Error( 'trufield_forbidden', __( 'Only administrators can verify phases.', 'trufield-portal' ) );
-}
+	if ( ! trufield_user_is_admin( $user_id ) ) {
+		return new WP_Error( 'trufield_forbidden', __( 'Only administrators can verify a phase submission.', 'trufield-portal' ) );
+	}
 
-if ( ! in_array( $phase, [ 1, 2, 3 ], true ) ) {
-return new WP_Error( 'trufield_invalid_phase', __( 'Invalid phase.', 'trufield-portal' ) );
-}
+	if ( ! in_array( $phase, [ 1, 2, 3 ], true ) ) {
+		return new WP_Error( 'trufield_invalid_phase', __( 'We could not find that phase.', 'trufield-portal' ) );
+	}
 
-if ( trufield_get_phase_status( $post_id, $phase ) !== 'completed' ) {
-return new WP_Error( 'trufield_phase_not_completed', __( 'Only completed phases can be verified.', 'trufield-portal' ) );
-}
+	if ( trufield_get_phase_status( $post_id, $phase ) !== 'completed' ) {
+		return new WP_Error( 'trufield_phase_not_completed', __( 'This phase must be marked complete before it can be verified.', 'trufield-portal' ) );
+	}
 
 update_post_meta( $post_id, "phase_{$phase}_verified", 1 );
 update_post_meta( $post_id, "phase_{$phase}_verified_at", current_time( 'mysql' ) );
@@ -301,21 +301,25 @@ return trufield_get_phase_status( $post_id, $phase ) !== 'completed';
 }
 
 function trufield_complete_phase( int $post_id, int $phase, int $user_id ) {
-if ( ! trufield_can_edit_phase( $post_id, $phase, $user_id ) ) {
-return new WP_Error( 'trufield_locked', __( 'You cannot complete this phase.', 'trufield-portal' ) );
-}
+	if ( ! trufield_can_edit_phase( $post_id, $phase, $user_id ) ) {
+		return new WP_Error( 'trufield_locked', __( 'This phase is not available to complete right now.', 'trufield-portal' ) );
+	}
 
-if ( ! trufield_all_required_fields_present( $post_id, $phase ) ) {
-return new WP_Error(
-'trufield_required_fields',
-__( 'Please fill in all required fields before completing this phase: ', 'trufield-portal' ) . implode( ', ', trufield_get_missing_required_fields( $post_id, $phase ) )
-);
-}
+	if ( ! trufield_all_required_fields_present( $post_id, $phase ) ) {
+		return new WP_Error(
+			'trufield_required_fields',
+			sprintf(
+				/* translators: %d = phase number. */
+				__( 'Before you can mark Phase %d complete, add the remaining required fields: ', 'trufield-portal' ),
+				$phase
+			) . implode( ', ', trufield_get_missing_required_fields( $post_id, $phase ) )
+		);
+	}
 
-$current = trufield_get_phase_status( $post_id, $phase );
-if ( $current === 'completed' && ! trufield_user_is_admin( $user_id ) ) {
-return new WP_Error( 'trufield_already_completed', __( 'Phase is already completed.', 'trufield-portal' ) );
-}
+	$current = trufield_get_phase_status( $post_id, $phase );
+	if ( $current === 'completed' && ! trufield_user_is_admin( $user_id ) ) {
+		return new WP_Error( 'trufield_already_completed', __( 'This phase has already been submitted.', 'trufield-portal' ) );
+	}
 
 update_post_meta( $post_id, "phase_{$phase}_status", 'completed' );
 update_post_meta( $post_id, "phase_{$phase}_completed_at", current_time( 'mysql' ) );
@@ -325,9 +329,9 @@ return true;
 }
 
 function trufield_reopen_phase( int $post_id, int $phase, int $user_id ) {
-if ( ! trufield_user_is_admin( $user_id ) ) {
-return new WP_Error( 'trufield_forbidden', __( 'Only admins can reopen phases.', 'trufield-portal' ) );
-}
+	if ( ! trufield_user_is_admin( $user_id ) ) {
+		return new WP_Error( 'trufield_forbidden', __( 'Only administrators can reopen a submitted phase.', 'trufield-portal' ) );
+	}
 
 update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 delete_post_meta( $post_id, "phase_{$phase}_completed_at" );
@@ -461,22 +465,22 @@ $nonce   = sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) );
 $post_id = (int) ( $_POST['plant_field_id'] ?? 0 );
 $phase   = (int) ( $_POST['phase'] ?? 0 );
 
-if ( ! wp_verify_nonce( $nonce, "trufield_save_phase_{$post_id}_{$phase}" ) ) {
-wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
-}
+	if ( ! wp_verify_nonce( $nonce, "trufield_save_phase_{$post_id}_{$phase}" ) ) {
+		wp_die( esc_html__( 'Your session check failed. Please refresh the page and try again.', 'trufield-portal' ), 403 );
+	}
 
-if ( ! $post_id || ! in_array( $phase, [ 1, 2, 3 ], true ) ) {
-wp_die( esc_html__( 'Invalid request.', 'trufield-portal' ), 400 );
-}
+	if ( ! $post_id || ! in_array( $phase, [ 1, 2, 3 ], true ) ) {
+		wp_die( esc_html__( 'We could not process that request.', 'trufield-portal' ), 400 );
+	}
 
-$user_id = get_current_user_id();
-if ( ! $user_id ) {
-wp_die( esc_html__( 'You must be logged in.', 'trufield-portal' ), 403 );
-}
+	$user_id = get_current_user_id();
+	if ( ! $user_id ) {
+		wp_die( esc_html__( 'Please sign in to continue.', 'trufield-portal' ), 403 );
+	}
 
-if ( ! trufield_can_edit_phase( $post_id, $phase, $user_id ) ) {
-wp_die( esc_html__( 'You are not allowed to edit this phase.', 'trufield-portal' ), 403 );
-}
+	if ( ! trufield_can_edit_phase( $post_id, $phase, $user_id ) ) {
+		wp_die( esc_html__( 'You do not have permission to update this phase.', 'trufield-portal' ), 403 );
+	}
 
 $editable = trufield_rep_editable_phase_fields( $phase );
 foreach ( $editable as $field ) {
@@ -521,9 +525,9 @@ $nonce   = sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) );
 $post_id = (int) ( $_GET['post_id'] ?? 0 );
 $phase   = (int) ( $_GET['phase'] ?? 0 );
 
-if ( ! wp_verify_nonce( $nonce, "trufield_reopen_phase_{$post_id}_{$phase}" ) ) {
-wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
-}
+	if ( ! wp_verify_nonce( $nonce, "trufield_reopen_phase_{$post_id}_{$phase}" ) ) {
+		wp_die( esc_html__( 'Your session check failed. Please refresh the page and try again.', 'trufield-portal' ), 403 );
+	}
 
 $result = trufield_reopen_phase( $post_id, $phase, get_current_user_id() );
 if ( is_wp_error( $result ) ) {
@@ -539,9 +543,9 @@ $post_id = (int) ( $_GET['post_id'] ?? 0 );
 $phase   = (int) ( $_GET['phase'] ?? 0 );
 $nonce   = sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) );
 
-if ( ! wp_verify_nonce( $nonce, "trufield_verify_phase_{$post_id}_{$phase}" ) ) {
-wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
-}
+	if ( ! wp_verify_nonce( $nonce, "trufield_verify_phase_{$post_id}_{$phase}" ) ) {
+		wp_die( esc_html__( 'Your session check failed. Please refresh the page and try again.', 'trufield-portal' ), 403 );
+	}
 
 $result = trufield_verify_phase( $post_id, $phase, get_current_user_id() );
 if ( is_wp_error( $result ) ) {

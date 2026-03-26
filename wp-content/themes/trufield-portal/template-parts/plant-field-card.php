@@ -17,27 +17,58 @@ $retailer      = get_post_meta( $post_id, 'retailer_name', true );
 $farm_name     = get_post_meta( $post_id, 'farm_name', true );
 $location      = get_post_meta( $post_id, 'field_location_address', true );
 $record_status = get_post_meta( $post_id, 'record_status', true ) ?: 'active';
+$phase_1_status   = trufield_get_phase_status( $post_id, 1 );
+$phase_1_verified = (bool) get_post_meta( $post_id, 'phase_1_verified', true );
+$phase_1_missing  = trufield_get_missing_required_fields( $post_id, 1 );
+$phase_1_ready    = empty( $phase_1_missing );
 
 $pips = [];
 foreach ( [ 1, 2, 3 ] as $phase ) {
-if ( $phase > 1 ) {
-// Phases 2 & 3 are not yet active in the current rollout.
-$pips[] = [ 'class' => 'upcoming', 'icon' => '–', 'label' => 'S' . $phase, 'title' => sprintf( 'Step %d — Coming Soon', $phase ) ];
-continue;
+	if ( $phase > 1 ) {
+		// Phases 2 & 3 are not yet active in the current rollout.
+		$pips[] = [
+			'class' => 'upcoming',
+			'icon'  => '–',
+			'label' => 'P' . $phase,
+			'title' => sprintf(
+				/* translators: %d = phase number. */
+				__( 'Phase %d — Future form', 'trufield-portal' ),
+				$phase
+			),
+		];
+		continue;
+	}
+
+	if ( $phase_1_verified ) {
+		$pips[] = [ 'class' => 'verified', 'icon' => '✓', 'label' => 'P1', 'title' => __( 'Phase 1 verified', 'trufield-portal' ) ];
+	} elseif ( $phase_1_status === 'completed' ) {
+		$pips[] = [ 'class' => 'completed', 'icon' => '●', 'label' => 'P1', 'title' => __( 'Phase 1 submitted', 'trufield-portal' ) ];
+	} elseif ( $phase_1_status === 'in_progress' ) {
+		$pips[] = [ 'class' => 'in_progress', 'icon' => '◑', 'label' => 'P1', 'title' => __( 'Phase 1 in progress', 'trufield-portal' ) ];
+	} else {
+		$pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'P1', 'title' => __( 'Phase 1 not started', 'trufield-portal' ) ];
+	}
 }
 
-$verified = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
-$status   = trufield_get_phase_status( $post_id, $phase );
-
-if ( $verified ) {
-$pips[] = [ 'class' => 'verified', 'icon' => '✓', 'label' => 'S' . $phase, 'title' => sprintf( 'Step %d verified', $phase ) ];
-} elseif ( $status === 'completed' ) {
-$pips[] = [ 'class' => 'completed', 'icon' => '●', 'label' => 'S' . $phase, 'title' => sprintf( 'Step %d completed', $phase ) ];
-} elseif ( $status === 'in_progress' ) {
-$pips[] = [ 'class' => 'in_progress', 'icon' => '◑', 'label' => 'S' . $phase, 'title' => sprintf( 'Step %d in progress', $phase ) ];
+if ( $phase_1_verified ) {
+	$phase_1_summary = __( 'Phase 1 verified by the admin team.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'completed' ) {
+	$phase_1_summary = __( 'Phase 1 submitted and awaiting admin verification.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'in_progress' && $phase_1_ready ) {
+	$phase_1_summary = __( 'Phase 1 draft is ready to mark complete.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'in_progress' ) {
+	$phase_1_summary = sprintf(
+		/* translators: %d = number of missing required fields. */
+		_n(
+			'Phase 1 draft in progress — %d required detail remaining.',
+			'Phase 1 draft in progress — %d required details remaining.',
+			count( $phase_1_missing ),
+			'trufield-portal'
+		),
+		count( $phase_1_missing )
+	);
 } else {
-$pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'S' . $phase, 'title' => sprintf( 'Step %d pending', $phase ) ];
-}
+	$phase_1_summary = __( 'Open this record to start the Phase 1 form.', 'trufield-portal' );
 }
 ?>
 <article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>">
@@ -59,6 +90,7 @@ $pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'S' . $phase, 'tit
 <?php endif; ?>
 </div>
 
+<p class="tf-field-card__phase-title"><?php esc_html_e( 'Phase 1 progress', 'trufield-portal' ); ?></p>
 <div class="tf-field-card__phases">
 <?php foreach ( $pips as $pip ) : ?>
 <span class="tf-phase-pip tf-phase-pip--<?php echo esc_attr( $pip['class'] ); ?>" title="<?php echo esc_attr( $pip['title'] ); ?>">
@@ -67,5 +99,6 @@ $pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'S' . $phase, 'tit
 </span>
 <?php endforeach; ?>
 </div>
+<p class="tf-field-card__summary"><?php echo esc_html( $phase_1_summary ); ?></p>
 </a>
 </article>
