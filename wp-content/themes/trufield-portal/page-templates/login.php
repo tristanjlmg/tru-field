@@ -10,8 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 get_header();
 
-$login_error  = sanitize_text_field( wp_unslash( $_GET['login'] ?? '' ) ) === 'failed';
-$reset_status = sanitize_text_field( wp_unslash( $_GET['reset'] ?? '' ) );
+$login_error = sanitize_text_field( wp_unslash( $_GET['login'] ?? '' ) ) === 'failed';
 ?>
 <div class="tf-container tf-login-wrap">
 	<div class="tf-login-card">
@@ -22,14 +21,6 @@ $reset_status = sanitize_text_field( wp_unslash( $_GET['reset'] ?? '' ) );
 		<?php if ( $login_error ) : ?>
 			<div class="tf-alert tf-alert--error" role="alert">
 				<?php esc_html_e( 'Incorrect username or password. Please try again.', 'trufield-portal' ); ?>
-			</div>
-		<?php elseif ( $reset_status === 'requested' ) : ?>
-			<div class="tf-alert tf-alert--info" role="alert">
-				<?php esc_html_e( 'Check your email for a link to reset your password.', 'trufield-portal' ); ?>
-			</div>
-		<?php elseif ( $reset_status === 'success' ) : ?>
-			<div class="tf-alert tf-alert--success" role="alert">
-				<?php esc_html_e( 'Your password has been reset. Please sign in below.', 'trufield-portal' ); ?>
 			</div>
 		<?php endif; ?>
 
@@ -75,7 +66,7 @@ $reset_status = sanitize_text_field( wp_unslash( $_GET['reset'] ?? '' ) );
 		</form>
 
 		<p class="tf-login-card__forgot">
-			<a href="<?php echo esc_url( trufield_forgot_password_url() ); ?>">
+			<a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">
 				<?php esc_html_e( 'Forgot your password?', 'trufield-portal' ); ?>
 			</a>
 		</p>

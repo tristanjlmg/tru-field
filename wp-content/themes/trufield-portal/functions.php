@@ -74,10 +74,8 @@ function trufield_enqueue_assets(): void {
 // ── Register page templates (page-templates/ subdir) ────────────────────────
 add_filter( 'theme_page_templates', 'trufield_register_page_templates' );
 function trufield_register_page_templates( array $templates ): array {
-	$templates['page-templates/dashboard.php']       = __( 'Portal Dashboard', 'trufield-portal' );
-	$templates['page-templates/leaderboard.php']     = __( 'Portal Leaderboard', 'trufield-portal' );
-	$templates['page-templates/login.php']           = __( 'Portal Login', 'trufield-portal' );
-	$templates['page-templates/forgot-password.php'] = __( 'Portal Forgot Password', 'trufield-portal' );
-	$templates['page-templates/reset-password.php']  = __( 'Portal Reset Password', 'trufield-portal' );
+	$templates['page-templates/dashboard.php']   = __( 'Portal Dashboard', 'trufield-portal' );
+	$templates['page-templates/leaderboard.php'] = __( 'Portal Leaderboard', 'trufield-portal' );
+	$templates['page-templates/login.php']       = __( 'Portal Login', 'trufield-portal' );
 	return $templates;
 }
