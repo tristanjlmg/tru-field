@@ -1,0 +1,277 @@
+<?php
+/**
+ * TruField Portal — Template Part: Phase Section
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+exit;
+}
+
+$post_id        = (int) ( $args['post_id'] ?? 0 );
+$phase          = (int) ( $args['phase'] ?? 1 );
+$phase_title    = $args['phase_title'] ?? sprintf( 'Step %d', $phase );
+$user_id        = (int) ( $args['user_id'] ?? 0 );
+$is_admin       = (bool) ( $args['is_admin'] ?? false );
+$phase_verified = (array) ( $args['phase_verified'] ?? [] );
+
+$status       = trufield_get_phase_status( $post_id, $phase );
+$is_verified  = isset( $phase_verified[ $phase ] ) ? (bool) $phase_verified[ $phase ] : (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
+$can_edit     = trufield_can_edit_phase( $post_id, $phase, $user_id );
+$prereq_met   = trufield_prerequisite_met( $post_id, $phase );
+$completed_at = get_post_meta( $post_id, "phase_{$phase}_completed_at", true );
+$verified_at  = get_post_meta( $post_id, "phase_{$phase}_verified_at", true );
+$missing      = trufield_get_missing_required_fields( $post_id, $phase );
+$required_ok  = empty( $missing );
+$labels       = trufield_field_labels();
+$schema       = trufield_phase_field_schema();
+
+$field_groups = [
+1 => [
+'required' => [
+'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => '', 'step' => null, 'min' => null ],
+'phase_1_treated_size_acres' => [ 'input' => 'number', 'step' => '0.01', 'min' => '0' ],
+'phase_1_carrier_volume_gal' => [ 'input' => 'number', 'step' => '0.1', 'min' => '0' ],
+'phase_1_protocol_version'   => [ 'input' => 'text', 'placeholder' => 'e.g. v2.1' ],
+],
+'optional' => [
+'phase_1_hybrid_variety'      => [ 'input' => 'text' ],
+'phase_1_planting_date'       => [ 'input' => 'date' ],
+'phase_1_planting_population' => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
+'phase_1_row_spacing'         => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_1_planting_speed'      => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+],
+],
+2 => [
+'required' => [
+'phase_2_application_type'          => [ 'input' => 'select' ],
+'phase_2_application_date'          => [ 'input' => 'date' ],
+'phase_2_verify_acres_treated'      => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_2_verify_carrier_volume_gal' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_2_soil_temp_f'               => [ 'input' => 'number', 'step' => '0.1' ],
+'phase_2_emergence'                 => [ 'input' => 'text', 'placeholder' => 'e.g. 85%' ],
+'phase_2_stand_count'               => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
+'phase_2_plant_heights'             => [ 'input' => 'text', 'placeholder' => 'e.g. 4-6 inches' ],
+'phase_2_required_photos'           => [ 'input' => 'textarea', 'rows' => 2, 'help' => 'Enter photo URLs or descriptions, one per line.' ],
+],
+'optional' => [
+'phase_2_emergence_stand_uniformity' => [ 'input' => 'select' ],
+'phase_2_plant_vigor'                => [ 'input' => 'select' ],
+'phase_2_residue_degradation'        => [ 'input' => 'select' ],
+'phase_2_app_machine_data'           => [ 'input' => 'url', 'placeholder' => 'Machine data URL' ],
+'phase_2_planting_machine_data'      => [ 'input' => 'url', 'placeholder' => 'Planting machine data URL' ],
+'phase_2_optional_video'             => [ 'input' => 'url', 'placeholder' => 'Video URL (optional)' ],
+'phase_2_optional_timelapse'         => [ 'input' => 'url', 'placeholder' => 'Timelapse URL (optional)' ],
+'phase_2_optional_drone_media'       => [ 'input' => 'url', 'placeholder' => 'Drone media URL (optional)' ],
+'phase_2_testimonial'                => [ 'input' => 'textarea', 'rows' => 3 ],
+'phase_2_pictures_at_application'    => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Application photo URLs' ],
+'phase_2_pictures_at_planting'       => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Planting photo URLs' ],
+],
+],
+3 => [
+'required' => [
+'phase_3_yield_bu_ac'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_moisture_percent'     => [ 'input' => 'number', 'min' => '0', 'max' => '100', 'step' => '0.1' ],
+'phase_3_test_weight_lbs_bu'   => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_event_date'           => [ 'input' => 'date' ],
+'phase_3_event_type'           => [ 'input' => 'select' ],
+'phase_3_event_location'       => [ 'input' => 'text' ],
+'phase_3_attendee_count'       => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
+'phase_3_required_event_media' => [ 'input' => 'textarea', 'rows' => 2, 'help' => 'Enter event media URLs or descriptions, one per line.' ],
+],
+'optional' => [
+'phase_3_stalk_diameter'    => [ 'input' => 'number', 'step' => '0.01' ],
+'phase_3_root_vigor'        => [ 'input' => 'select' ],
+'phase_3_harvest_photos'    => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Harvest photo URLs' ],
+'phase_3_comments'          => [ 'input' => 'textarea', 'rows' => 3 ],
+'phase_3_optional_video'    => [ 'input' => 'url', 'placeholder' => 'Video URL (optional)' ],
+'phase_3_testimonial'       => [ 'input' => 'textarea', 'rows' => 3 ],
+],
+],
+];
+
+$render_field = static function ( string $field, array $config, bool $required = false ) use ( $post_id, $labels, $schema ): void {
+$value       = get_post_meta( $post_id, $field, true );
+$label       = $labels[ $field ] ?? $field;
+$input_type  = $config['input'] ?? 'text';
+$placeholder = $config['placeholder'] ?? '';
+$rows        = (int) ( $config['rows'] ?? 3 );
+$min         = $config['min'] ?? null;
+$max         = $config['max'] ?? null;
+$step        = $config['step'] ?? null;
+$help        = $config['help'] ?? '';
+?>
+<div class="tf-field-group">
+<label for="<?php echo esc_attr( $field ); ?>">
+<?php echo esc_html( $label ); ?>
+<?php if ( $required ) : ?>
+<span class="tf-required">*</span>
+<?php endif; ?>
+</label>
+<?php if ( $input_type === 'select' ) : ?>
+<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select">
+<option value=""><?php esc_html_e( 'Select…', 'trufield-portal' ); ?></option>
+<?php foreach ( $schema[ $field ]['options'] ?? [] as $option_value => $option_label ) : ?>
+<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+<?php endforeach; ?>
+</select>
+<?php elseif ( $input_type === 'textarea' ) : ?>
+<textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"><?php echo esc_textarea( (string) $value ); ?></textarea>
+<?php else : ?>
+<input
+type="<?php echo esc_attr( $input_type ); ?>"
+id="<?php echo esc_attr( $field ); ?>"
+name="<?php echo esc_attr( $field ); ?>"
+class="tf-input"
+value="<?php echo esc_attr( (string) $value ); ?>"
+placeholder="<?php echo esc_attr( $placeholder ); ?>"
+<?php echo $min !== null ? ' min="' . esc_attr( (string) $min ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $max !== null ? ' max="' . esc_attr( (string) $max ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $step !== null ? ' step="' . esc_attr( (string) $step ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+>
+<?php endif; ?>
+<?php if ( $help ) : ?>
+<small><?php echo esc_html( $help ); ?></small>
+<?php endif; ?>
+</div>
+<?php
+};
+
+$format_value = static function ( string $field, $value ) use ( $schema ): string {
+if ( $value === '' || $value === null ) {
+return '';
+}
+
+$type = $schema[ $field ]['type'] ?? 'text';
+if ( $type === 'select' ) {
+return $schema[ $field ]['options'][ $value ] ?? (string) $value;
+}
+
+if ( $type === 'date' ) {
+$timestamp = strtotime( (string) $value );
+return $timestamp ? wp_date( 'm/d/Y', $timestamp ) : (string) $value;
+}
+
+if ( $type === 'url' ) {
+return (string) $value;
+}
+
+return (string) $value;
+};
+
+$readonly_fields = array_merge( array_keys( $field_groups[ $phase ]['required'] ), array_keys( $field_groups[ $phase ]['optional'] ) );
+$readonly_pairs  = [];
+foreach ( $readonly_fields as $field ) {
+$value = get_post_meta( $post_id, $field, true );
+if ( trim( (string) $value ) !== '' ) {
+$readonly_pairs[ $field ] = $format_value( $field, $value );
+}
+}
+
+$reopen_url = $is_admin ? wp_nonce_url( admin_url( "admin-post.php?action=trufield_reopen_phase&post_id={$post_id}&phase={$phase}" ), "trufield_reopen_phase_{$post_id}_{$phase}" ) : '';
+$verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phase ) : '';
+?>
+<section class="tf-section tf-phase tf-phase--<?php echo esc_attr( $status ); ?>" id="<?php echo esc_attr( 'tf-phase-' . $phase ); ?>">
+<div class="tf-phase__header">
+<div class="tf-phase__title-row">
+<h2 class="tf-phase__title"><?php echo esc_html( $phase_title ); ?></h2>
+<span class="tf-phase__status tf-phase__status--<?php echo esc_attr( $status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $status ) ) ); ?></span>
+</div>
+
+<?php if ( $is_verified && $verified_at ) : ?>
+<div class="tf-phase__verified-badge">✓ <?php echo esc_html( sprintf( __( 'Admin Verified on %s', 'trufield-portal' ), wp_date( 'm/d/Y g:i a', strtotime( $verified_at ) ) ) ); ?></div>
+<?php elseif ( $is_verified ) : ?>
+<div class="tf-phase__verified-badge">✓ <?php esc_html_e( 'Admin Verified', 'trufield-portal' ); ?></div>
+<?php elseif ( $status === 'completed' ) : ?>
+<div class="tf-phase__awaiting-badge"><?php esc_html_e( 'Submitted — Awaiting Verification', 'trufield-portal' ); ?></div>
+<?php endif; ?>
+
+<?php if ( $completed_at ) : ?>
+<p class="tf-phase__completed-at"><?php echo esc_html( sprintf( __( 'Completed: %s', 'trufield-portal' ), wp_date( 'm/d/Y g:i a', strtotime( $completed_at ) ) ) ); ?></p>
+<?php endif; ?>
+
+<?php if ( $status === 'completed' && ! $is_verified && ! $is_admin ) : ?>
+<p class="tf-phase__blocked-note"><?php esc_html_e( 'Awaiting admin verification before the next step unlocks.', 'trufield-portal' ); ?></p>
+<?php elseif ( ! $prereq_met && ! $is_admin ) : ?>
+<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Step %d must be verified before this step unlocks.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
+<?php endif; ?>
+
+<?php if ( $is_admin && $status === 'completed' ) : ?>
+<div class="tf-phase-form__actions">
+<a href="<?php echo esc_url( $reopen_url ); ?>" class="tf-btn tf-btn--ghost tf-btn--sm" onclick="return confirm('<?php echo esc_js( __( 'Reopen this phase? Verification will be cleared.', 'trufield-portal' ) ); ?>');">
+<?php esc_html_e( 'Reopen', 'trufield-portal' ); ?>
+</a>
+<?php if ( ! $is_verified ) : ?>
+<a href="<?php echo esc_url( $verify_url ); ?>" class="tf-btn tf-btn--secondary tf-btn--sm"><?php esc_html_e( 'Verify', 'trufield-portal' ); ?></a>
+<?php endif; ?>
+</div>
+<?php endif; ?>
+</div>
+
+<?php if ( ! $can_edit ) : ?>
+<div class="tf-phase__readonly">
+<?php if ( ! empty( $readonly_pairs ) ) : ?>
+<dl class="tf-dl">
+<?php foreach ( $readonly_pairs as $field => $value ) : ?>
+<dt><?php echo esc_html( $labels[ $field ] ?? $field ); ?></dt>
+<dd>
+<?php if ( ( $schema[ $field ]['type'] ?? '' ) === 'url' ) : ?>
+<a href="<?php echo esc_url( $value ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $value ); ?></a>
+<?php else : ?>
+<?php echo nl2br( esc_html( $value ) ); ?>
+<?php endif; ?>
+</dd>
+<?php endforeach; ?>
+</dl>
+<?php elseif ( ! $prereq_met ) : ?>
+<p class="tf-phase__empty"><?php esc_html_e( 'This step is locked until the previous step is verified.', 'trufield-portal' ); ?></p>
+<?php else : ?>
+<p class="tf-phase__empty"><?php esc_html_e( 'No data entered yet.', 'trufield-portal' ); ?></p>
+<?php endif; ?>
+</div>
+<?php else : ?>
+<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-phase-form" id="<?php echo esc_attr( 'tf-phase-form-' . $phase ); ?>">
+<?php wp_nonce_field( "trufield_save_phase_{$post_id}_{$phase}" ); ?>
+<input type="hidden" name="action" value="trufield_save_phase">
+<input type="hidden" name="plant_field_id" value="<?php echo esc_attr( (string) $post_id ); ?>">
+<input type="hidden" name="phase" value="<?php echo esc_attr( (string) $phase ); ?>">
+
+<p class="tf-required-note"><?php esc_html_e( '* Required fields', 'trufield-portal' ); ?></p>
+
+<?php if ( ! $required_ok ) : ?>
+<div class="tf-missing-fields">
+<strong><?php echo esc_html( sprintf( _n( '%d required field missing', '%d required fields missing', count( $missing ), 'trufield-portal' ), count( $missing ) ) ); ?></strong>
+— <?php echo esc_html( implode( ', ', $missing ) ); ?>
+</div>
+<?php endif; ?>
+
+<div class="tf-form-grid">
+<?php foreach ( $field_groups[ $phase ]['required'] as $field => $config ) : ?>
+<?php $render_field( $field, $config, true ); ?>
+<?php endforeach; ?>
+</div>
+
+<div class="tf-show-more">
+<button type="button" class="tf-show-more__toggle" aria-expanded="false">
+<span class="tf-show-more__toggle-text"><?php esc_html_e( 'Show optional fields', 'trufield-portal' ); ?></span>
+<span class="tf-show-more__icon">▼</span>
+</button>
+<div class="tf-show-more__content" hidden>
+<div class="tf-form-grid">
+<?php foreach ( $field_groups[ $phase ]['optional'] as $field => $config ) : ?>
+<?php $render_field( $field, $config, false ); ?>
+<?php endforeach; ?>
+</div>
+</div>
+</div>
+
+<div class="tf-phase-form__actions">
+<button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary"><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
+<?php if ( $prereq_met && $required_ok ) : ?>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( __( 'Mark this step complete? It will lock until an admin reopens it.', 'trufield-portal' ) ); ?>');">
+<?php esc_html_e( 'Mark Complete', 'trufield-portal' ); ?>
+</button>
+<?php endif; ?>
+</div>
+</form>
+<?php endif; ?>
+</section>

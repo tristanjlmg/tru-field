@@ -1,0 +1,15 @@
+/*
+Theme Name: TruField Portal
+Theme URI:  https://trufield.com
+Author:     TruField
+Description: Custom portal theme for TruField field-management workflow.
+Version:    1.0.0
+Text Domain: trufield-portal
+Tags: custom-theme, portal
+*/
+
+/* -----------------------------------------------------------------------
+   Base reset — full stylesheet lives in assets/css/portal.css
+   ----------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #1a1a2e; }

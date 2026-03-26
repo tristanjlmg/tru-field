@@ -1,0 +1,11 @@
+# Ignore everything by default
+*
+
+# Un-ignore this file itself
+!.gitignore
+
+# Un-ignore the custom theme only
+!wp-content/
+!wp-content/themes/
+!wp-content/themes/trufield-portal/
+!wp-content/themes/trufield-portal/**
