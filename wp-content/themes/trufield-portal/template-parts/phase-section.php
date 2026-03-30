@@ -29,12 +29,27 @@ $phase_label  = sprintf( __( 'Phase %d', 'trufield-portal' ), $phase );
 $field_groups = [
 1 => [
 'required' => [
+'retailer_name'              => [ 'input' => 'text', 'placeholder' => 'Retailer name' ],
+'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
+'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Contact person for field trial' ],
+'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
+'field_location_address'     => [ 'input' => 'textarea', 'rows' => 2 ],
+'phase_1_state_region'       => [ 'input' => 'text', 'placeholder' => 'State or region' ],
+'phase_1_product_being_tested' => [ 'input' => 'text', 'placeholder' => 'Product name' ],
+'phase_1_application_type'   => [ 'input' => 'select' ],
+'phase_1_application_date'   => [ 'input' => 'date' ],
+'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'e.g. 32 oz/ac' ],
+'phase_1_trial_design'       => [ 'input' => 'select' ],
+'phase_1_growth_stage_at_application' => [ 'input' => 'text', 'placeholder' => 'e.g. V3' ],
+'phase_1_weather_conditions_at_application' => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Weather conditions at application' ],
+'phase_1_soil_conditions_at_application' => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Soil conditions at application' ],
 'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => '', 'step' => null, 'min' => null ],
 'phase_1_treated_size_acres' => [ 'input' => 'number', 'step' => '0.01', 'min' => '0' ],
 'phase_1_carrier_volume_gal' => [ 'input' => 'number', 'step' => '0.1', 'min' => '0' ],
 'phase_1_protocol_version'   => [ 'input' => 'text', 'placeholder' => 'e.g. v2.1' ],
 ],
 'optional' => [
+'phase_1_field_overview_photo' => [ 'input' => 'url', 'placeholder' => 'Photo URL', 'help' => 'Use a media URL for now. File upload can be added separately.' ],
 'phase_1_hybrid_variety'      => [ 'input' => 'text' ],
 'phase_1_planting_date'       => [ 'input' => 'date' ],
 'phase_1_planting_population' => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],

@@ -71,6 +71,26 @@ function trufield_enqueue_assets(): void {
 	] );
 }
 
+add_action( 'admin_enqueue_scripts', 'trufield_enqueue_admin_assets' );
+function trufield_enqueue_admin_assets( string $hook ): void {
+	if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+		return;
+	}
+
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->post_type !== 'plant_field' ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'trufield-portal-admin',
+		TRUFIELD_THEME_URI . '/assets/js/admin-location-sync.js',
+		[ 'jquery', 'acf-input' ],
+		TRUFIELD_VERSION,
+		true
+	);
+}
+
 // ── Register page templates (page-templates/ subdir) ────────────────────────
 add_filter( 'theme_page_templates', 'trufield_register_page_templates' );
 function trufield_register_page_templates( array $templates ): array {

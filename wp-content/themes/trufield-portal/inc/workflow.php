@@ -34,9 +34,18 @@ $required = [
 1 => [
 'retailer_name',
 'farm_name',
-'field_trial_contact',
 'field_name',
+'field_trial_contact',
 'field_location_address',
+'phase_1_state_region',
+'phase_1_product_being_tested',
+'phase_1_application_type',
+'phase_1_application_date',
+'phase_1_application_rate',
+'phase_1_trial_design',
+'phase_1_growth_stage_at_application',
+'phase_1_weather_conditions_at_application',
+'phase_1_soil_conditions_at_application',
 'phase_1_trial_type',
 'phase_1_treated_size_acres',
 'phase_1_carrier_volume_gal',
@@ -71,10 +80,20 @@ return $required[ $phase ] ?? [];
 function trufield_field_labels(): array {
 return [
 'retailer_name'                       => 'Retailer Name',
-'farm_name'                           => 'Farm Name',
+'farm_name'                           => 'Grower Name / Farm Name',
 'field_trial_contact'                 => 'Field Trial Contact',
-'field_name'                          => 'Field Name',
+'field_name'                          => 'Field Name / Field ID',
 'field_location_address'              => 'Field Location Address',
+'phase_1_state_region'                => 'State / Region',
+'phase_1_product_being_tested'        => 'Product Being Tested',
+'phase_1_application_type'            => 'Application Type',
+'phase_1_application_date'            => 'Application Date',
+'phase_1_application_rate'            => 'Application Rate',
+'phase_1_trial_design'                => 'Trial Design',
+'phase_1_growth_stage_at_application' => 'Growth Stage at Application',
+'phase_1_weather_conditions_at_application' => 'Weather Conditions at Application',
+'phase_1_soil_conditions_at_application' => 'Soil Conditions at Application',
+'phase_1_field_overview_photo'        => 'Field Overview Photo',
 'phase_1_trial_type'                  => 'Trial Type',
 'phase_1_treated_size_acres'          => 'Treated Size (Acres)',
 'phase_1_carrier_volume_gal'          => 'Carrier Volume (Gal)',
@@ -123,6 +142,31 @@ return [
 
 function trufield_phase_field_schema(): array {
 return [
+'phase_1_state_region' => [ 'type' => 'text' ],
+'phase_1_product_being_tested' => [ 'type' => 'text' ],
+'phase_1_application_type' => [
+'type'    => 'select',
+'options' => [
+'in_furrow'      => 'In-Furrow',
+'seed_treatment' => 'Seed Treatment',
+'foliar'         => 'Foliar',
+'other'          => 'Other',
+],
+],
+'phase_1_application_date' => [ 'type' => 'date' ],
+'phase_1_application_rate' => [ 'type' => 'text' ],
+'phase_1_trial_design' => [
+'type'    => 'select',
+'options' => [
+'strip'        => 'Strip',
+'side_by_side' => 'Side-by-Side',
+'demo'         => 'Demo',
+],
+],
+'phase_1_growth_stage_at_application' => [ 'type' => 'text' ],
+'phase_1_weather_conditions_at_application' => [ 'type' => 'textarea' ],
+'phase_1_soil_conditions_at_application' => [ 'type' => 'textarea' ],
+'phase_1_field_overview_photo' => [ 'type' => 'url' ],
 'phase_1_trial_type' => [
 'type'    => 'select',
 'options' => [
@@ -288,6 +332,11 @@ if ( trufield_user_is_admin( $user_id ) ) {
 return true;
 }
 
+$user = get_userdata( $user_id );
+if ( $user && in_array( 'leadership', (array) $user->roles, true ) ) {
+return false;
+}
+
 $assigned = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
 if ( $assigned !== $user_id ) {
 return false;
@@ -345,6 +394,21 @@ return true;
 function trufield_rep_editable_phase_fields( int $phase ): array {
 $fields = [
 1 => [
+'retailer_name',
+'farm_name',
+'field_trial_contact',
+'field_name',
+'field_location_address',
+'phase_1_state_region',
+'phase_1_product_being_tested',
+'phase_1_application_type',
+'phase_1_application_date',
+'phase_1_application_rate',
+'phase_1_trial_design',
+'phase_1_growth_stage_at_application',
+'phase_1_weather_conditions_at_application',
+'phase_1_soil_conditions_at_application',
+'phase_1_field_overview_photo',
 'phase_1_trial_type',
 'phase_1_treated_size_acres',
 'phase_1_carrier_volume_gal',

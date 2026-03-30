@@ -101,7 +101,7 @@ acf_add_local_field_group( [
 ],
 [
 'key'      => 'field_tf_farm_name',
-'label'    => 'Farm Name',
+'label'    => 'Grower Name / Farm Name',
 'name'     => 'farm_name',
 'type'     => 'text',
 'required' => 1,
@@ -121,11 +121,12 @@ acf_add_local_field_group( [
 ],
 [
 'key'      => 'field_tf_field_name',
-'label'    => 'Field Name',
+'label'    => 'Field Name / Field ID',
 'name'     => 'field_name',
 'type'     => 'text',
 'required' => 1,
 ],
+// The Google Places map field below will automatically populate the address, latitude, and longitude fields when a location is selected
 [
 'key'      => 'field_tf_field_location_address',
 'label'    => 'Field Location Address',
@@ -133,6 +134,18 @@ acf_add_local_field_group( [
 'type'     => 'textarea',
 'rows'     => 2,
 'required' => 1,
+],
+[
+'key'          => 'field_tf_field_location_google_place',
+'label'        => 'Field Location (Google Places)',
+'name'         => 'field_location_google_place',
+'type'         => 'google_map',
+'instructions' => 'Search for the field location with Google Places. Address, latitude, and longitude are synced automatically.',
+'required'     => 0,
+'center_lat'   => '39.8283',
+'center_lng'   => '-98.5795',
+'zoom'         => 14,
+'height'       => 320,
 ],
 [
 'key'   => 'field_tf_field_location_lat',
@@ -162,6 +175,90 @@ acf_add_local_field_group( [
 'key'                   => 'group_tf_phase_1',
 'title'                 => 'Phase 1 — Trial Setup',
 'fields'                => [
+[
+'key'      => 'field_tf_phase_1_state_region',
+'label'    => 'State / Region',
+'name'     => 'phase_1_state_region',
+'type'     => 'text',
+'required' => 1,
+],
+[
+'key'      => 'field_tf_phase_1_product_being_tested',
+'label'    => 'Product Being Tested',
+'name'     => 'phase_1_product_being_tested',
+'type'     => 'text',
+'required' => 1,
+],
+[
+'key'           => 'field_tf_phase_1_application_type',
+'label'         => 'Application Type',
+'name'          => 'phase_1_application_type',
+'type'          => 'select',
+'choices'       => [
+'in_furrow'      => 'In-Furrow',
+'seed_treatment' => 'Seed Treatment',
+'foliar'         => 'Foliar',
+'other'          => 'Other',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 1,
+],
+[
+'key'            => 'field_tf_phase_1_application_date',
+'label'          => 'Application Date',
+'name'           => 'phase_1_application_date',
+'type'           => 'date_picker',
+'display_format' => 'm/d/Y',
+'return_format'  => 'Y-m-d',
+'required'       => 1,
+],
+[
+'key'         => 'field_tf_phase_1_application_rate',
+'label'       => 'Application Rate',
+'name'        => 'phase_1_application_rate',
+'type'        => 'text',
+'required'    => 1,
+'placeholder' => 'e.g. 32 oz/ac',
+],
+[
+'key'           => 'field_tf_phase_1_trial_design',
+'label'         => 'Trial Design',
+'name'          => 'phase_1_trial_design',
+'type'          => 'select',
+'choices'       => [
+'strip'        => 'Strip',
+'side_by_side' => 'Side-by-Side',
+'demo'         => 'Demo',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 1,
+],
+[
+'key'         => 'field_tf_phase_1_growth_stage_at_application',
+'label'       => 'Growth Stage at Application',
+'name'        => 'phase_1_growth_stage_at_application',
+'type'        => 'text',
+'required'    => 1,
+'placeholder' => 'e.g. V3',
+],
+[
+'key'      => 'field_tf_phase_1_weather_conditions_at_application',
+'label'    => 'Weather Conditions at Application',
+'name'     => 'phase_1_weather_conditions_at_application',
+'type'     => 'textarea',
+'rows'     => 2,
+'required' => 1,
+],
+[
+'key'      => 'field_tf_phase_1_soil_conditions_at_application',
+'label'    => 'Soil Conditions at Application',
+'name'     => 'phase_1_soil_conditions_at_application',
+'type'     => 'textarea',
+'rows'     => 2,
+'required' => 1,
+],
 [
 'key'           => 'field_tf_phase_1_trial_type',
 'label'         => 'Trial Type',
@@ -239,6 +336,14 @@ acf_add_local_field_group( [
 'type'  => 'number',
 'min'   => 0,
 'step'  => '0.1',
+],
+[
+'key'         => 'field_tf_phase_1_field_overview_photo',
+'label'       => 'Field Overview Photo',
+'name'        => 'phase_1_field_overview_photo',
+'type'        => 'url',
+'placeholder' => 'Photo URL',
+'instructions'=> 'Use a media URL for now. File upload can be added separately.',
 ],
 ],
 'location'              => trufield_acf_location_rule(),
@@ -734,4 +839,93 @@ return [
 ],
 ],
 ];
+}
+
+add_action( 'acf/init', 'trufield_configure_google_maps_api_key', 20 );
+function trufield_configure_google_maps_api_key(): void {
+if ( ! function_exists( 'acf_update_setting' ) ) {
+return;
+}
+
+$api_key = '';
+
+if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
+} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
+}
+
+if ( $api_key !== '' ) {
+acf_update_setting( 'google_api_key', $api_key );
+}
+}
+
+add_filter( 'acf/fields/google_map/api', 'trufield_acf_google_map_api' );
+function trufield_acf_google_map_api( array $api ): array {
+$api_key = '';
+
+if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
+} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
+}
+
+if ( $api_key !== '' ) {
+$api['key'] = $api_key;
+}
+
+return $api;
+}
+
+add_filter( 'acf/load_value/name=field_location_google_place', 'trufield_prefill_google_place_from_legacy_fields', 10, 3 );
+function trufield_prefill_google_place_from_legacy_fields( $value, $post_id, array $field ) {
+if ( ! empty( $value ) ) {
+return $value;
+}
+
+$post_id = is_numeric( $post_id ) ? (int) $post_id : 0;
+if ( $post_id <= 0 ) {
+return $value;
+}
+
+$address = (string) get_post_meta( $post_id, 'field_location_address', true );
+$lat     = get_post_meta( $post_id, 'field_location_lat', true );
+$lng     = get_post_meta( $post_id, 'field_location_lng', true );
+
+if ( $address === '' && $lat === '' && $lng === '' ) {
+return $value;
+}
+
+return [
+'address' => $address,
+'lat'     => $lat !== '' ? (float) $lat : '',
+'lng'     => $lng !== '' ? (float) $lng : '',
+'zoom'    => 14,
+];
+}
+
+add_filter( 'acf/update_value/name=field_location_google_place', 'trufield_sync_google_place_to_legacy_fields', 10, 3 );
+function trufield_sync_google_place_to_legacy_fields( $value, $post_id, array $field ) {
+$post_id = is_numeric( $post_id ) ? (int) $post_id : 0;
+if ( $post_id <= 0 || ! is_array( $value ) ) {
+return $value;
+}
+
+$address = isset( $value['address'] ) ? sanitize_textarea_field( (string) $value['address'] ) : '';
+$lat     = isset( $value['lat'] ) ? trim( (string) $value['lat'] ) : '';
+$lng     = isset( $value['lng'] ) ? trim( (string) $value['lng'] ) : '';
+
+if ( $address !== '' ) {
+update_post_meta( $post_id, 'field_location_address', $address );
+}
+
+if ( $lat !== '' ) {
+update_post_meta( $post_id, 'field_location_lat', (float) $lat );
+}
+
+if ( $lng !== '' ) {
+update_post_meta( $post_id, 'field_location_lng', (float) $lng );
+}
+
+return $value;
 }
