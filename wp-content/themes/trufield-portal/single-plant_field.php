@@ -87,6 +87,8 @@ $phase_statuses[ $phase ] = trufield_get_phase_status( $post_id, $phase );
 <?php
 if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 	echo esc_html( sprintf( __( 'Phase %d submitted for admin verification.', 'trufield-portal' ), (int) $matches[1] ) );
+} elseif ( 'address_verified' === $success ) {
+	esc_html_e( 'Field location verified. Latitude and longitude were updated.', 'trufield-portal' );
 } else {
 	esc_html_e( 'Phase 1 progress saved.', 'trufield-portal' );
 }

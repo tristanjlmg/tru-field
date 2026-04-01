@@ -13,6 +13,18 @@ define( 'TRUFIELD_THEME_DIR', get_template_directory() );
 define( 'TRUFIELD_THEME_URI', get_template_directory_uri() );
 define( 'TRUFIELD_VERSION', '1.0.0' );
 
+function trufield_asset_version( string $relative_path ): string {
+	$file_path = TRUFIELD_THEME_DIR . '/' . ltrim( $relative_path, '/' );
+	if ( file_exists( $file_path ) ) {
+		$modified = filemtime( $file_path );
+		if ( false !== $modified ) {
+			return (string) $modified;
+		}
+	}
+
+	return TRUFIELD_VERSION;
+}
+
 /**
  * Phase rollout control.
  * Add 2 and/or 3 to this array when those phases are ready to go live.
@@ -48,27 +60,69 @@ function trufield_theme_setup(): void {
 
 // ── Enqueue assets ──────────────────────────────────────────────────────────
 add_action( 'wp_enqueue_scripts', 'trufield_enqueue_assets' );
+function trufield_get_google_maps_api_key(): string {
+	static $api_key = null;
+
+	if ( null !== $api_key ) {
+		return $api_key;
+	}
+
+	if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+		$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
+	} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
+		$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
+	} else {
+		$api_key = '';
+	}
+
+	return $api_key;
+}
+
 function trufield_enqueue_assets(): void {
 	wp_enqueue_style(
 		'trufield-portal',
 		TRUFIELD_THEME_URI . '/assets/css/portal.css',
 		[],
-		TRUFIELD_VERSION
+		trufield_asset_version( 'assets/css/portal.css' )
 	);
 
 	wp_enqueue_script(
 		'trufield-portal',
 		TRUFIELD_THEME_URI . '/assets/js/portal.js',
 		[],
-		TRUFIELD_VERSION,
+		trufield_asset_version( 'assets/js/portal.js' ),
 		true
 	);
 
 	// Pass data needed by JS.
 	wp_localize_script( 'trufield-portal', 'TruField', [
-		'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-		'nonce'   => wp_create_nonce( 'trufield_grower_search' ),
+		'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
+		'nonce'              => wp_create_nonce( 'trufield_grower_search' ),
+		'geocodeNonce'       => wp_create_nonce( 'trufield_geocode_address' ),
+		'googlePlacesEnabled' => '' !== trufield_get_google_maps_api_key(),
 	] );
+
+	if ( is_singular( 'plant_field' ) ) {
+		$api_key = trufield_get_google_maps_api_key();
+
+		if ( '' !== $api_key ) {
+			wp_enqueue_script(
+				'trufield-google-maps',
+				add_query_arg(
+					[
+						'key'       => $api_key,
+						'libraries' => 'places',
+					],
+					'https://maps.googleapis.com/maps/api/js'
+				),
+				[ 'trufield-portal' ],
+				null,
+				true
+			);
+
+			wp_script_add_data( 'trufield-google-maps', 'defer', true );
+		}
+	}
 }
 
 add_action( 'admin_enqueue_scripts', 'trufield_enqueue_admin_assets' );
@@ -86,7 +140,7 @@ function trufield_enqueue_admin_assets( string $hook ): void {
 		'trufield-portal-admin',
 		TRUFIELD_THEME_URI . '/assets/js/admin-location-sync.js',
 		[ 'jquery', 'acf-input' ],
-		TRUFIELD_VERSION,
+		trufield_asset_version( 'assets/js/admin-location-sync.js' ),
 		true
 	);
 }

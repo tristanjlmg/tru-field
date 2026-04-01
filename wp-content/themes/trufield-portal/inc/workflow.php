@@ -36,7 +36,6 @@ $required = [
 'farm_name',
 'field_name',
 'field_trial_contact',
-'field_location_address',
 'phase_1_state_region',
 'phase_1_product_being_tested',
 'phase_1_application_type',
@@ -84,6 +83,9 @@ return [
 'field_trial_contact'                 => 'Field Trial Contact',
 'field_name'                          => 'Field Name / Field ID',
 'field_location_address'              => 'Field Location Address',
+'field_location_lat'                  => 'Field Latitude',
+'field_location_lng'                  => 'Field Longitude',
+'field_location_manual_override'      => 'Address unavailable - manual coordinate override',
 'phase_1_state_region'                => 'State / Region',
 'phase_1_product_being_tested'        => 'Product Being Tested',
 'phase_1_application_type'            => 'Application Type',
@@ -142,6 +144,10 @@ return [
 
 function trufield_phase_field_schema(): array {
 return [
+'field_location_address' => [ 'type' => 'text' ],
+'field_location_lat' => [ 'type' => 'number' ],
+'field_location_lng' => [ 'type' => 'number' ],
+'field_location_manual_override' => [ 'type' => 'boolean' ],
 'phase_1_state_region' => [ 'type' => 'text' ],
 'phase_1_product_being_tested' => [ 'type' => 'text' ],
 'phase_1_application_type' => [
@@ -266,23 +272,8 @@ return [
 ];
 }
 
-function trufield_all_required_fields_present( int $post_id, int $phase ): bool {
-foreach ( trufield_get_required_fields( $phase ) as $field ) {
-$value = get_post_meta( $post_id, $field, true );
-if ( is_array( $value ) ) {
-$value = array_filter( array_map( 'trim', $value ) );
-if ( empty( $value ) ) {
-return false;
-}
-continue;
-}
-
-if ( trim( (string) $value ) === '' ) {
-return false;
-}
-}
-
-return true;
+function trufield_location_override_enabled( int $post_id ): bool {
+	return (bool) get_post_meta( $post_id, 'field_location_manual_override', true );
 }
 
 function trufield_get_missing_required_fields( int $post_id, int $phase ): array {
@@ -296,7 +287,30 @@ $missing[] = $labels[ $field ] ?? $field;
 }
 }
 
+	if ( 1 === $phase ) {
+		$address  = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
+		$lat      = trim( (string) get_post_meta( $post_id, 'field_location_lat', true ) );
+		$lng      = trim( (string) get_post_meta( $post_id, 'field_location_lng', true ) );
+		$override = trufield_location_override_enabled( $post_id );
+
+		if ( ! $override && '' === $address ) {
+			$missing[] = $labels['field_location_address'] ?? 'Field Location Address';
+		}
+
+		if ( '' === $lat ) {
+			$missing[] = $labels['field_location_lat'] ?? 'Field Latitude';
+		}
+
+		if ( '' === $lng ) {
+			$missing[] = $labels['field_location_lng'] ?? 'Field Longitude';
+		}
+	}
+
 return $missing;
+}
+
+function trufield_all_required_fields_present( int $post_id, int $phase ): bool {
+	return [] === trufield_get_missing_required_fields( $post_id, $phase );
 }
 
 function trufield_verify_phase( int $post_id, int $phase, int $user_id ) {
@@ -399,6 +413,9 @@ $fields = [
 'field_trial_contact',
 'field_name',
 'field_location_address',
+'field_location_lat',
+'field_location_lng',
+'field_location_manual_override',
 'phase_1_state_region',
 'phase_1_product_being_tested',
 'phase_1_application_type',
@@ -483,6 +500,9 @@ $type   = $schema[ $field ]['type'] ?? 'text';
 $value  = is_string( $raw_value ) ? wp_unslash( $raw_value ) : $raw_value;
 
 switch ( $type ) {
+case 'boolean':
+	return ! empty( $value ) ? '1' : '';
+
 case 'integer':
 $value = trim( (string) $value );
 return $value === '' ? '' : absint( $value );
@@ -563,6 +583,33 @@ update_post_meta( $post_id, $field, $sanitized );
 
 $redirect = wp_get_referer() ?: get_permalink( $post_id );
 $action   = sanitize_key( $_POST['phase_action'] ?? 'save' );
+
+if ( $action === 'verify_address' ) {
+	$address = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
+	if ( '' === $address ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Enter a field location address before verifying it.', 'trufield-portal' ) ), $redirect ) );
+		exit;
+	}
+
+	$result = trufield_lookup_address_coordinates( $address, trufield_get_google_maps_api_key() );
+	if ( ! $result || ! isset( $result['lat'], $result['lng'] ) ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'We could not verify that address right now.', 'trufield-portal' ) ), $redirect ) );
+		exit;
+	}
+
+	update_post_meta( $post_id, 'field_location_address', (string) ( $result['address'] ?? $address ) );
+	update_post_meta( $post_id, 'field_location_lat', (float) $result['lat'] );
+	update_post_meta( $post_id, 'field_location_lng', (float) $result['lng'] );
+	delete_post_meta( $post_id, 'field_location_manual_override' );
+
+	if ( trufield_get_phase_status( $post_id, $phase ) === 'pending' ) {
+		update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
+	}
+	update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
+
+	wp_safe_redirect( add_query_arg( 'tf_success', 'address_verified', $redirect ) );
+	exit;
+}
 
 if ( $action === 'complete' ) {
 $result = trufield_complete_phase( $post_id, $phase, $user_id );

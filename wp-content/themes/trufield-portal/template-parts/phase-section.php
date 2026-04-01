@@ -25,6 +25,7 @@ $required_ok  = empty( $missing );
 $labels       = trufield_field_labels();
 $schema       = trufield_phase_field_schema();
 $phase_label  = sprintf( __( 'Phase %d', 'trufield-portal' ), $phase );
+$location_override = 1 === $phase ? trufield_location_override_enabled( $post_id ) : false;
 
 $field_groups = [
 1 => [
@@ -175,6 +176,12 @@ return (string) $value;
 };
 
 $readonly_fields = array_merge( array_keys( $field_groups[ $phase ]['required'] ), array_keys( $field_groups[ $phase ]['optional'] ) );
+
+if ( 1 === $phase ) {
+	$readonly_fields[] = 'field_location_lat';
+	$readonly_fields[] = 'field_location_lng';
+}
+
 $readonly_pairs  = [];
 foreach ( $readonly_fields as $field ) {
 $value = get_post_meta( $post_id, $field, true );
@@ -278,7 +285,78 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 
 <div class="tf-form-grid">
+<?php if ( 1 === $phase ) : ?>
+<div class="tf-phase-location<?php echo $location_override ? ' is-manual' : ''; ?>" data-tf-location>
+<div class="tf-phase-location__header">
+<div class="tf-phase-location__intro">
+<label class="tf-phase-location__label" for="field_location_address"><?php echo esc_html( $labels['field_location_address'] ?? 'Field Location Address' ); ?><?php if ( ! $location_override ) : ?> <span class="tf-required">*</span><?php endif; ?></label>
+<p class="tf-phase-location__help" data-tf-location-help><?php esc_html_e( 'Search and select a verified address to automatically fill latitude and longitude. If no address is available, turn on manual override and enter coordinates directly.', 'trufield-portal' ); ?></p>
+</div>
+<label class="tf-phase-location__toggle">
+<input type="hidden" name="field_location_manual_override" value="0">
+<input type="checkbox" name="field_location_manual_override" value="1" <?php checked( $location_override ); ?> data-tf-location-override>
+<span><?php esc_html_e( 'Address unavailable, enter coordinates manually', 'trufield-portal' ); ?></span>
+</label>
+</div>
+<div class="tf-phase-location__grid">
+<div class="tf-field-group tf-phase-location__address-wrap">
+<div class="tf-phase-location__address-row">
+<input
+type="text"
+id="field_location_address"
+name="field_location_address"
+class="tf-input"
+value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_address', true ) ); ?>"
+placeholder="<?php esc_attr_e( 'Search for the field location', 'trufield-portal' ); ?>"
+autocomplete="street-address"
+data-tf-location-address
+>
+<button type="submit" name="phase_action" value="verify_address" class="tf-btn tf-btn--secondary tf-phase-location__verify" formnovalidate data-tf-location-verify><?php esc_html_e( 'Verify Address', 'trufield-portal' ); ?></button>
+</div>
+<small class="tf-phase-location__status" data-tf-location-status><?php esc_html_e( 'Coordinates are required before Phase 1 can be completed.', 'trufield-portal' ); ?></small>
+</div>
+<div class="tf-phase-location__coords">
+<div class="tf-field-group">
+<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?> <span class="tf-required">*</span></label>
+<input
+type="number"
+id="field_location_lat"
+class="tf-input"
+value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lat', true ) ); ?>"
+step="0.000001"
+placeholder="<?php esc_attr_e( 'Latitude', 'trufield-portal' ); ?>"
+<?php echo $location_override ? '' : ' disabled readonly tabindex="-1" aria-disabled="true"'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+data-tf-location-lat
+>
+<input type="hidden" name="field_location_lat" value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lat', true ) ); ?>" data-tf-location-lat-hidden>
+</div>
+<div class="tf-field-group">
+<label for="field_location_lng"><?php echo esc_html( $labels['field_location_lng'] ?? 'Field Longitude' ); ?> <span class="tf-required">*</span></label>
+<input
+type="number"
+id="field_location_lng"
+class="tf-input"
+value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lng', true ) ); ?>"
+step="0.000001"
+placeholder="<?php esc_attr_e( 'Longitude', 'trufield-portal' ); ?>"
+<?php echo $location_override ? '' : ' disabled readonly tabindex="-1" aria-disabled="true"'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+data-tf-location-lng
+>
+<input type="hidden" name="field_location_lng" value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lng', true ) ); ?>" data-tf-location-lng-hidden>
+</div>
+</div>
+<small class="tf-phase-location__lock-note" data-tf-location-lock-note><?php esc_html_e( 'Latitude and longitude stay locked until manual override is enabled.', 'trufield-portal' ); ?></small>
+<div class="tf-phase-location__map-wrap">
+<div class="tf-phase-location__map" data-tf-location-map aria-hidden="true"></div>
+<div class="tf-phase-location__map-note" data-tf-location-map-note><?php esc_html_e( 'Map preview will appear after the address is verified.', 'trufield-portal' ); ?></div>
+</div>
+</div>
+</div>
+<?php endif; ?>
 <?php foreach ( $field_groups[ $phase ]['required'] as $field => $config ) : ?>
+<?php if ( 1 === $phase && 'field_location_address' === $field ) {
+	continue;
+} ?>
 <?php $render_field( $field, $config, true ); ?>
 <?php endforeach; ?>
 </div>
@@ -309,7 +387,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </div>
 
 <div class="tf-phase-form__actions">
-<button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary"><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
+<button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary" formnovalidate><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
 <?php if ( $prereq_met && $required_ok ) : ?>
 <button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( __( 'Submit Phase 1 for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ) ); ?>');">
 <?php esc_html_e( 'Mark Phase 1 Complete', 'trufield-portal' ); ?>

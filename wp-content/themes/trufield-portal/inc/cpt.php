@@ -47,3 +47,52 @@ function trufield_register_cpt_plant_field(): void {
 
 	register_post_type( 'plant_field', $args );
 }
+
+add_action( 'admin_post_trufield_create_plant_field', 'trufield_handle_create_plant_field' );
+function trufield_handle_create_plant_field(): void {
+	$nonce = sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) );
+	if ( ! wp_verify_nonce( $nonce, 'trufield_create_plant_field' ) ) {
+		wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
+	}
+
+	$user_id = get_current_user_id();
+	if ( ! $user_id || ! user_can( $user_id, 'publish_plant_fields' ) ) {
+		wp_die( esc_html__( 'You do not have permission to create a trial.', 'trufield-portal' ), 403 );
+	}
+
+	$title = sanitize_text_field( wp_unslash( $_POST['trial_name'] ?? '' ) );
+	if ( '' === $title ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Trial name is required.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
+		exit;
+	}
+
+	$post_id = wp_insert_post(
+		[
+			'post_type'   => 'plant_field',
+			'post_status' => 'publish',
+			'post_title'  => $title,
+			'post_author' => $user_id,
+		],
+		true
+	);
+
+	if ( is_wp_error( $post_id ) ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $post_id->get_error_message() ), trufield_dashboard_url() ) );
+		exit;
+	}
+
+	update_post_meta( $post_id, 'record_status', 'active' );
+	update_post_meta( $post_id, 'current_phase', 1 );
+	update_post_meta( $post_id, 'phase_1_status', 'pending' );
+
+	wp_safe_redirect(
+		add_query_arg(
+			[
+				'tf_success' => 'trial_created',
+				'tf_post_id' => $post_id,
+			],
+			trufield_dashboard_url()
+		)
+	);
+	exit;
+}

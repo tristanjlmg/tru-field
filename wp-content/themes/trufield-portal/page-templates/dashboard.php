@@ -13,17 +13,28 @@ get_header();
 $current_user = wp_get_current_user();
 $fields       = trufield_get_visible_fields();
 $is_sales_rep = in_array( 'sales_rep', (array) $current_user->roles, true );
+$can_create   = current_user_can( 'publish_plant_fields' );
 
 // Feedback messages from phase save redirects.
 $success = sanitize_key( $_GET['tf_success'] ?? '' );
 $error   = sanitize_text_field( urldecode( $_GET['tf_error'] ?? '' ) );
+$created_post_id = (int) ( $_GET['tf_post_id'] ?? 0 );
 ?>
 <div class="tf-container">
 
 	<?php if ( $success ) : ?>
 		<div class="tf-alert tf-alert--success" role="alert">
 			<?php
-			if ( preg_match( '/^phase_(\d)_completed$/', $success, $m ) ) {
+			if ( 'trial_created' === $success && $created_post_id > 0 ) {
+				printf(
+					wp_kses(
+						/* translators: %s = trial link. */
+						__( 'New trial created. <a href="%s">Open the record</a>.', 'trufield-portal' ),
+						[ 'a' => [ 'href' => [] ] ]
+					),
+					esc_url( get_permalink( $created_post_id ) )
+				);
+			} elseif ( preg_match( '/^phase_(\d)_completed$/', $success, $m ) ) {
 				printf(
 					/* translators: %d = phase number */
 					esc_html__( 'Phase %d submitted for admin verification.', 'trufield-portal' ),
@@ -64,6 +75,15 @@ $error   = sanitize_text_field( urldecode( $_GET['tf_error'] ?? '' ) );
 			</p>
 		</div>
 		<div class="tf-dashboard-header__actions">
+			<?php if ( $can_create ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form">
+					<?php wp_nonce_field( 'trufield_create_plant_field' ); ?>
+					<input type="hidden" name="action" value="trufield_create_plant_field">
+					<label class="screen-reader-text" for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
+					<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Test trial name', 'trufield-portal' ); ?>">
+					<button type="submit" class="tf-btn tf-btn--secondary"><?php esc_html_e( 'Create Test Trial', 'trufield-portal' ); ?></button>
+				</form>
+			<?php endif; ?>
 			<span class="tf-dashboard-header__count">
 				<?php
 				printf(
