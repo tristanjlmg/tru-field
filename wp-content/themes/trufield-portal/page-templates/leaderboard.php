@@ -15,8 +15,14 @@ $current_uid = get_current_user_id();
 <h1><?php esc_html_e( 'Leaderboard', 'trufield-portal' ); ?></h1>
 
 <div class="tf-alert tf-alert--info tf-leaderboard-placeholder">
-<strong><?php esc_html_e( 'Leaderboard — Coming Soon', 'trufield-portal' ); ?></strong><br>
-<?php esc_html_e( 'Point scoring is not yet active. This view shows activity tracking only.', 'trufield-portal' ); ?>
+<strong><?php esc_html_e( '5-Grower Threshold', 'trufield-portal' ); ?></strong><br>
+<?php
+	printf(
+		esc_html__( 'Each retailer awards %1$d points once a rep reaches at least %2$d valid Phase 1 entries for that retailer.', 'trufield-portal' ),
+		trufield_get_retailer_points_award(),
+		trufield_get_retailer_points_threshold()
+	);
+	?>
 </div>
 
 <?php if ( empty( $leaderboard ) ) : ?>
@@ -28,9 +34,10 @@ $current_uid = get_current_user_id();
 <tr>
 <th scope="col" class="tf-table__rank"><?php esc_html_e( 'Rank', 'trufield-portal' ); ?></th>
 <th scope="col"><?php esc_html_e( 'Rep', 'trufield-portal' ); ?></th>
+<th scope="col" class="tf-table__num"><?php esc_html_e( 'Points', 'trufield-portal' ); ?></th>
+<th scope="col" class="tf-table__num"><?php esc_html_e( 'Valid Entries', 'trufield-portal' ); ?></th>
+<th scope="col" class="tf-table__num"><?php esc_html_e( 'Retailers Awarded', 'trufield-portal' ); ?></th>
 <th scope="col" class="tf-table__num"><?php esc_html_e( 'Fields', 'trufield-portal' ); ?></th>
-<th scope="col" class="tf-table__num"><?php esc_html_e( 'Phase 1 Verified', 'trufield-portal' ); ?></th>
-<th scope="col" class="tf-table__num"><?php esc_html_e( 'Completed Fields', 'trufield-portal' ); ?></th>
 </tr>
 </thead>
 <tbody>
@@ -54,9 +61,10 @@ $current_uid = get_current_user_id();
 <span class="tf-badge tf-badge--me"><?php esc_html_e( 'You', 'trufield-portal' ); ?></span>
 <?php endif; ?>
 </td>
+<td class="tf-table__num tf-table__num--highlight"><strong><?php echo (int) $row['points']; ?></strong></td>
+<td class="tf-table__num"><?php echo (int) $row['valid_entries']; ?></td>
+<td class="tf-table__num"><?php echo (int) $row['awarded_retailers']; ?></td>
 <td class="tf-table__num"><?php echo (int) $row['field_count']; ?></td>
-<td class="tf-table__num tf-table__num--highlight"><strong><?php echo (int) $row['verified_phases']; ?></strong></td>
-<td class="tf-table__num tf-table__num--muted"><?php echo (int) $row['completed_fields']; ?></td>
 </tr>
 <?php endforeach; ?>
 </tbody>

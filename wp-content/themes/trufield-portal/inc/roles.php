@@ -82,6 +82,7 @@ return [
 'trufield_save_phase',
 'trufield_reopen_phase',
 'trufield_verify_phase',
+		'trufield_import_fields',
 'trufield_export_csv',
 ];
 }

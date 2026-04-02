@@ -19,6 +19,7 @@ $can_create   = current_user_can( 'publish_plant_fields' );
 $success = sanitize_key( $_GET['tf_success'] ?? '' );
 $error   = sanitize_text_field( urldecode( $_GET['tf_error'] ?? '' ) );
 $created_post_id = (int) ( $_GET['tf_post_id'] ?? 0 );
+$field_count = count( $fields );
 ?>
 <div class="tf-container">
 
@@ -40,6 +41,8 @@ $created_post_id = (int) ( $_GET['tf_post_id'] ?? 0 );
 					esc_html__( 'Phase %d submitted for admin verification.', 'trufield-portal' ),
 					(int) $m[1]
 				);
+			} elseif ( 'phase_1_autoverified' === $success ) {
+				esc_html_e( 'Phase 1 verified automatically once all required details were completed.', 'trufield-portal' );
 			} else {
 				esc_html_e( 'Phase 1 progress saved.', 'trufield-portal' );
 			}
@@ -73,26 +76,47 @@ $created_post_id = (int) ( $_GET['tf_post_id'] ?? 0 );
 				}
 				?>
 			</p>
+			<?php if ( ! empty( $fields ) ) : ?>
+				<div class="tf-trial-search" data-tf-trial-search>
+					<label class="tf-trial-search__label" for="tf-trial-search-input"><?php esc_html_e( 'Search trials', 'trufield-portal' ); ?></label>
+					<input
+						type="search"
+						id="tf-trial-search-input"
+						class="tf-input tf-trial-search__input"
+						placeholder="<?php esc_attr_e( 'Search by trial, retailer, farm, or address', 'trufield-portal' ); ?>"
+						data-tf-trial-search-input
+						autocomplete="off"
+					>
+					<p class="tf-trial-search__hint" data-tf-trial-search-hint><?php esc_html_e( 'Start typing to filter the visible field cards instantly.', 'trufield-portal' ); ?></p>
+				</div>
+			<?php endif; ?>
 		</div>
 		<div class="tf-dashboard-header__actions">
-			<?php if ( $can_create ) : ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form">
-					<?php wp_nonce_field( 'trufield_create_plant_field' ); ?>
-					<input type="hidden" name="action" value="trufield_create_plant_field">
-					<label class="screen-reader-text" for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
-					<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Test trial name', 'trufield-portal' ); ?>">
-					<button type="submit" class="tf-btn tf-btn--secondary"><?php esc_html_e( 'Create Test Trial', 'trufield-portal' ); ?></button>
-				</form>
-			<?php endif; ?>
-			<span class="tf-dashboard-header__count">
+			<span class="tf-dashboard-header__count" data-tf-trial-count data-total-count="<?php echo esc_attr( (string) $field_count ); ?>" data-singular-label="<?php esc_attr_e( 'record', 'trufield-portal' ); ?>" data-plural-label="<?php esc_attr_e( 'records', 'trufield-portal' ); ?>">
 				<?php
 				printf(
 					/* translators: %d = record count */
-					esc_html( _n( '%d record', '%d records', count( $fields ), 'trufield-portal' ) ),
-					count( $fields )
+					esc_html( _n( '%d record', '%d records', $field_count, 'trufield-portal' ) ),
+					$field_count
 				);
 				?>
 			</span>
+			<?php if ( $can_create ) : ?>
+				<section id="create-trial-panel" class="tf-create-panel" aria-labelledby="create-trial-heading">
+					<div class="tf-create-panel__header">
+						<p class="tf-create-panel__eyebrow"><?php esc_html_e( 'Admin action', 'trufield-portal' ); ?></p>
+						<h2 id="create-trial-heading" class="tf-create-panel__title"><?php esc_html_e( 'Create trial', 'trufield-portal' ); ?></h2>
+						<p class="tf-create-panel__copy"><?php esc_html_e( 'Start a new field record and assign the details afterward.', 'trufield-portal' ); ?></p>
+					</div>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form">
+						<?php wp_nonce_field( 'trufield_create_plant_field' ); ?>
+						<input type="hidden" name="action" value="trufield_create_plant_field">
+						<label class="screen-reader-text" for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
+						<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Trial name', 'trufield-portal' ); ?>">
+						<button type="submit" class="tf-btn tf-btn--primary"><?php esc_html_e( 'Create Trial', 'trufield-portal' ); ?></button>
+					</form>
+				</section>
+			<?php endif; ?>
 		</div>
 	</div>
 
@@ -109,10 +133,13 @@ $created_post_id = (int) ( $_GET['tf_post_id'] ?? 0 );
 			</p>
 		</div>
 	<?php else : ?>
-		<div class="tf-field-grid">
+		<div class="tf-field-grid" data-tf-trial-grid>
 			<?php foreach ( $fields as $plant_field ) :
 				get_template_part( 'template-parts/plant-field-card', null, [ 'post' => $plant_field ] );
 			endforeach; ?>
+		</div>
+		<div class="tf-empty-state tf-empty-state--search" data-tf-trial-empty hidden>
+			<p><?php esc_html_e( 'No trials match that search yet. Try a different trial name, retailer, farm, or address.', 'trufield-portal' ); ?></p>
 		</div>
 	<?php endif; ?>
 

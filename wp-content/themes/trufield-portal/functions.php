@@ -38,6 +38,7 @@ $trufield_includes = [
 	'inc/roles.php',
 	'inc/acf-fields.php',
 	'inc/queries.php',
+	'inc/imports.php',
 	'inc/workflow.php',
 	'inc/scoring.php',
 	'inc/auth-routing.php',

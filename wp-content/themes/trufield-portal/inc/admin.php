@@ -132,6 +132,15 @@ add_action( 'admin_menu', 'trufield_admin_menu' );
 function trufield_admin_menu(): void {
 add_submenu_page(
 'edit.php?post_type=plant_field',
+		__( 'Import XLSX', 'trufield-portal' ),
+		__( 'Import XLSX', 'trufield-portal' ),
+		'trufield_import_fields',
+		'trufield-import',
+		'trufield_import_page_render'
+	);
+
+	add_submenu_page(
+		'edit.php?post_type=plant_field',
 __( 'Export CSV', 'trufield-portal' ),
 __( 'Export CSV', 'trufield-portal' ),
 'trufield_export_csv',

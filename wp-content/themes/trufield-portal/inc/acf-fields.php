@@ -343,7 +343,7 @@ acf_add_local_field_group( [
 'name'        => 'phase_1_field_overview_photo',
 'type'        => 'url',
 'placeholder' => 'Photo URL',
-'instructions'=> 'Use a media URL for now. File upload can be added separately.',
+'instructions'=> 'This field stores the uploaded photo URL. Use the portal Phase 1 form to upload or replace the image.',
 ],
 ],
 'location'              => trufield_acf_location_rule(),

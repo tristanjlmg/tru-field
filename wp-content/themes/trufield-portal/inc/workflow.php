@@ -313,6 +313,64 @@ function trufield_all_required_fields_present( int $post_id, int $phase ): bool 
 	return [] === trufield_get_missing_required_fields( $post_id, $phase );
 }
 
+function trufield_phase_auto_verifies( int $phase ): bool {
+	return 1 === $phase;
+}
+
+function trufield_sync_phase_verification_state( int $post_id, int $phase ): array {
+	$required_ok   = trufield_all_required_fields_present( $post_id, $phase );
+	$auto_verify   = trufield_phase_auto_verifies( $phase );
+	$was_verified  = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
+	$was_completed = trufield_get_phase_status( $post_id, $phase ) === 'completed';
+	$just_verified = false;
+
+	if ( ! $auto_verify ) {
+		return [
+			'auto_verify'   => false,
+			'required_ok'   => $required_ok,
+			'just_verified' => false,
+			'is_verified'   => $was_verified,
+			'is_completed'  => $was_completed,
+		];
+	}
+
+	if ( $required_ok ) {
+		if ( ! $was_completed ) {
+			update_post_meta( $post_id, "phase_{$phase}_status", 'completed' );
+		}
+
+		if ( '' === (string) get_post_meta( $post_id, "phase_{$phase}_completed_at", true ) ) {
+			update_post_meta( $post_id, "phase_{$phase}_completed_at", current_time( 'mysql' ) );
+		}
+
+		if ( ! $was_verified ) {
+			update_post_meta( $post_id, "phase_{$phase}_verified", 1 );
+			update_post_meta( $post_id, "phase_{$phase}_verified_at", current_time( 'mysql' ) );
+			$just_verified = true;
+		}
+	} else {
+		if ( $was_verified ) {
+			delete_post_meta( $post_id, "phase_{$phase}_verified" );
+			delete_post_meta( $post_id, "phase_{$phase}_verified_at" );
+		}
+
+		if ( $was_completed ) {
+			update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
+			delete_post_meta( $post_id, "phase_{$phase}_completed_at" );
+		}
+	}
+
+	update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
+
+	return [
+		'auto_verify'   => true,
+		'required_ok'   => $required_ok,
+		'just_verified' => $just_verified,
+		'is_verified'   => (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true ),
+		'is_completed'  => trufield_get_phase_status( $post_id, $phase ) === 'completed',
+	];
+}
+
 function trufield_verify_phase( int $post_id, int $phase, int $user_id ) {
 	if ( ! trufield_user_is_admin( $user_id ) ) {
 		return new WP_Error( 'trufield_forbidden', __( 'Only administrators can verify a phase submission.', 'trufield-portal' ) );
@@ -534,6 +592,49 @@ return trim( $value );
 }
 }
 
+function trufield_phase_photo_attachment_meta_key( string $field ): string {
+	return $field . '_attachment_id';
+}
+
+function trufield_delete_phase_photo_value( int $post_id, string $field ): void {
+	delete_post_meta( $post_id, $field );
+	delete_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ) );
+}
+
+function trufield_handle_phase_photo_upload( int $post_id, string $field, string $file_input ) {
+	if ( empty( $_FILES[ $file_input ] ) || ! is_array( $_FILES[ $file_input ] ) ) {
+		return null;
+	}
+
+	$file = $_FILES[ $file_input ];
+	if ( (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) === UPLOAD_ERR_NO_FILE ) {
+		return null;
+	}
+
+	if ( ! empty( $file['error'] ) ) {
+		return new WP_Error( 'trufield_upload_error', __( 'The photo upload could not be processed.', 'trufield-portal' ) );
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+
+	$attachment_id = media_handle_upload( $file_input, $post_id );
+	if ( is_wp_error( $attachment_id ) ) {
+		return $attachment_id;
+	}
+
+	$image_url = wp_get_attachment_url( $attachment_id );
+	if ( ! $image_url ) {
+		return new WP_Error( 'trufield_upload_url_missing', __( 'The uploaded photo could not be linked to this trial.', 'trufield-portal' ) );
+	}
+
+	update_post_meta( $post_id, $field, esc_url_raw( $image_url ) );
+	update_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), $attachment_id );
+
+	return $attachment_id;
+}
+
 add_action( 'admin_post_trufield_save_phase', 'trufield_handle_save_phase' );
 add_action( 'admin_post_nopriv_trufield_save_phase', 'trufield_handle_save_phase_nopriv' );
 add_action( 'admin_post_trufield_reopen_phase', 'trufield_handle_reopen_phase' );
@@ -566,6 +667,9 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		wp_die( esc_html__( 'You do not have permission to update this phase.', 'trufield-portal' ), 403 );
 	}
 
+	$redirect = wp_get_referer() ?: get_permalink( $post_id );
+	$action   = sanitize_key( $_POST['phase_action'] ?? 'save' );
+
 $editable = trufield_rep_editable_phase_fields( $phase );
 foreach ( $editable as $field ) {
 if ( ! array_key_exists( $field, $_POST ) ) {
@@ -581,8 +685,17 @@ continue;
 update_post_meta( $post_id, $field, $sanitized );
 }
 
-$redirect = wp_get_referer() ?: get_permalink( $post_id );
-$action   = sanitize_key( $_POST['phase_action'] ?? 'save' );
+	if ( 1 === $phase && ! empty( $_POST['phase_1_field_overview_photo_remove'] ) ) {
+		trufield_delete_phase_photo_value( $post_id, 'phase_1_field_overview_photo' );
+	}
+
+	if ( 1 === $phase ) {
+		$upload_result = trufield_handle_phase_photo_upload( $post_id, 'phase_1_field_overview_photo', 'phase_1_field_overview_photo_upload' );
+		if ( is_wp_error( $upload_result ) ) {
+			wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $upload_result->get_error_message() ), $redirect ) );
+			exit;
+		}
+	}
 
 if ( $action === 'verify_address' ) {
 	$address = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
@@ -606,8 +719,9 @@ if ( $action === 'verify_address' ) {
 		update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 	}
 	update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
+	$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
 
-	wp_safe_redirect( add_query_arg( 'tf_success', 'address_verified', $redirect ) );
+	wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : 'address_verified', $redirect ) );
 	exit;
 }
 
@@ -618,6 +732,12 @@ wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $result->get_error_me
 exit;
 }
 
+	if ( trufield_phase_auto_verifies( $phase ) ) {
+		$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
+		wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : "phase_{$phase}_completed", $redirect ) );
+		exit;
+	}
+
 wp_safe_redirect( add_query_arg( 'tf_success', "phase_{$phase}_completed", $redirect ) );
 exit;
 }
@@ -627,7 +747,9 @@ update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 }
 update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
 
-wp_safe_redirect( add_query_arg( 'tf_success', 'saved', $redirect ) );
+$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
+
+wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : 'saved', $redirect ) );
 exit;
 }
 

@@ -43,15 +43,15 @@ $step_titles        = [
 
 if ( $phase_1_verified ) {
 	$phase_1_panel_title = __( 'Phase 1 verified', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'This Phase 1 submission has been reviewed by the admin team. No further action is needed right now.', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'All required Phase 1 details are complete and this record is now verified.', 'trufield-portal' );
 	$phase_1_panel_note  = __( 'Phases 2 and 3 are separate forms and will stay unavailable until a later rollout.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'completed' ) {
-	$phase_1_panel_title = __( 'Awaiting admin verification', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Phase 1 has been submitted and is now read-only while the admin team verifies the record.', 'trufield-portal' );
+	$phase_1_panel_title = __( 'Phase 1 complete', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Phase 1 is complete and this record is currently locked for edits.', 'trufield-portal' );
 	$phase_1_panel_note  = __( 'You can review the submitted details below. Future phases remain placeholders for now.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'in_progress' && $phase_1_required_ok ) {
-	$phase_1_panel_title = __( 'Ready to complete Phase 1', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Review the required setup details, then use Mark Phase 1 Complete to submit this record for admin verification.', 'trufield-portal' );
+	$phase_1_panel_title = __( 'Ready to verify Phase 1', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Every required Phase 1 detail is present. Save once more and the record will verify automatically.', 'trufield-portal' );
 	$phase_1_panel_note  = __( 'You can still save your draft and return later if needed.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'in_progress' ) {
 	$phase_1_panel_title = __( 'Phase 1 draft in progress', 'trufield-portal' );
@@ -87,6 +87,8 @@ $phase_statuses[ $phase ] = trufield_get_phase_status( $post_id, $phase );
 <?php
 if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 	echo esc_html( sprintf( __( 'Phase %d submitted for admin verification.', 'trufield-portal' ), (int) $matches[1] ) );
+	} elseif ( 'phase_1_autoverified' === $success ) {
+		esc_html_e( 'Phase 1 verified automatically once all required details were completed.', 'trufield-portal' );
 } elseif ( 'address_verified' === $success ) {
 	esc_html_e( 'Field location verified. Latitude and longitude were updated.', 'trufield-portal' );
 } else {

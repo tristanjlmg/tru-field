@@ -21,6 +21,22 @@ $phase_1_status   = trufield_get_phase_status( $post_id, 1 );
 $phase_1_verified = (bool) get_post_meta( $post_id, 'phase_1_verified', true );
 $phase_1_missing  = trufield_get_missing_required_fields( $post_id, 1 );
 $phase_1_ready    = empty( $phase_1_missing );
+$search_text      = strtolower(
+	trim(
+		implode(
+			' ',
+			array_filter(
+				[
+					get_the_title( $post_id ),
+					(string) $retailer,
+					(string) $farm_name,
+					(string) $location,
+				],
+				static fn( $value ): bool => trim( (string) $value ) !== ''
+			)
+		)
+	)
+);
 
 $pips = [];
 foreach ( [ 1, 2, 3 ] as $phase ) {
@@ -51,11 +67,11 @@ foreach ( [ 1, 2, 3 ] as $phase ) {
 }
 
 if ( $phase_1_verified ) {
-	$phase_1_summary = __( 'Phase 1 verified by the admin team.', 'trufield-portal' );
+	$phase_1_summary = __( 'Phase 1 verified.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'completed' ) {
-	$phase_1_summary = __( 'Phase 1 submitted and awaiting admin verification.', 'trufield-portal' );
+	$phase_1_summary = __( 'Phase 1 is complete and locked.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'in_progress' && $phase_1_ready ) {
-	$phase_1_summary = __( 'Phase 1 draft is ready to mark complete.', 'trufield-portal' );
+	$phase_1_summary = __( 'Phase 1 is ready to verify on the next save.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'in_progress' ) {
 	$phase_1_summary = sprintf(
 		/* translators: %d = number of missing required fields. */
@@ -71,7 +87,7 @@ if ( $phase_1_verified ) {
 	$phase_1_summary = __( 'Open this record to start the Phase 1 form.', 'trufield-portal' );
 }
 ?>
-<article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>">
+<article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>" data-tf-trial-card data-tf-search="<?php echo esc_attr( $search_text ); ?>">
 <a href="<?php echo esc_url( get_permalink( $post_id ) ); ?>" class="tf-field-card__link" aria-label="<?php echo esc_attr( get_the_title( $post_id ) ); ?>">
 <header class="tf-field-card__header">
 <h2 class="tf-field-card__title"><?php echo esc_html( get_the_title( $post_id ) ); ?></h2>

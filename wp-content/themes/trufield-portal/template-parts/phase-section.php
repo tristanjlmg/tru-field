@@ -50,7 +50,7 @@ $field_groups = [
 'phase_1_protocol_version'   => [ 'input' => 'text', 'placeholder' => 'e.g. v2.1' ],
 ],
 'optional' => [
-'phase_1_field_overview_photo' => [ 'input' => 'url', 'placeholder' => 'Photo URL', 'help' => 'Use a media URL for now. File upload can be added separately.' ],
+'phase_1_field_overview_photo' => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload a field overview photo from your device. JPG, PNG, GIF, and WebP are supported.' ],
 'phase_1_hybrid_variety'      => [ 'input' => 'text' ],
 'phase_1_planting_date'       => [ 'input' => 'date' ],
 'phase_1_planting_population' => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
@@ -115,7 +115,9 @@ $rows        = (int) ( $config['rows'] ?? 3 );
 $min         = $config['min'] ?? null;
 $max         = $config['max'] ?? null;
 $step        = $config['step'] ?? null;
+$accept      = $config['accept'] ?? '';
 $help        = $config['help'] ?? '';
+$attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), true );
 ?>
 <div class="tf-field-group">
 <label for="<?php echo esc_attr( $field ); ?>">
@@ -133,6 +135,33 @@ $help        = $config['help'] ?? '';
 </select>
 <?php elseif ( $input_type === 'textarea' ) : ?>
 <textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"><?php echo esc_textarea( (string) $value ); ?></textarea>
+<?php elseif ( $input_type === 'file' ) : ?>
+<div class="tf-upload-field">
+<?php if ( $value ) : ?>
+<div class="tf-upload-field__preview">
+<a href="<?php echo esc_url( (string) $value ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__image-link">
+<img src="<?php echo esc_url( (string) $value ); ?>" alt="<?php echo esc_attr( $label ); ?>" class="tf-upload-field__image">
+</a>
+<div class="tf-upload-field__meta">
+<a href="<?php echo esc_url( (string) $value ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__link"><?php esc_html_e( 'View current photo', 'trufield-portal' ); ?></a>
+<?php if ( $attachment_id > 0 ) : ?>
+<span class="tf-upload-field__caption"><?php esc_html_e( 'Stored in the WordPress media library.', 'trufield-portal' ); ?></span>
+<?php endif; ?>
+<label class="tf-upload-field__remove">
+<input type="checkbox" name="<?php echo esc_attr( $field ); ?>_remove" value="1">
+<span><?php esc_html_e( 'Remove current photo', 'trufield-portal' ); ?></span>
+</label>
+</div>
+</div>
+<?php endif; ?>
+<input
+type="file"
+id="<?php echo esc_attr( $field ); ?>_upload"
+name="<?php echo esc_attr( $field ); ?>_upload"
+class="tf-input tf-input--file"
+<?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+>
+</div>
 <?php else : ?>
 <input
 type="<?php echo esc_attr( $input_type ); ?>"
@@ -201,9 +230,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </div>
 
 <?php if ( $is_verified && $verified_at ) : ?>
-<div class="tf-phase__verified-badge">✓ <?php echo esc_html( sprintf( __( 'Admin Verified on %s', 'trufield-portal' ), wp_date( 'm/d/Y g:i a', strtotime( $verified_at ) ) ) ); ?></div>
+<div class="tf-phase__verified-badge">✓ <?php echo esc_html( sprintf( __( 'Verified on %s', 'trufield-portal' ), wp_date( 'm/d/Y g:i a', strtotime( $verified_at ) ) ) ); ?></div>
 <?php elseif ( $is_verified ) : ?>
-<div class="tf-phase__verified-badge">✓ <?php esc_html_e( 'Admin Verified', 'trufield-portal' ); ?></div>
+<div class="tf-phase__verified-badge">✓ <?php esc_html_e( 'Verified', 'trufield-portal' ); ?></div>
 <?php elseif ( $status === 'completed' ) : ?>
 <div class="tf-phase__awaiting-badge"><?php esc_html_e( 'Submitted — Awaiting Verification', 'trufield-portal' ); ?></div>
 <?php endif; ?>
@@ -223,7 +252,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <a href="<?php echo esc_url( $reopen_url ); ?>" class="tf-btn tf-btn--ghost tf-btn--sm" onclick="return confirm('<?php echo esc_js( __( 'Reopen this phase? Verification will be cleared.', 'trufield-portal' ) ); ?>');">
 <?php esc_html_e( 'Reopen', 'trufield-portal' ); ?>
 </a>
-<?php if ( ! $is_verified ) : ?>
+<?php if ( ! $is_verified && ! trufield_phase_auto_verifies( $phase ) ) : ?>
 <a href="<?php echo esc_url( $verify_url ); ?>" class="tf-btn tf-btn--secondary tf-btn--sm"><?php esc_html_e( 'Verify', 'trufield-portal' ); ?></a>
 <?php endif; ?>
 </div>
@@ -244,7 +273,14 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php foreach ( $readonly_pairs as $field => $value ) : ?>
 <dt><?php echo esc_html( $labels[ $field ] ?? $field ); ?></dt>
 <dd>
-<?php if ( ( $schema[ $field ]['type'] ?? '' ) === 'url' ) : ?>
+<?php if ( $field === 'phase_1_field_overview_photo' ) : ?>
+<div class="tf-readonly-photo">
+<a href="<?php echo esc_url( $value ); ?>" target="_blank" rel="noopener noreferrer">
+<img src="<?php echo esc_url( $value ); ?>" alt="<?php echo esc_attr( $labels[ $field ] ?? $field ); ?>" class="tf-readonly-photo__image">
+</a>
+<a href="<?php echo esc_url( $value ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open photo', 'trufield-portal' ); ?></a>
+</div>
+<?php elseif ( ( $schema[ $field ]['type'] ?? '' ) === 'url' ) : ?>
 <a href="<?php echo esc_url( $value ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $value ); ?></a>
 <?php else : ?>
 <?php echo nl2br( esc_html( $value ) ); ?>
@@ -259,7 +295,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 </div>
 <?php else : ?>
-<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-phase-form" id="<?php echo esc_attr( 'tf-phase-form-' . $phase ); ?>">
+<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-phase-form" id="<?php echo esc_attr( 'tf-phase-form-' . $phase ); ?>" enctype="multipart/form-data">
 <?php wp_nonce_field( "trufield_save_phase_{$post_id}_{$phase}" ); ?>
 <input type="hidden" name="action" value="trufield_save_phase">
 <input type="hidden" name="plant_field_id" value="<?php echo esc_attr( (string) $post_id ); ?>">
@@ -270,15 +306,15 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <div class="tf-phase__helper-notes">
 <span class="tf-phase__helper-note"><?php esc_html_e( 'Required fields are marked with *.', 'trufield-portal' ); ?></span>
 <span class="tf-phase__helper-note"><?php esc_html_e( 'Optional details are available under “Show optional fields.”', 'trufield-portal' ); ?></span>
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Media/video upload is not part of Phase 1 at this stage.', 'trufield-portal' ); ?></span>
+<span class="tf-phase__helper-note"><?php esc_html_e( 'Field overview photos can be uploaded directly in Phase 1.', 'trufield-portal' ); ?></span>
 </div>
 </div>
 
-<p class="tf-required-note"><?php esc_html_e( '* Required fields must be complete before Phase 1 can be submitted. Optional fields can be saved at any time.', 'trufield-portal' ); ?></p>
+<p class="tf-required-note"><?php echo esc_html( 1 === $phase ? __( '* Required fields must be complete before Phase 1 can be verified. Optional fields can be saved at any time.', 'trufield-portal' ) : __( '* Required fields must be complete before this phase can be submitted. Optional fields can be saved at any time.', 'trufield-portal' ) ); ?></p>
 
 <?php if ( ! $required_ok ) : ?>
 <div class="tf-missing-fields" role="status">
-<strong><?php esc_html_e( 'Mark Phase 1 Complete will appear after the remaining required details are filled in.', 'trufield-portal' ); ?></strong>
+<strong><?php echo esc_html( 1 === $phase ? __( 'Phase 1 verifies automatically after the remaining required details are filled in and saved.', 'trufield-portal' ) : __( 'Mark this phase complete after the remaining required details are filled in.', 'trufield-portal' ) ); ?></strong>
 <span><?php echo esc_html( implode( ', ', $missing ) ); ?></span>
 <span class="tf-missing-fields__note"><?php esc_html_e( 'If an assigned-record detail is missing and you cannot edit it here, contact the admin team.', 'trufield-portal' ); ?></span>
 </div>
@@ -381,21 +417,21 @@ data-tf-location-lng
 <span><?php esc_html_e( 'Keep your draft and come back later.', 'trufield-portal' ); ?></span>
 </div>
 <div class="tf-phase-form__action-help-item">
-<strong><?php esc_html_e( 'Mark Phase 1 Complete', 'trufield-portal' ); ?></strong>
-<span><?php esc_html_e( 'Submit this form for admin verification once every required field is ready.', 'trufield-portal' ); ?></span>
+<strong><?php echo esc_html( 1 === $phase ? __( 'Auto Verify', 'trufield-portal' ) : __( 'Complete Phase', 'trufield-portal' ) ); ?></strong>
+<span><?php echo esc_html( 1 === $phase ? __( 'Once every required field is present, saving the form verifies Phase 1 automatically.', 'trufield-portal' ) : __( 'Submit this form for verification once every required field is ready.', 'trufield-portal' ) ); ?></span>
 </div>
 </div>
 
 <div class="tf-phase-form__actions">
 <button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary" formnovalidate><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
-<?php if ( $prereq_met && $required_ok ) : ?>
+<?php if ( $phase !== 1 && $prereq_met && $required_ok ) : ?>
 <button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( __( 'Submit Phase 1 for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ) ); ?>');">
 <?php esc_html_e( 'Mark Phase 1 Complete', 'trufield-portal' ); ?>
 </button>
 <?php endif; ?>
 </div>
 <?php if ( $prereq_met && ! $required_ok ) : ?>
-<p class="tf-phase-form__complete-note"><?php esc_html_e( 'Mark Phase 1 Complete is unavailable until all required fields above are filled in.', 'trufield-portal' ); ?></p>
+<p class="tf-phase-form__complete-note"><?php echo esc_html( 1 === $phase ? __( 'Phase 1 will verify automatically after all required fields above are filled in and saved.', 'trufield-portal' ) : __( 'This phase cannot be completed until all required fields above are filled in.', 'trufield-portal' ) ); ?></p>
 <?php endif; ?>
 </form>
 <?php endif; ?>

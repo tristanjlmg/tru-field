@@ -69,6 +69,77 @@
     });
   }
 
+  function initTrialSearch() {
+    var searchWrapper = document.querySelector('[data-tf-trial-search]');
+    var input = searchWrapper && searchWrapper.querySelector('[data-tf-trial-search-input]');
+    var hint = searchWrapper && searchWrapper.querySelector('[data-tf-trial-search-hint]');
+    var grid = document.querySelector('[data-tf-trial-grid]');
+    var emptyState = document.querySelector('[data-tf-trial-empty]');
+    var count = document.querySelector('[data-tf-trial-count]');
+
+    if (!searchWrapper || !input || !grid) {
+      return;
+    }
+
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('[data-tf-trial-card]'));
+    var totalCount = cards.length;
+
+    function updateCount(visibleCount) {
+      if (!count) {
+        return;
+      }
+
+      var singularLabel = count.getAttribute('data-singular-label') || 'record';
+      var pluralLabel = count.getAttribute('data-plural-label') || 'records';
+      count.textContent = visibleCount + ' ' + (visibleCount === 1 ? singularLabel : pluralLabel);
+    }
+
+    function updateHint(query, visibleCount) {
+      if (!hint) {
+        return;
+      }
+
+      if (!query) {
+        hint.textContent = 'Start typing to filter the visible field cards instantly.';
+        return;
+      }
+
+      hint.textContent = visibleCount === 1
+        ? '1 matching trial'
+        : visibleCount + ' matching trials';
+    }
+
+    function applyFilter() {
+      var query = String(input.value || '').trim().toLowerCase();
+      var visibleCount = 0;
+
+      cards.forEach(function (card) {
+        var haystack = String(card.getAttribute('data-tf-search') || '').toLowerCase();
+        var isMatch = !query || haystack.indexOf(query) !== -1;
+
+        card.hidden = !isMatch;
+        card.setAttribute('aria-hidden', isMatch ? 'false' : 'true');
+
+        if (isMatch) {
+          visibleCount += 1;
+        }
+      });
+
+      updateCount(visibleCount);
+      updateHint(query, visibleCount);
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount !== 0;
+      }
+    }
+
+    input.addEventListener('input', applyFilter);
+    input.addEventListener('search', applyFilter);
+
+    updateCount(totalCount);
+    updateHint('', totalCount);
+  }
+
   function initNavToggle() {
     var button = document.querySelector('.tf-nav-toggle');
     var navId = button && button.getAttribute('aria-controls');
@@ -633,6 +704,7 @@
     initAlertDismiss();
     initNavToggle();
     initShowMore();
+    initTrialSearch();
     ensurePhaseLocationBindings(0);
   }
 
