@@ -26,12 +26,19 @@ $assigned_rep_id    = (int) get_post_meta( $post_id, 'assigned_sales_rep', true 
 $assigned_rep       = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
 $record_status      = get_post_meta( $post_id, 'record_status', true ) ?: 'active';
 $retailer_name      = get_post_meta( $post_id, 'retailer_name', true );
+$retailer_contact   = get_post_meta( $post_id, 'retailer_key_contact', true );
+$rsm_bam            = get_post_meta( $post_id, 'rsm_bam', true );
+$fsa                = get_post_meta( $post_id, 'fsa', true );
+$import_city        = get_post_meta( $post_id, 'import_city', true );
+$import_state       = get_post_meta( $post_id, 'import_state', true );
 $farm_name          = get_post_meta( $post_id, 'farm_name', true );
 $field_location     = get_post_meta( $post_id, 'field_location_address', true );
 $phase_1_status     = trufield_get_phase_status( $post_id, 1 );
 $phase_1_verified   = (bool) get_post_meta( $post_id, 'phase_1_verified', true );
 $phase_1_missing    = trufield_get_missing_required_fields( $post_id, 1 );
 $phase_1_required_ok = empty( $phase_1_missing );
+$phase_1_validation_missing = trufield_get_missing_validation_fields( $post_id, 1 );
+$phase_1_validation_ok = empty( $phase_1_validation_missing );
 $phase_1_can_edit   = trufield_can_edit_phase( $post_id, 1, $user_id );
 $phase_verified     = [];
 $phase_statuses     = [];
@@ -43,32 +50,45 @@ $step_titles        = [
 
 if ( $phase_1_verified ) {
 	$phase_1_panel_title = __( 'Phase 1 verified', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'All required Phase 1 details are complete and this record is now verified.', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'The required Phase 1 details are complete and this record now counts as 1 valid grower entry.', 'trufield-portal' );
 	$phase_1_panel_note  = __( 'Phases 2 and 3 are separate forms and will stay unavailable until a later rollout.', 'trufield-portal' );
 } elseif ( $phase_1_status === 'completed' ) {
-	$phase_1_panel_title = __( 'Phase 1 complete', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Phase 1 is complete and this record is currently locked for edits.', 'trufield-portal' );
-	$phase_1_panel_note  = __( 'You can review the submitted details below. Future phases remain placeholders for now.', 'trufield-portal' );
-} elseif ( $phase_1_status === 'in_progress' && $phase_1_required_ok ) {
-	$phase_1_panel_title = __( 'Ready to verify Phase 1', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Every required Phase 1 detail is present. Save once more and the record will verify automatically.', 'trufield-portal' );
+	$phase_1_panel_title = __( 'Phase 1 needs final details', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'This record will count as a valid grower entry after the remaining required Phase 1 details are filled in and saved.', 'trufield-portal' );
+	$phase_1_panel_note  = __( 'Finish the remaining Phase 1 fields below. Future phases remain placeholders for now.', 'trufield-portal' );
+} elseif ( $phase_1_status === 'in_progress' && $phase_1_validation_ok ) {
+	$phase_1_panel_title = __( 'Ready to count as a valid entry', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Every required Phase 1 field is present. Save once more if needed and this record will count as 1 valid grower entry.', 'trufield-portal' );
 	$phase_1_panel_note  = __( 'You can still save your draft and return later if needed.', 'trufield-portal' );
+	} elseif ( $phase_1_status === 'in_progress' && $phase_1_required_ok ) {
+	$phase_1_panel_title = __( 'Required details are complete', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'The required fields are done, but a valid grower entry still needs the remaining required Phase 1 details completed.', 'trufield-portal' );
+	$phase_1_panel_note  = sprintf(
+		/* translators: %d = number of remaining phase 1 fields for validation. */
+		_n(
+			'%d required Phase 1 field still needs attention before this record counts as a valid grower entry.',
+			'%d required Phase 1 fields still need attention before this record counts as a valid grower entry.',
+			count( $phase_1_validation_missing ),
+			'trufield-portal'
+		),
+		count( $phase_1_validation_missing )
+	);
 } elseif ( $phase_1_status === 'in_progress' ) {
 	$phase_1_panel_title = __( 'Phase 1 draft in progress', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Continue filling in the required Phase 1 details for this assigned record. Save progress anytime and return later.', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Continue filling in the Phase 1 details for this assigned record. Save progress anytime and return later.', 'trufield-portal' );
 	$phase_1_panel_note  = sprintf(
 		/* translators: %d = number of missing required fields. */
 		_n(
-			'%d required detail still needs attention before Phase 1 can be completed.',
-			'%d required details still need attention before Phase 1 can be completed.',
-			count( $phase_1_missing ),
+			'%d required Phase 1 field still needs attention before this record counts as a valid grower entry.',
+			'%d required Phase 1 fields still need attention before this record counts as a valid grower entry.',
+			count( $phase_1_validation_missing ),
 			'trufield-portal'
 		),
-		count( $phase_1_missing )
+		count( $phase_1_validation_missing )
 	);
 } else {
 	$phase_1_panel_title = __( 'Start Phase 1', 'trufield-portal' );
-	$phase_1_panel_copy  = __( 'Phase 1 is the only active form for this record right now. Complete the setup details below, then mark the phase complete when it is ready.', 'trufield-portal' );
+	$phase_1_panel_copy  = __( 'Phase 1 is the only active form for this record right now. Fill out the required Phase 1 fields below for this record to count as 1 valid grower entry.', 'trufield-portal' );
 	$phase_1_panel_note  = $phase_1_can_edit
 		? __( 'Optional details can be added before submission, but Phases 2 and 3 are not available yet.', 'trufield-portal' )
 		: __( 'If this record should be assigned to you for Phase 1 work, contact the admin team.', 'trufield-portal' );
@@ -86,9 +106,10 @@ $phase_statuses[ $phase ] = trufield_get_phase_status( $post_id, $phase );
 <div class="tf-alert tf-alert--success" role="alert">
 <?php
 if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
-	echo esc_html( sprintf( __( 'Phase %d submitted for admin verification.', 'trufield-portal' ), (int) $matches[1] ) );
+	$phase = (int) $matches[1];
+	echo esc_html( sprintf( trufield_phase_auto_verifies( $phase ) ? __( 'Phase %d saved. It will count once the required fields are complete.', 'trufield-portal' ) : __( 'Phase %d submitted for admin verification.', 'trufield-portal' ), $phase ) );
 	} elseif ( 'phase_1_autoverified' === $success ) {
-		esc_html_e( 'Phase 1 verified automatically once all required details were completed.', 'trufield-portal' );
+		esc_html_e( 'Phase 1 counted as a valid grower entry once the required Phase 1 fields were completed.', 'trufield-portal' );
 } elseif ( 'address_verified' === $success ) {
 	esc_html_e( 'Field location verified. Latitude and longitude were updated.', 'trufield-portal' );
 } else {
@@ -118,8 +139,23 @@ if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 <?php if ( $retailer_name ) : ?>
 <span><strong><?php esc_html_e( 'Retailer:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $retailer_name ); ?></span>
 <?php endif; ?>
+<?php if ( $retailer_contact ) : ?>
+<span><strong><?php esc_html_e( 'Retailer Contact:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $retailer_contact ); ?></span>
+<?php endif; ?>
+<?php if ( $rsm_bam ) : ?>
+<span><strong><?php esc_html_e( 'RSM / BAM:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $rsm_bam ); ?></span>
+<?php endif; ?>
+<?php if ( $fsa ) : ?>
+<span><strong><?php esc_html_e( 'FSA:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $fsa ); ?></span>
+<?php endif; ?>
 <?php if ( $farm_name ) : ?>
 <span><strong><?php esc_html_e( 'Farm:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $farm_name ); ?></span>
+<?php endif; ?>
+<?php if ( $import_city ) : ?>
+<span><strong><?php esc_html_e( 'City:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $import_city ); ?></span>
+<?php endif; ?>
+<?php if ( $import_state ) : ?>
+<span><strong><?php esc_html_e( 'Imported State:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $import_state ); ?></span>
 <?php endif; ?>
 <?php if ( $field_location ) : ?>
 <span><strong><?php esc_html_e( 'Location:', 'trufield-portal' ); ?></strong> <?php echo esc_html( $field_location ); ?></span>
@@ -162,7 +198,7 @@ if ( $phase === 1 ) {
 <span class="tf-step__num"><?php echo esc_html( sprintf( __( 'Phase %d', 'trufield-portal' ), $phase ) ); ?></span>
 <span class="tf-step__name"><?php echo esc_html( $step_titles[ $phase ] ); ?></span>
 <?php if ( $phase === 1 && $state === 'completed-pending' ) : ?>
-<span class="tf-step__note"><?php esc_html_e( 'Awaiting Admin Verification', 'trufield-portal' ); ?></span>
+<span class="tf-step__note"><?php esc_html_e( 'Needs remaining Phase 1 fields', 'trufield-portal' ); ?></span>
 <?php elseif ( $phase === 1 ) : ?>
 <span class="tf-step__note"><?php esc_html_e( 'Current form', 'trufield-portal' ); ?></span>
 <?php elseif ( $phase > 1 ) : ?>

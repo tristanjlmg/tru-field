@@ -95,7 +95,7 @@ acf_add_local_field_group( [
 ],
 [
 'key'   => 'field_tf_retailer_key_contact',
-'label' => 'Retailer Key Contact',
+'label' => 'Retailer Contact',
 'name'  => 'retailer_key_contact',
 'type'  => 'text',
 ],
@@ -104,27 +104,35 @@ acf_add_local_field_group( [
 'label'    => 'Grower Name / Farm Name',
 'name'     => 'farm_name',
 'type'     => 'text',
-'required' => 1,
+'required' => 0,
 ],
 [
 'key'      => 'field_tf_field_trial_contact',
-'label'    => 'Field Trial Contact',
+'label'    => 'Crop Specialist / Field Trial Contact (First Last)',
 'name'     => 'field_trial_contact',
 'type'     => 'text',
 'required' => 1,
 ],
 [
 'key'   => 'field_tf_contact_phone',
-'label' => 'Contact Phone',
+'label' => 'Crop Specialist / Field Trial Contact Phone',
 'name'  => 'contact_phone',
 'type'  => 'text',
+'required' => 1,
+],
+[
+'key'      => 'field_tf_field_trial_contact_email',
+'label'    => 'Field Trial Contact Email',
+'name'     => 'field_trial_contact_email',
+'type'     => 'email',
+'required' => 1,
 ],
 [
 'key'      => 'field_tf_field_name',
 'label'    => 'Field Name / Field ID',
 'name'     => 'field_name',
 'type'     => 'text',
-'required' => 1,
+'required' => 0,
 ],
 // The Google Places map field below will automatically populate the address, latitude, and longitude fields when a location is selected
 [
@@ -177,32 +185,10 @@ acf_add_local_field_group( [
 'fields'                => [
 [
 'key'      => 'field_tf_phase_1_state_region',
-'label'    => 'State / Region',
+'label'    => 'State',
 'name'     => 'phase_1_state_region',
 'type'     => 'text',
 'required' => 1,
-],
-[
-'key'      => 'field_tf_phase_1_product_being_tested',
-'label'    => 'Product Being Tested',
-'name'     => 'phase_1_product_being_tested',
-'type'     => 'text',
-'required' => 1,
-],
-[
-'key'           => 'field_tf_phase_1_application_type',
-'label'         => 'Application Type',
-'name'          => 'phase_1_application_type',
-'type'          => 'select',
-'choices'       => [
-'in_furrow'      => 'In-Furrow',
-'seed_treatment' => 'Seed Treatment',
-'foliar'         => 'Foliar',
-'other'          => 'Other',
-],
-'allow_null'    => 1,
-'return_format' => 'value',
-'required'      => 1,
 ],
 [
 'key'            => 'field_tf_phase_1_application_date',
@@ -215,49 +201,11 @@ acf_add_local_field_group( [
 ],
 [
 'key'         => 'field_tf_phase_1_application_rate',
-'label'       => 'Application Rate',
+'label'       => 'Applied Rate (oz/ac)',
 'name'        => 'phase_1_application_rate',
 'type'        => 'text',
 'required'    => 1,
 'placeholder' => 'e.g. 32 oz/ac',
-],
-[
-'key'           => 'field_tf_phase_1_trial_design',
-'label'         => 'Trial Design',
-'name'          => 'phase_1_trial_design',
-'type'          => 'select',
-'choices'       => [
-'strip'        => 'Strip',
-'side_by_side' => 'Side-by-Side',
-'demo'         => 'Demo',
-],
-'allow_null'    => 1,
-'return_format' => 'value',
-'required'      => 1,
-],
-[
-'key'         => 'field_tf_phase_1_growth_stage_at_application',
-'label'       => 'Growth Stage at Application',
-'name'        => 'phase_1_growth_stage_at_application',
-'type'        => 'text',
-'required'    => 1,
-'placeholder' => 'e.g. V3',
-],
-[
-'key'      => 'field_tf_phase_1_weather_conditions_at_application',
-'label'    => 'Weather Conditions at Application',
-'name'     => 'phase_1_weather_conditions_at_application',
-'type'     => 'textarea',
-'rows'     => 2,
-'required' => 1,
-],
-[
-'key'      => 'field_tf_phase_1_soil_conditions_at_application',
-'label'    => 'Soil Conditions at Application',
-'name'     => 'phase_1_soil_conditions_at_application',
-'type'     => 'textarea',
-'rows'     => 2,
-'required' => 1,
 ],
 [
 'key'           => 'field_tf_phase_1_trial_type',
@@ -265,10 +213,8 @@ acf_add_local_field_group( [
 'name'          => 'phase_1_trial_type',
 'type'          => 'select',
 'choices'       => [
-'standard'    => 'Standard Trial',
-'split_field' => 'Split Field',
-'replicated'  => 'Replicated',
-'on_farm'     => 'On-Farm',
+	'full_field'   => 'Full Field',
+	'side_by_side' => 'Side by Side',
 ],
 'allow_null'    => 1,
 'return_format' => 'value',
@@ -288,7 +234,7 @@ acf_add_local_field_group( [
 'label'    => 'Carrier Volume (Gal)',
 'name'     => 'phase_1_carrier_volume_gal',
 'type'     => 'number',
-'required' => 1,
+'required' => 0,
 'min'      => 0,
 'step'     => '0.1',
 ],
@@ -296,9 +242,99 @@ acf_add_local_field_group( [
 'key'         => 'field_tf_phase_1_protocol_version',
 'label'       => 'Protocol Version',
 'name'        => 'phase_1_protocol_version',
-'type'        => 'text',
+'type'        => 'select',
 'required'    => 1,
-'placeholder' => 'e.g. v2.1',
+'choices'     => [
+	'corn_residue_spring'        => 'Corn Residue Spring',
+	'corn_residue_fall'          => 'Corn Residue Fall',
+	'corn_residue_preplant_soy'  => 'Corn Residue Pre-Plant Soy',
+	'wheat_residue_preplant_soy' => 'Wheat Residue Pre-Plant Soy',
+	'soy_residue_spring'         => 'Soy Residue Spring',
+	'soybeans_double_crop'       => 'Soybeans Double Crop',
+],
+'ui'          => 1,
+],
+[
+'key'           => 'field_tf_phase_1_application_timing',
+'label'         => 'Application Timing',
+'name'          => 'phase_1_application_timing',
+'type'          => 'select',
+'choices'       => [
+	'spring_2026' => 'Spring 2026',
+	'fall_2026'   => 'Fall 2026',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 1,
+],
+[
+'key'            => 'field_tf_phase_1_retailer_training_discussion_date',
+'label'          => 'Retailer Product Training/Discussion Date',
+'name'           => 'phase_1_retailer_training_discussion_date',
+'type'           => 'date_picker',
+'display_format' => 'm/d/Y',
+'return_format'  => 'Y-m-d',
+'required'       => 1,
+],
+[ 
+'key'      => 'field_tf_phase_1_product_being_tested',
+'label'    => 'Product Being Tested',
+'name'     => 'phase_1_product_being_tested',
+'type'     => 'text',
+'required' => 0,
+],
+[ 
+'key'           => 'field_tf_phase_1_application_type',
+'label'         => 'Application Type',
+'name'          => 'phase_1_application_type',
+'type'          => 'select',
+'choices'       => [
+'in_furrow'      => 'In-Furrow',
+'seed_treatment' => 'Seed Treatment',
+'foliar'         => 'Foliar',
+'other'          => 'Other',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[ 
+'key'           => 'field_tf_phase_1_trial_design',
+'label'         => 'Trial Design',
+'name'          => 'phase_1_trial_design',
+'type'          => 'select',
+'choices'       => [
+'strip'        => 'Strip',
+'side_by_side' => 'Side-by-Side',
+'demo'         => 'Demo',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[ 
+'key'         => 'field_tf_phase_1_growth_stage_at_application',
+'label'       => 'Growth Stage at Application',
+'name'        => 'phase_1_growth_stage_at_application',
+'type'        => 'text',
+'required'    => 0,
+'placeholder' => 'e.g. V3',
+],
+[ 
+'key'      => 'field_tf_phase_1_weather_conditions_at_application',
+'label'    => 'Weather Conditions at Application',
+'name'     => 'phase_1_weather_conditions_at_application',
+'type'     => 'textarea',
+'rows'     => 2,
+'required' => 0,
+],
+[ 
+'key'      => 'field_tf_phase_1_soil_conditions_at_application',
+'label'    => 'Soil Conditions at Application',
+'name'     => 'phase_1_soil_conditions_at_application',
+'type'     => 'textarea',
+'rows'     => 2,
+'required' => 0,
 ],
 [
 'key'   => 'field_tf_phase_1_hybrid_variety',
@@ -827,6 +863,72 @@ acf_add_local_field_group( [
 'instruction_placement' => 'label',
 'active'                => true,
 ] );
+}
+
+add_filter( 'acf/load_field', 'trufield_relax_required_acf_fields_for_admins', 20 );
+function trufield_relax_required_acf_fields_for_admins( array $field ): array {
+	if ( empty( $field['required'] ) || ! trufield_should_relax_admin_plant_field_validation() ) {
+		return $field;
+	}
+
+	$field['required'] = 0;
+
+	return $field;
+}
+
+add_filter( 'acf/validate_value', 'trufield_allow_admin_incomplete_plant_fields', 20, 4 );
+function trufield_allow_admin_incomplete_plant_fields( $valid, $value, array $field, $input_name ) {
+	if ( true === $valid || empty( $field['required'] ) || ! trufield_should_relax_admin_plant_field_validation() ) {
+		return $valid;
+	}
+
+	return true;
+}
+
+function trufield_should_relax_admin_plant_field_validation(): bool {
+	if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+		return false;
+	}
+
+	$post_id = trufield_get_current_admin_plant_field_id();
+	if ( $post_id > 0 ) {
+		return get_post_type( $post_id ) === 'plant_field';
+	}
+
+	if ( function_exists( 'get_current_screen' ) ) {
+		$screen = get_current_screen();
+		if ( $screen && $screen->post_type === 'plant_field' ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function trufield_get_current_admin_plant_field_id(): int {
+	$candidates = [
+		$_POST['post_ID'] ?? null,
+		$_POST['post_id'] ?? null,
+		$_POST['_acf_post_id'] ?? null,
+		$_GET['post'] ?? null,
+	];
+
+	foreach ( $candidates as $candidate ) {
+		if ( ! is_scalar( $candidate ) ) {
+			continue;
+		}
+
+		$value = (string) wp_unslash( $candidate );
+		if ( preg_match( '/^post_(\d+)$/', $value, $matches ) ) {
+			return (int) $matches[1];
+		}
+
+		if ( ctype_digit( $value ) ) {
+			return (int) $value;
+		}
+	}
+
+	return 0;
 }
 
 function trufield_acf_location_rule(): array {

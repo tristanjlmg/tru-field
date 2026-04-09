@@ -57,13 +57,15 @@
       btn.addEventListener('click', function () {
         var content = btn.parentNode.querySelector('.tf-show-more__content');
         var expanded = btn.getAttribute('aria-expanded') === 'true';
+        var showLabel = btn.getAttribute('data-show-label') || 'Show optional fields';
+        var hideLabel = btn.getAttribute('data-hide-label') || 'Hide optional fields';
         btn.setAttribute('aria-expanded', String(!expanded));
         if (expanded) {
           content.hidden = true;
-          btn.querySelector('.tf-show-more__toggle-text').textContent = 'Show optional fields';
+          btn.querySelector('.tf-show-more__toggle-text').textContent = showLabel;
         } else {
           content.hidden = false;
-          btn.querySelector('.tf-show-more__toggle-text').textContent = 'Hide optional fields';
+          btn.querySelector('.tf-show-more__toggle-text').textContent = hideLabel;
         }
       });
     });

@@ -18,7 +18,7 @@ $current_uid = get_current_user_id();
 <strong><?php esc_html_e( '5-Grower Threshold', 'trufield-portal' ); ?></strong><br>
 <?php
 	printf(
-		esc_html__( 'Each retailer awards %1$d points once a rep reaches at least %2$d valid Phase 1 entries for that retailer.', 'trufield-portal' ),
+		esc_html__( 'Each retailer awards %1$d Phase 1 points once a rep reaches at least %2$d valid grower entries for that retailer. Rankings are based on total points across all phases.', 'trufield-portal' ),
 		trufield_get_retailer_points_award(),
 		trufield_get_retailer_points_threshold()
 	);
@@ -34,7 +34,7 @@ $current_uid = get_current_user_id();
 <tr>
 <th scope="col" class="tf-table__rank"><?php esc_html_e( 'Rank', 'trufield-portal' ); ?></th>
 <th scope="col"><?php esc_html_e( 'Rep', 'trufield-portal' ); ?></th>
-<th scope="col" class="tf-table__num"><?php esc_html_e( 'Points', 'trufield-portal' ); ?></th>
+<th scope="col" class="tf-table__num"><?php esc_html_e( 'Total Points', 'trufield-portal' ); ?></th>
 <th scope="col" class="tf-table__num"><?php esc_html_e( 'Valid Entries', 'trufield-portal' ); ?></th>
 <th scope="col" class="tf-table__num"><?php esc_html_e( 'Retailers Awarded', 'trufield-portal' ); ?></th>
 <th scope="col" class="tf-table__num"><?php esc_html_e( 'Fields', 'trufield-portal' ); ?></th>

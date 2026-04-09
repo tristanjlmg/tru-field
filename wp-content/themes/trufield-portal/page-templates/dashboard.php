@@ -36,13 +36,14 @@ $field_count = count( $fields );
 					esc_url( get_permalink( $created_post_id ) )
 				);
 			} elseif ( preg_match( '/^phase_(\d)_completed$/', $success, $m ) ) {
+				$phase = (int) $m[1];
 				printf(
 					/* translators: %d = phase number */
-					esc_html__( 'Phase %d submitted for admin verification.', 'trufield-portal' ),
-					(int) $m[1]
+					esc_html__( trufield_phase_auto_verifies( $phase ) ? 'Phase %d saved. It will count once the required fields are complete.' : 'Phase %d submitted for admin verification.', 'trufield-portal' ),
+					$phase
 				);
 			} elseif ( 'phase_1_autoverified' === $success ) {
-				esc_html_e( 'Phase 1 verified automatically once all required details were completed.', 'trufield-portal' );
+				esc_html_e( 'Phase 1 counted as a valid grower entry once the required Phase 1 fields were completed.', 'trufield-portal' );
 			} else {
 				esc_html_e( 'Phase 1 progress saved.', 'trufield-portal' );
 			}

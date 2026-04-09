@@ -23,6 +23,14 @@ function trufield_get_retailer_points_award(): int {
 	return (int) ( TRUFIELD_PHASE_POINTS[1] ?? 0 );
 }
 
+function trufield_get_phase_points_award( int $phase ): int {
+	return (int) ( TRUFIELD_PHASE_POINTS[ $phase ] ?? 0 );
+}
+
+function trufield_phase_uses_retailer_threshold_scoring( int $phase ): bool {
+	return 1 === $phase;
+}
+
 function trufield_phase_is_verified( int $post_id, int $phase ): bool {
 return (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 }
@@ -36,6 +44,7 @@ function trufield_normalize_retailer_key( string $retailer_name ): string {
 function trufield_get_field_score( int $post_id ): array {
 $verified_phases  = 0;
 $completed_phases = 0;
+	$verified_points  = 0;
 
 foreach ( [ 1, 2, 3 ] as $phase ) {
 if ( trufield_get_phase_status( $post_id, $phase ) === 'completed' ) {
@@ -44,6 +53,9 @@ if ( trufield_get_phase_status( $post_id, $phase ) === 'completed' ) {
 
 if ( trufield_phase_is_verified( $post_id, $phase ) ) {
 ++$verified_phases;
+		if ( ! trufield_phase_uses_retailer_threshold_scoring( $phase ) ) {
+			$verified_points += trufield_get_phase_points_award( $phase );
+		}
 }
 }
 
@@ -52,8 +64,8 @@ $phase_1_valid = trufield_phase_is_verified( $post_id, 1 );
 
 return [
 'pending'          => 0,
-'verified'         => $phase_1_valid ? trufield_get_retailer_points_award() : 0,
-'total'            => $phase_1_valid ? trufield_get_retailer_points_award() : 0,
+'verified'         => $verified_points,
+'total'            => $verified_points,
 'verified_phases'  => $verified_phases,
 'completed_phases' => $completed_phases,
 'valid_phase_1'    => $phase_1_valid ? 1 : 0,
@@ -81,6 +93,8 @@ $agg    = [
 foreach ( $fields as $post ) {
 $score = trufield_get_field_score( $post->ID );
 
+		$agg['verified']         += $score['verified'];
+		$agg['total']            += $score['total'];
 $agg['verified_phases']  += $score['verified_phases'];
 $agg['completed_phases'] += $score['completed_phases'];
 $agg['field_count']++;
@@ -117,8 +131,8 @@ $agg['completed_fields']++;
 	}
 
 	$agg['retailer_count'] = count( $retailer_valid_counts );
-	$agg['points']         = $agg['awarded_retailers'] * $award;
-	$agg['verified']       = $agg['points'];
+	$agg['points']         = $agg['total'] + ( $agg['awarded_retailers'] * $award );
+	$agg['verified']      += $agg['awarded_retailers'] * $award;
 	$agg['total']          = $agg['points'];
 
 return $agg;

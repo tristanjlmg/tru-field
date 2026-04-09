@@ -33,22 +33,17 @@ function trufield_get_required_fields( int $phase ): array {
 $required = [
 1 => [
 'retailer_name',
-'farm_name',
-'field_name',
+'contact_phone',
+'field_trial_contact_email',
 'field_trial_contact',
 'phase_1_state_region',
-'phase_1_product_being_tested',
-'phase_1_application_type',
 'phase_1_application_date',
 'phase_1_application_rate',
-'phase_1_trial_design',
-'phase_1_growth_stage_at_application',
-'phase_1_weather_conditions_at_application',
-'phase_1_soil_conditions_at_application',
 'phase_1_trial_type',
 'phase_1_treated_size_acres',
-'phase_1_carrier_volume_gal',
 'phase_1_protocol_version',
+'phase_1_application_timing',
+'phase_1_retailer_training_discussion_date',
 ],
 2 => [
 'phase_2_application_type',
@@ -76,21 +71,43 @@ $required = [
 return $required[ $phase ] ?? [];
 }
 
+function trufield_phase_validates_from_full_form( int $phase ): bool {
+	return false;
+}
+
+function trufield_get_validation_fields( int $phase ): array {
+	if ( ! trufield_phase_validates_from_full_form( $phase ) ) {
+		return trufield_get_required_fields( $phase );
+	}
+
+	return array_values(
+		array_filter(
+			trufield_rep_editable_phase_fields( $phase ),
+			static function ( string $field ): bool {
+					return ! in_array( $field, [ 'field_location_manual_override', 'farm_name', 'field_name' ], true );
+			}
+		)
+	);
+}
+
 function trufield_field_labels(): array {
 return [
 'retailer_name'                       => 'Retailer Name',
+'retailer_key_contact'                => 'Retailer Contact',
 'farm_name'                           => 'Grower Name / Farm Name',
-'field_trial_contact'                 => 'Field Trial Contact',
+'field_trial_contact'                 => 'Crop Specialist / Field Trial Contact (First Last)',
+'contact_phone'                       => 'Crop Specialist / Field Trial Contact Phone',
+'field_trial_contact_email'           => 'Field Trial Contact Email',
 'field_name'                          => 'Field Name / Field ID',
 'field_location_address'              => 'Field Location Address',
 'field_location_lat'                  => 'Field Latitude',
 'field_location_lng'                  => 'Field Longitude',
 'field_location_manual_override'      => 'Address unavailable - manual coordinate override',
-'phase_1_state_region'                => 'State / Region',
+'phase_1_state_region'                => 'State',
 'phase_1_product_being_tested'        => 'Product Being Tested',
 'phase_1_application_type'            => 'Application Type',
 'phase_1_application_date'            => 'Application Date',
-'phase_1_application_rate'            => 'Application Rate',
+'phase_1_application_rate'            => 'Applied Rate (oz/ac)',
 'phase_1_trial_design'                => 'Trial Design',
 'phase_1_growth_stage_at_application' => 'Growth Stage at Application',
 'phase_1_weather_conditions_at_application' => 'Weather Conditions at Application',
@@ -100,6 +117,8 @@ return [
 'phase_1_treated_size_acres'          => 'Treated Size (Acres)',
 'phase_1_carrier_volume_gal'          => 'Carrier Volume (Gal)',
 'phase_1_protocol_version'            => 'Protocol Version',
+'phase_1_application_timing'          => 'Application Timing',
+'phase_1_retailer_training_discussion_date' => 'Retailer Product Training/Discussion Date',
 'phase_1_hybrid_variety'              => 'Hybrid Variety',
 'phase_1_planting_date'               => 'Planting Date',
 'phase_1_planting_population'         => 'Planting Population',
@@ -148,6 +167,8 @@ return [
 'field_location_lat' => [ 'type' => 'number' ],
 'field_location_lng' => [ 'type' => 'number' ],
 'field_location_manual_override' => [ 'type' => 'boolean' ],
+'contact_phone' => [ 'type' => 'text' ],
+'field_trial_contact_email' => [ 'type' => 'email' ],
 'phase_1_state_region' => [ 'type' => 'text' ],
 'phase_1_product_being_tested' => [ 'type' => 'text' ],
 'phase_1_application_type' => [
@@ -176,15 +197,31 @@ return [
 'phase_1_trial_type' => [
 'type'    => 'select',
 'options' => [
-'standard'    => 'Standard Trial',
-'split_field' => 'Split Field',
-'replicated'  => 'Replicated',
-'on_farm'     => 'On-Farm',
+'full_field'   => 'Full Field',
+'side_by_side' => 'Side by Side',
 ],
 ],
 'phase_1_treated_size_acres' => [ 'type' => 'number' ],
 'phase_1_carrier_volume_gal' => [ 'type' => 'number' ],
-'phase_1_protocol_version' => [ 'type' => 'text' ],
+'phase_1_protocol_version' => [
+'type'    => 'select',
+'options' => [
+'corn_residue_spring'         => 'Corn Residue Spring',
+'corn_residue_fall'           => 'Corn Residue Fall',
+'corn_residue_preplant_soy'   => 'Corn Residue Pre-Plant Soy',
+'wheat_residue_preplant_soy'  => 'Wheat Residue Pre-Plant Soy',
+'soy_residue_spring'          => 'Soy Residue Spring',
+'soybeans_double_crop'        => 'Soybeans Double Crop',
+],
+],
+'phase_1_application_timing' => [
+'type'    => 'select',
+'options' => [
+'spring_2026' => 'Spring 2026',
+'fall_2026'   => 'Fall 2026',
+],
+],
+'phase_1_retailer_training_discussion_date' => [ 'type' => 'date' ],
 'phase_1_hybrid_variety' => [ 'type' => 'text' ],
 'phase_1_planting_date' => [ 'type' => 'date' ],
 'phase_1_planting_population' => [ 'type' => 'integer' ],
@@ -309,6 +346,47 @@ $missing[] = $labels[ $field ] ?? $field;
 return $missing;
 }
 
+function trufield_get_missing_validation_fields( int $post_id, int $phase ): array {
+	$labels  = trufield_field_labels();
+	$missing = [];
+
+	foreach ( trufield_get_validation_fields( $phase ) as $field ) {
+		if ( 1 === $phase && in_array( $field, [ 'field_location_address', 'field_location_lat', 'field_location_lng' ], true ) ) {
+			continue;
+		}
+
+		$value = get_post_meta( $post_id, $field, true );
+		if ( trim( (string) $value ) === '' ) {
+			$missing[] = $labels[ $field ] ?? $field;
+		}
+	}
+
+	if ( 1 === $phase ) {
+		$address  = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
+		$lat      = trim( (string) get_post_meta( $post_id, 'field_location_lat', true ) );
+		$lng      = trim( (string) get_post_meta( $post_id, 'field_location_lng', true ) );
+		$override = trufield_location_override_enabled( $post_id );
+
+		if ( ! $override && '' === $address ) {
+			$missing[] = $labels['field_location_address'] ?? 'Field Location Address';
+		}
+
+		if ( '' === $lat ) {
+			$missing[] = $labels['field_location_lat'] ?? 'Field Latitude';
+		}
+
+		if ( '' === $lng ) {
+			$missing[] = $labels['field_location_lng'] ?? 'Field Longitude';
+		}
+	}
+
+	return $missing;
+}
+
+function trufield_all_validation_fields_present( int $post_id, int $phase ): bool {
+	return [] === trufield_get_missing_validation_fields( $post_id, $phase );
+}
+
 function trufield_all_required_fields_present( int $post_id, int $phase ): bool {
 	return [] === trufield_get_missing_required_fields( $post_id, $phase );
 }
@@ -319,6 +397,7 @@ function trufield_phase_auto_verifies( int $phase ): bool {
 
 function trufield_sync_phase_verification_state( int $post_id, int $phase ): array {
 	$required_ok   = trufield_all_required_fields_present( $post_id, $phase );
+	$validation_ok = trufield_all_validation_fields_present( $post_id, $phase );
 	$auto_verify   = trufield_phase_auto_verifies( $phase );
 	$was_verified  = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 	$was_completed = trufield_get_phase_status( $post_id, $phase ) === 'completed';
@@ -328,13 +407,14 @@ function trufield_sync_phase_verification_state( int $post_id, int $phase ): arr
 		return [
 			'auto_verify'   => false,
 			'required_ok'   => $required_ok,
+			'validation_ok' => $required_ok,
 			'just_verified' => false,
 			'is_verified'   => $was_verified,
 			'is_completed'  => $was_completed,
 		];
 	}
 
-	if ( $required_ok ) {
+	if ( $validation_ok ) {
 		if ( ! $was_completed ) {
 			update_post_meta( $post_id, "phase_{$phase}_status", 'completed' );
 		}
@@ -365,6 +445,7 @@ function trufield_sync_phase_verification_state( int $post_id, int $phase ): arr
 	return [
 		'auto_verify'   => true,
 		'required_ok'   => $required_ok,
+		'validation_ok' => $validation_ok,
 		'just_verified' => $just_verified,
 		'is_verified'   => (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true ),
 		'is_completed'  => trufield_get_phase_status( $post_id, $phase ) === 'completed',
@@ -467,8 +548,11 @@ function trufield_rep_editable_phase_fields( int $phase ): array {
 $fields = [
 1 => [
 'retailer_name',
+'retailer_key_contact',
 'farm_name',
 'field_trial_contact',
+'contact_phone',
+'field_trial_contact_email',
 'field_name',
 'field_location_address',
 'field_location_lat',
@@ -488,6 +572,8 @@ $fields = [
 'phase_1_treated_size_acres',
 'phase_1_carrier_volume_gal',
 'phase_1_protocol_version',
+'phase_1_application_timing',
+'phase_1_retailer_training_discussion_date',
 'phase_1_hybrid_variety',
 'phase_1_planting_date',
 'phase_1_planting_population',
@@ -572,6 +658,10 @@ return $value === '' ? '' : (float) $value;
 case 'url':
 $value = trim( (string) $value );
 return $value === '' ? '' : esc_url_raw( $value );
+
+case 'email':
+	$value = trim( (string) $value );
+	return $value === '' ? '' : sanitize_email( $value );
 
 case 'textarea':
 $value = sanitize_textarea_field( (string) $value );
