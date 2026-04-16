@@ -30,7 +30,7 @@ function trufield_asset_version( string $relative_path ): string {
  * Add 2 and/or 3 to this array when those phases are ready to go live.
  * Drives ACF field group visibility and admin column display.
  */
-define( 'TRUFIELD_ACTIVE_PHASES', [ 1 ] );
+define( 'TRUFIELD_ACTIVE_PHASES', [ 1, 2 ] );
 
 // ── Modular includes ────────────────────────────────────────────────────────
 $trufield_includes = [

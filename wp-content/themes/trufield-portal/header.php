@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 $current_user = wp_get_current_user();
+$is_public_auth = trufield_current_page_is_public_auth() && ! is_user_logged_in();
 ?><!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -18,8 +19,16 @@ $current_user = wp_get_current_user();
 <?php wp_body_open(); ?>
 
 <div class="tf-portal-wrap">
-	<header class="tf-header">
+	<header class="tf-header<?php echo $is_public_auth ? ' tf-header--public-auth' : ''; ?>">
 		<div class="tf-header__inner">
+			<?php if ( $is_public_auth ) : ?>
+				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="tf-header__logo tf-header__logo--auth" aria-label="<?php esc_attr_e( 'TruField Portal home', 'trufield-portal' ); ?>">
+					<span class="tf-brand-wordmark" aria-hidden="true">
+						<span class="tf-brand-wordmark__name">TruField</span>
+						<span class="tf-brand-wordmark__badge">Portal</span>
+					</span>
+				</a>
+			<?php else : ?>
 			<a href="<?php echo esc_url( trufield_dashboard_url() ); ?>" class="tf-header__logo">
 				<?php bloginfo( 'name' ); ?>
 				<span class="tf-header__portal-badge">Portal</span>
@@ -53,13 +62,17 @@ $current_user = wp_get_current_user();
 						<?php esc_html_e( 'WP Admin', 'trufield-portal' ); ?>
 					</a>
 				<?php endif; ?>
+				<a href="<?php echo esc_url( wp_logout_url() ); ?>" class="tf-nav__link tf-nav__link--logout">
+					<?php esc_html_e( 'Log Out', 'trufield-portal' ); ?>
+				</a>
 			</nav>
 			<div class="tf-header__user">
-				<span><?php echo esc_html( $current_user->display_name ); ?></span>
-				<a href="<?php echo esc_url( wp_logout_url() ); ?>" class="tf-btn tf-btn--sm tf-btn--ghost">
+				<span class="tf-header__greeting"><?php printf( esc_html__( 'Hi %s', 'trufield-portal' ), esc_html( $current_user->display_name ) ); ?></span>
+				<a href="<?php echo esc_url( wp_logout_url() ); ?>" class="tf-btn tf-btn--sm tf-btn--ghost tf-header__logout">
 					<?php esc_html_e( 'Log Out', 'trufield-portal' ); ?>
 				</a>
 			</div>
+			<?php endif; ?>
 			<?php endif; ?>
 		</div>
 	</header>

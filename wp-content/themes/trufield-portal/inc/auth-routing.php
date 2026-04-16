@@ -66,6 +66,13 @@ function trufield_forgot_password_url(): string {
 }
 
 /**
+ * Get the URL of the frontend forgot username page.
+ */
+function trufield_forgot_username_url(): string {
+	return add_query_arg( 'mode', 'username', trufield_forgot_password_url() );
+}
+
+/**
  * Get the URL of the frontend reset password page.
  */
 function trufield_reset_password_url(): string {
@@ -142,6 +149,15 @@ return false;
 return get_page_template_slug( get_the_ID() ) === 'page-templates/reset-password.php';
 }
 
+/**
+ * Whether the current page is a public auth page.
+ */
+function trufield_current_page_is_public_auth(): bool {
+	return trufield_current_page_is_login()
+		|| trufield_current_page_is_forgot_password()
+		|| trufield_current_page_is_reset_password();
+}
+
 // ── Protect portal content ─────────────────────────────────────────────────
 add_action( 'template_redirect', 'trufield_gate_portal_access' );
 function trufield_gate_portal_access(): void {
@@ -155,9 +171,7 @@ return;
 }
 
 if (
-trufield_current_page_is_login()
-|| trufield_current_page_is_forgot_password()
-|| trufield_current_page_is_reset_password()
+trufield_current_page_is_public_auth()
 ) {
 return;
 }
@@ -184,9 +198,7 @@ return;
 }
 
 if (
-trufield_current_page_is_login()
-|| trufield_current_page_is_forgot_password()
-|| trufield_current_page_is_reset_password()
+trufield_current_page_is_public_auth()
 ) {
 wp_safe_redirect( trufield_dashboard_url() );
 exit;
@@ -300,13 +312,12 @@ wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
 
 $username = sanitize_user( wp_unslash( $_POST['log'] ?? '' ) );
 $password = wp_unslash( $_POST['pwd'] ?? '' );
-$remember = ! empty( $_POST['rememberme'] );
 
 $user = wp_signon(
 [
 'user_login'    => $username,
 'user_password' => $password,
-'remember'      => $remember,
+'remember'      => false,
 ],
 false
 );
@@ -322,6 +333,7 @@ exit;
 
 // ── Handle forgot password form submission ─────────────────────────────────
 add_action( 'admin_post_nopriv_trufield_forgot_password', 'trufield_handle_forgot_password' );
+add_action( 'admin_post_nopriv_trufield_forgot_username', 'trufield_handle_forgot_username' );
 
 /**
  * Handle local development forgot-password flow without sending email.
@@ -388,6 +400,42 @@ exit;
 
 wp_safe_redirect( add_query_arg( 'fp_sent', '1', $forgot_url ) );
 exit;
+}
+
+/**
+ * Handle forgot username form submission.
+ */
+function trufield_handle_forgot_username(): void {
+	$username_url = trufield_forgot_username_url();
+	$nonce        = sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) );
+
+	if ( ! wp_verify_nonce( $nonce, 'trufield_forgot_username' ) ) {
+		wp_safe_redirect( add_query_arg( 'fu_error', 'invalid_nonce', $username_url ) );
+		exit;
+	}
+
+	$email = sanitize_email( wp_unslash( $_POST['user_email'] ?? '' ) );
+	if ( '' === $email || ! is_email( $email ) ) {
+		wp_safe_redirect( add_query_arg( 'fu_error', 'invalid_submission', $username_url ) );
+		exit;
+	}
+
+	$user = get_user_by( 'email', $email );
+	if ( ! ( $user instanceof WP_User ) ) {
+		wp_safe_redirect( add_query_arg( 'fu_error', 'not_found', $username_url ) );
+		exit;
+	}
+
+	wp_safe_redirect(
+		add_query_arg(
+			[
+				'fu_found'    => '1',
+				'fu_username' => $user->user_login,
+			],
+			$username_url
+		)
+	);
+	exit;
 }
 
 // ── Handle reset password form submission ──────────────────────────────────

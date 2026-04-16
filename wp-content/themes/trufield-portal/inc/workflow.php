@@ -46,15 +46,16 @@ $required = [
 'phase_1_retailer_training_discussion_date',
 ],
 2 => [
-'phase_2_application_type',
-'phase_2_application_date',
-'phase_2_verify_acres_treated',
-'phase_2_verify_carrier_volume_gal',
-'phase_2_soil_temp_f',
-'phase_2_emergence',
-'phase_2_stand_count',
-'phase_2_plant_heights',
-'phase_2_required_photos',
+'phase_2_rsm_visit_1_date',
+'phase_2_rsm_visit_1_upload_photos',
+'phase_2_rsm_visit_2_date',
+'phase_2_rsm_visit_2_upload_photos',
+'phase_2_residue_degradation_observed',
+'phase_2_emergence_stand_collected',
+'phase_2_stand_count_data',
+'phase_2_average_stand_count_treated',
+'phase_2_average_stand_count_untreated',
+'phase_2_most_significant_visual_difference',
 ],
 3 => [
 'phase_3_yield_bu_ac',
@@ -124,26 +125,16 @@ return [
 'phase_1_planting_population'         => 'Planting Population',
 'phase_1_row_spacing'                 => 'Row Spacing',
 'phase_1_planting_speed'              => 'Planting Speed',
-'phase_2_application_type'            => 'Application Type',
-'phase_2_application_date'            => 'Application Date',
-'phase_2_verify_acres_treated'        => 'Verify Acres Treated',
-'phase_2_verify_carrier_volume_gal'   => 'Verify Carrier Volume (Gal)',
-'phase_2_soil_temp_f'                 => 'Soil Temp (F)',
-'phase_2_emergence'                   => 'Emergence',
-'phase_2_stand_count'                 => 'Stand Count',
-'phase_2_plant_heights'               => 'Plant Heights',
-'phase_2_required_photos'             => 'Required Photos',
-'phase_2_emergence_stand_uniformity'  => 'Emergence / Stand Uniformity',
-'phase_2_plant_vigor'                 => 'Plant Vigor',
-'phase_2_residue_degradation'         => 'Residue Degradation',
-'phase_2_app_machine_data'            => 'App Machine Data',
-'phase_2_planting_machine_data'       => 'Planting Machine Data',
-'phase_2_optional_video'              => 'Optional Video',
-'phase_2_optional_timelapse'          => 'Optional Timelapse',
-'phase_2_optional_drone_media'        => 'Optional Drone Media',
-'phase_2_testimonial'                 => 'Testimonial',
-'phase_2_pictures_at_application'     => 'Pictures at Application',
-'phase_2_pictures_at_planting'        => 'Pictures at Planting',
+'phase_2_rsm_visit_1_date'            => 'RSM Visit Date 1',
+'phase_2_rsm_visit_1_upload_photos'   => 'RSM Visit Date 1 Upload Photos',
+'phase_2_rsm_visit_2_date'            => 'RSM Visit Date 2',
+'phase_2_rsm_visit_2_upload_photos'   => 'RSM Visit Date 2 Upload Photos',
+'phase_2_residue_degradation_observed'=> 'Residue Degradation Observed',
+'phase_2_emergence_stand_collected'   => 'Emergence, Stand Collected',
+'phase_2_stand_count_data'            => 'Stand Count Data',
+'phase_2_average_stand_count_treated' => 'Average Stand Counts - TREATED',
+'phase_2_average_stand_count_untreated' => 'Average Stand Counts - UNTREATED',
+'phase_2_most_significant_visual_difference' => 'Most Significant Visual Difference',
 'phase_3_yield_bu_ac'                 => 'Yield (bu/ac)',
 'phase_3_moisture_percent'            => 'Moisture (%)',
 'phase_3_test_weight_lbs_bu'          => 'Test Weight (lbs/bu)',
@@ -159,6 +150,43 @@ return [
 'phase_3_optional_video'              => 'Optional Video',
 'phase_3_testimonial'                 => 'Testimonial',
 ];
+}
+
+function trufield_get_retailer_name_options(): array {
+	static $options = null;
+
+	if ( is_array( $options ) ) {
+		return $options;
+	}
+
+	global $wpdb;
+
+	$rows = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT DISTINCT pm.meta_value
+			 FROM {$wpdb->postmeta} pm
+			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+			 WHERE pm.meta_key = %s
+			 AND pm.meta_value <> ''
+			 AND p.post_type = %s
+			 AND p.post_status NOT IN ('trash', 'auto-draft')
+			 ORDER BY pm.meta_value ASC",
+			'retailer_name',
+			'plant_field'
+		)
+	);
+
+	$options = [];
+	foreach ( $rows as $row ) {
+		$name = trim( sanitize_text_field( (string) $row ) );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$options[ $name ] = $name;
+	}
+
+	return $options;
 }
 
 function trufield_phase_field_schema(): array {
@@ -227,55 +255,28 @@ return [
 'phase_1_planting_population' => [ 'type' => 'integer' ],
 'phase_1_row_spacing' => [ 'type' => 'number' ],
 'phase_1_planting_speed' => [ 'type' => 'number' ],
-'phase_2_application_type' => [
-'type'    => 'select',
-'options' => [
-'in_furrow'      => 'In-Furrow',
-'seed_treatment' => 'Seed Treatment',
-'foliar'         => 'Foliar',
-],
-],
-'phase_2_application_date' => [ 'type' => 'date' ],
-'phase_2_verify_acres_treated' => [ 'type' => 'number' ],
-'phase_2_verify_carrier_volume_gal' => [ 'type' => 'number' ],
-'phase_2_soil_temp_f' => [ 'type' => 'number' ],
-'phase_2_emergence' => [ 'type' => 'text' ],
-'phase_2_stand_count' => [ 'type' => 'integer' ],
-'phase_2_plant_heights' => [ 'type' => 'text' ],
-'phase_2_required_photos' => [ 'type' => 'textarea' ],
-'phase_2_emergence_stand_uniformity' => [
-'type'    => 'select',
-'options' => [
-'excellent' => 'Excellent',
-'good'      => 'Good',
-'fair'      => 'Fair',
-'poor'      => 'Poor',
-],
-],
-'phase_2_plant_vigor' => [
-'type'    => 'select',
-'options' => [
-'excellent' => 'Excellent',
-'good'      => 'Good',
-'fair'      => 'Fair',
-'poor'      => 'Poor',
-],
-],
-'phase_2_residue_degradation' => [
+'phase_2_rsm_visit_1_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_1_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_2_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_2_upload_photos' => [ 'type' => 'url' ],
+'phase_2_residue_degradation_observed' => [
 'type'    => 'select',
 'options' => [
 'yes' => 'Yes',
 'no'  => 'No',
 ],
 ],
-'phase_2_app_machine_data' => [ 'type' => 'url' ],
-'phase_2_planting_machine_data' => [ 'type' => 'url' ],
-'phase_2_optional_video' => [ 'type' => 'url' ],
-'phase_2_optional_timelapse' => [ 'type' => 'url' ],
-'phase_2_optional_drone_media' => [ 'type' => 'url' ],
-'phase_2_testimonial' => [ 'type' => 'textarea' ],
-'phase_2_pictures_at_application' => [ 'type' => 'textarea' ],
-'phase_2_pictures_at_planting' => [ 'type' => 'textarea' ],
+'phase_2_emergence_stand_collected' => [
+'type'    => 'select',
+'options' => [
+'yes' => 'Yes',
+'no'  => 'No',
+],
+],
+'phase_2_stand_count_data' => [ 'type' => 'text' ],
+'phase_2_average_stand_count_treated' => [ 'type' => 'number' ],
+'phase_2_average_stand_count_untreated' => [ 'type' => 'number' ],
+'phase_2_most_significant_visual_difference' => [ 'type' => 'textarea' ],
 'phase_3_yield_bu_ac' => [ 'type' => 'number' ],
 'phase_3_moisture_percent' => [ 'type' => 'number' ],
 'phase_3_test_weight_lbs_bu' => [ 'type' => 'number' ],
@@ -581,26 +582,16 @@ $fields = [
 'phase_1_planting_speed',
 ],
 2 => [
-'phase_2_application_type',
-'phase_2_application_date',
-'phase_2_verify_acres_treated',
-'phase_2_verify_carrier_volume_gal',
-'phase_2_soil_temp_f',
-'phase_2_emergence',
-'phase_2_stand_count',
-'phase_2_plant_heights',
-'phase_2_emergence_stand_uniformity',
-'phase_2_plant_vigor',
-'phase_2_residue_degradation',
-'phase_2_app_machine_data',
-'phase_2_planting_machine_data',
-'phase_2_required_photos',
-'phase_2_optional_video',
-'phase_2_optional_timelapse',
-'phase_2_optional_drone_media',
-'phase_2_testimonial',
-'phase_2_pictures_at_application',
-'phase_2_pictures_at_planting',
+'phase_2_rsm_visit_1_date',
+'phase_2_rsm_visit_1_upload_photos',
+'phase_2_rsm_visit_2_date',
+'phase_2_rsm_visit_2_upload_photos',
+'phase_2_residue_degradation_observed',
+'phase_2_emergence_stand_collected',
+'phase_2_stand_count_data',
+'phase_2_average_stand_count_treated',
+'phase_2_average_stand_count_untreated',
+'phase_2_most_significant_visual_difference',
 ],
 3 => [
 'phase_3_yield_bu_ac',
@@ -686,6 +677,29 @@ function trufield_phase_photo_attachment_meta_key( string $field ): string {
 	return $field . '_attachment_id';
 }
 
+function trufield_phase_file_fields( int $phase ): array {
+	$fields = [
+		1 => [ 'phase_1_field_overview_photo' ],
+		2 => [
+			'phase_2_rsm_visit_1_upload_photos',
+			'phase_2_rsm_visit_2_upload_photos',
+		],
+		3 => [],
+	];
+
+	return $fields[ $phase ] ?? [];
+}
+
+function trufield_get_phase_step_count( int $phase ): int {
+	$steps = [
+		1 => 3,
+		2 => 2,
+		3 => 1,
+	];
+
+	return $steps[ $phase ] ?? 1;
+}
+
 function trufield_delete_phase_photo_value( int $post_id, string $field ): void {
 	delete_post_meta( $post_id, $field );
 	delete_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ) );
@@ -757,8 +771,21 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		wp_die( esc_html__( 'You do not have permission to update this phase.', 'trufield-portal' ), 403 );
 	}
 
-	$redirect = wp_get_referer() ?: get_permalink( $post_id );
-	$action   = sanitize_key( $_POST['phase_action'] ?? 'save' );
+	$redirect_base = wp_get_referer() ?: get_permalink( $post_id );
+	$phase_step    = max( 1, min( trufield_get_phase_step_count( $phase ), (int) ( $_POST['phase_step'] ?? 1 ) ) );
+	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( 'phase_step', $phase_step, $redirect_base ) : $redirect_base;
+	$action        = sanitize_key( $_POST['phase_action'] ?? 'save' );
+
+	if ( 1 === $phase && array_key_exists( 'retailer_name', $_POST ) ) {
+		$retailer_selection = trim( sanitize_text_field( wp_unslash( $_POST['retailer_name'] ) ) );
+		$retailer_manual    = trim( sanitize_text_field( wp_unslash( $_POST['retailer_name_manual'] ?? '' ) ) );
+
+		if ( 'other' === strtolower( $retailer_selection ) ) {
+			$_POST['retailer_name'] = $retailer_manual;
+		} else {
+			$_POST['retailer_name'] = $retailer_selection;
+		}
+	}
 
 $editable = trufield_rep_editable_phase_fields( $phase );
 foreach ( $editable as $field ) {
@@ -775,12 +802,12 @@ continue;
 update_post_meta( $post_id, $field, $sanitized );
 }
 
-	if ( 1 === $phase && ! empty( $_POST['phase_1_field_overview_photo_remove'] ) ) {
-		trufield_delete_phase_photo_value( $post_id, 'phase_1_field_overview_photo' );
-	}
+	foreach ( trufield_phase_file_fields( $phase ) as $file_field ) {
+		if ( ! empty( $_POST[ $file_field . '_remove' ] ) ) {
+			trufield_delete_phase_photo_value( $post_id, $file_field );
+		}
 
-	if ( 1 === $phase ) {
-		$upload_result = trufield_handle_phase_photo_upload( $post_id, 'phase_1_field_overview_photo', 'phase_1_field_overview_photo_upload' );
+		$upload_result = trufield_handle_phase_photo_upload( $post_id, $file_field, $file_field . '_upload' );
 		if ( is_wp_error( $upload_result ) ) {
 			wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $upload_result->get_error_message() ), $redirect ) );
 			exit;

@@ -5,10 +5,12 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+$is_public_auth = trufield_current_page_is_public_auth() && ! is_user_logged_in();
 ?>
 	</main><!-- .tf-main -->
 
-	<footer class="tf-footer">
+	<footer class="tf-footer<?php echo $is_public_auth ? ' tf-footer--public-auth' : ''; ?>">
 		<div class="tf-footer__inner">
 			<p>
 				&copy; <?php echo esc_html( gmdate( 'Y' ) ); ?>

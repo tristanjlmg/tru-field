@@ -32,21 +32,23 @@ $reset_user = $checked_user;
 
 $invalid_link = ! ( $reset_user instanceof WP_User );
 ?>
-<div class="tf-container tf-login-wrap">
-<div class="tf-login-card">
-<h1 class="tf-login-card__title"><?php esc_html_e( 'Choose a new password', 'trufield-portal' ); ?></h1>
+<div class="tf-container tf-auth-shell">
+<div class="tf-auth-card">
+<div class="tf-auth-card__header">
+<h1 class="tf-auth-card__title"><?php esc_html_e( 'Choose a new password', 'trufield-portal' ); ?></h1>
+</div>
 
 <?php if ( $invalid_link ) : ?>
 <div class="tf-alert tf-alert--error" role="alert">
 <?php echo esc_html( $error_messages['invalid_key'] ); ?>
 </div>
-<p class="tf-login-card__back">
-<a class="tf-back-link" href="<?php echo esc_url( trufield_forgot_password_url() ); ?>">
+<div class="tf-auth-card__links tf-auth-card__links--stacked">
+<a href="<?php echo esc_url( trufield_forgot_password_url() ); ?>">
 <?php esc_html_e( 'Back to password reset request', 'trufield-portal' ); ?>
 </a>
-</p>
+</div>
 <?php else : ?>
-<p class="tf-login-card__intro">
+<p class="tf-auth-card__intro">
 <?php esc_html_e( 'Create a new password for your account below.', 'trufield-portal' ); ?>
 </p>
 
@@ -87,16 +89,16 @@ $invalid_link = ! ( $reset_user instanceof WP_User );
        autocomplete="new-password">
 </div>
 
-<button type="submit" class="tf-btn tf-btn--primary tf-btn--full">
+<button type="submit" class="tf-btn tf-btn--primary tf-auth-card__submit">
 <?php esc_html_e( 'Reset password', 'trufield-portal' ); ?>
 </button>
 </form>
 
-<p class="tf-login-card__back">
-<a class="tf-back-link" href="<?php echo esc_url( trufield_login_url() ); ?>">
+<div class="tf-auth-card__links tf-auth-card__links--stacked">
+<a href="<?php echo esc_url( trufield_login_url() ); ?>">
 <?php esc_html_e( 'Back to sign in', 'trufield-portal' ); ?>
 </a>
-</p>
+</div>
 <?php endif; ?>
 </div>
 </div>

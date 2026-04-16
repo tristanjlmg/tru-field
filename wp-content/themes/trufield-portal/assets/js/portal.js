@@ -71,6 +71,236 @@
     });
   }
 
+  function initRetailerPickers() {
+    document.querySelectorAll('[data-tf-retailer-picker]').forEach(function (wrapper) {
+      var select = wrapper.querySelector('[data-tf-retailer-select]');
+      var manualWrap = wrapper.querySelector('[data-tf-retailer-manual]');
+      var manualInput = wrapper.querySelector('[data-tf-retailer-manual-input]');
+
+      if (!select || !manualWrap || !manualInput) {
+        return;
+      }
+
+      function syncRetailerMode() {
+        var isOther = String(select.value || '').toLowerCase() === 'other';
+        manualWrap.hidden = !isOther;
+
+        if (!isOther) {
+          manualInput.value = '';
+        }
+      }
+
+      select.addEventListener('change', syncRetailerMode);
+      syncRetailerMode();
+    });
+  }
+
+  function initPhaseSubsteps() {
+    document.querySelectorAll('[data-tf-phase-substeps]').forEach(function (wrapper) {
+      var form = wrapper.closest('form');
+      var phase = Number(wrapper.getAttribute('data-phase') || '1');
+      var hiddenInput = form && form.querySelector('[data-tf-phase-step-input]');
+      var tabs = Array.prototype.slice.call(wrapper.querySelectorAll('[data-tf-phase-step-tab]'));
+      var panels = Array.prototype.slice.call(wrapper.querySelectorAll('[data-tf-phase-step-panel]'));
+      var plantFieldInput = form && form.querySelector('input[name="plant_field_id"]');
+      var storageKey = plantFieldInput ? 'tf-phase-' + String(phase || 1) + '-step-' + String(plantFieldInput.value || '') : '';
+      var requestedInitialStep = Number(wrapper.getAttribute('data-initial-step') || '0');
+      var storedStep = storageKey && window.sessionStorage ? Number(window.sessionStorage.getItem(storageKey) || '0') : 0;
+      var currentStep = requestedInitialStep > 0 ? requestedInitialStep : (storedStep > 0 ? storedStep : 1);
+
+      if (!form || !hiddenInput || !tabs.length || !panels.length) {
+        return;
+      }
+
+      function getPanel(step) {
+        return panels.find(function (panel) {
+          return Number(panel.getAttribute('data-step') || '0') === step;
+        }) || null;
+      }
+
+      function getControl(fieldName) {
+        if (!form || !fieldName) {
+          return null;
+        }
+
+        var control = form.elements[fieldName];
+        if (!control) {
+          return null;
+        }
+
+        if (typeof control.length === 'number' && !control.tagName) {
+          var firstNonHidden = null;
+
+          for (var index = 0; index < control.length; index += 1) {
+            if ((control[index].type === 'checkbox' || control[index].type === 'radio') && control[index].checked) {
+              return control[index];
+            }
+
+            if (!firstNonHidden && control[index].type !== 'hidden') {
+              firstNonHidden = control[index];
+            }
+          }
+
+          return firstNonHidden || control[0] || null;
+        }
+
+        return control;
+      }
+
+      function getFieldLabel(fieldName) {
+        var label = form.querySelector('[for="' + fieldName + '"]');
+        var text = label ? String(label.textContent || '') : fieldName;
+        return text.replace('*', '').trim();
+      }
+
+      function focusControl(fieldName) {
+        if (fieldName === 'retailer_name') {
+          var retailerSelect = form.querySelector('[data-tf-retailer-select]');
+          var retailerManual = form.querySelector('[data-tf-retailer-manual-input]');
+
+          if (retailerSelect && String(retailerSelect.value || '').toLowerCase() === 'other' && retailerManual) {
+            retailerManual.focus();
+            return;
+          }
+        }
+
+        var visibleControl = document.getElementById(fieldName) || getControl(fieldName);
+        if (visibleControl && typeof visibleControl.focus === 'function' && !visibleControl.disabled) {
+          visibleControl.focus();
+        }
+      }
+
+      function validatePanel(panel) {
+        var errorBox = panel.querySelector('[data-tf-step-error]');
+        var fieldNames = String(panel.getAttribute('data-required-fields') || '')
+          .split(',')
+          .map(function (fieldName) { return fieldName.trim(); })
+          .filter(Boolean);
+        var invalidLabels = [];
+        var firstInvalidField = '';
+        var manualOverride = getControl('field_location_manual_override');
+        var manualOverrideEnabled = !!(manualOverride && manualOverride.checked);
+
+        fieldNames.forEach(function (fieldName) {
+          var control;
+          var value;
+
+          if (fieldName === 'field_location_address' && manualOverrideEnabled) {
+            return;
+          }
+
+          control = getControl(fieldName);
+          if (!control) {
+            return;
+          }
+
+          if (fieldName === 'retailer_name' && String(control.value || '').toLowerCase() === 'other') {
+            var manualControl = getControl('retailer_name_manual');
+            var manualValue = manualControl ? String(manualControl.value || '').trim() : '';
+
+            if (manualValue === '') {
+              invalidLabels.push(getFieldLabel(fieldName));
+              if (!firstInvalidField) {
+                firstInvalidField = fieldName;
+              }
+            }
+            return;
+          }
+
+          value = String(control.value || '').trim();
+          if (value === '') {
+            invalidLabels.push(getFieldLabel(fieldName));
+            if (!firstInvalidField) {
+              firstInvalidField = fieldName;
+            }
+          }
+        });
+
+        if (errorBox) {
+          if (invalidLabels.length) {
+            errorBox.hidden = false;
+            errorBox.innerHTML = '<strong>Complete the required fields in this section before continuing.</strong><span>' + invalidLabels.join(', ') + '</span>';
+          } else {
+            errorBox.hidden = true;
+            errorBox.innerHTML = '';
+          }
+        }
+
+        if (firstInvalidField) {
+          focusControl(firstInvalidField);
+        }
+
+        return invalidLabels.length === 0;
+      }
+
+      function syncStepState(step) {
+        currentStep = step;
+        hiddenInput.value = String(step);
+
+        if (storageKey && window.sessionStorage) {
+          window.sessionStorage.setItem(storageKey, String(step));
+        }
+
+        tabs.forEach(function (tab) {
+          var tabStep = Number(tab.getAttribute('data-step') || '0');
+          var isActive = tabStep === step;
+          var isComplete = tabStep < step;
+
+          tab.classList.toggle('is-active', isActive);
+          tab.classList.toggle('is-complete', isComplete);
+          tab.setAttribute('aria-current', isActive ? 'step' : 'false');
+        });
+
+        panels.forEach(function (panel) {
+          var panelStep = Number(panel.getAttribute('data-step') || '0');
+          var isActive = panelStep === step;
+          panel.hidden = !isActive;
+          panel.classList.toggle('is-active', isActive);
+        });
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var targetStep = Number(tab.getAttribute('data-step') || '0');
+          var activePanel = getPanel(currentStep);
+
+          if (!targetStep || targetStep === currentStep) {
+            return;
+          }
+
+          if (targetStep > currentStep && activePanel && !validatePanel(activePanel)) {
+            return;
+          }
+
+          syncStepState(targetStep);
+        });
+      });
+
+      panels.forEach(function (panel) {
+        var prevButton = panel.querySelector('[data-tf-phase-step-prev]');
+        var nextButton = panel.querySelector('[data-tf-phase-step-next]');
+
+        if (prevButton) {
+          prevButton.addEventListener('click', function () {
+            syncStepState(Math.max(1, currentStep - 1));
+          });
+        }
+
+        if (nextButton) {
+          nextButton.addEventListener('click', function () {
+            if (!validatePanel(panel)) {
+              return;
+            }
+
+            syncStepState(Math.min(panels.length, currentStep + 1));
+          });
+        }
+      });
+
+      syncStepState(Math.max(1, Math.min(panels.length, currentStep)));
+    });
+  }
+
   function initTrialSearch() {
     var searchWrapper = document.querySelector('[data-tf-trial-search]');
     var input = searchWrapper && searchWrapper.querySelector('[data-tf-trial-search-input]');
@@ -140,6 +370,41 @@
 
     updateCount(totalCount);
     updateHint('', totalCount);
+  }
+
+  function initLeaderboardSearch() {
+    var searchWrapper = document.querySelector('[data-tf-leaderboard-search]');
+    var input = searchWrapper && searchWrapper.querySelector('[data-tf-leaderboard-search-input]');
+    var emptyState = searchWrapper && searchWrapper.querySelector('[data-tf-leaderboard-empty]');
+
+    if (!searchWrapper || !input) {
+      return;
+    }
+
+    var rows = Array.prototype.slice.call(searchWrapper.querySelectorAll('[data-tf-leaderboard-row]'));
+
+    function applyFilter() {
+      var query = String(input.value || '').trim().toLowerCase();
+      var visibleCount = 0;
+
+      rows.forEach(function (row) {
+        var haystack = String(row.getAttribute('data-tf-search') || '').toLowerCase();
+        var isMatch = !query || haystack.indexOf(query) !== -1;
+
+        row.hidden = !isMatch;
+
+        if (isMatch) {
+          visibleCount += 1;
+        }
+      });
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount !== 0;
+      }
+    }
+
+    input.addEventListener('input', applyFilter);
+    input.addEventListener('search', applyFilter);
   }
 
   function initNavToggle() {
@@ -706,7 +971,10 @@
     initAlertDismiss();
     initNavToggle();
     initShowMore();
+    initRetailerPickers();
+    initPhaseSubsteps();
     initTrialSearch();
+    initLeaderboardSearch();
     ensurePhaseLocationBindings(0);
   }
 
