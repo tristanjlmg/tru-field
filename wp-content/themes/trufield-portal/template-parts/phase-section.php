@@ -28,26 +28,39 @@ $labels       = trufield_field_labels();
 $schema       = trufield_phase_field_schema();
 $phase_label  = sprintf( __( 'Phase %d', 'trufield-portal' ), $phase );
 $location_override = 1 === $phase ? trufield_location_override_enabled( $post_id ) : false;
+$admin_phase_one_fields = [
+	'rsm_bam' => [
+		'input'       => 'user_select',
+		'placeholder' => 'Select',
+	],
+	'fsa' => [
+		'input'       => 'user_select',
+		'placeholder' => 'Select',
+	],
+];
 
 $field_groups = [
 1 => [
 'required' => [
 'retailer_name'              => [ 'input' => 'text', 'placeholder' => 'Retailer name' ],
-'field_location_address'     => [ 'input' => 'textarea', 'rows' => 2 ],
-'phase_1_state_region'       => [ 'input' => 'text', 'placeholder' => 'State' ],
-'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'First and last name' ],
-'contact_phone'              => [ 'input' => 'text', 'placeholder' => '(555) 555-5555' ],
-'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'name@example.com' ],
+'retailer_branch_location'   => [ 'input' => 'text', 'placeholder' => 'Enter Branch Location' ],
+'retailer_key_contact'       => [ 'input' => 'text', 'placeholder' => 'Enter' ],
+'retailer_contact_phone'     => [ 'input' => 'text', 'placeholder' => 'Enter' ],
+'retailer_address'           => [ 'input' => 'text', 'placeholder' => 'Enter Address' ],
+'retailer_city'              => [ 'input' => 'text', 'placeholder' => 'Enter City' ],
+'phase_1_state_region'       => [ 'input' => 'select', 'placeholder' => 'Select State' ],
+'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
+'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
+'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'phase_1_application_date'   => [ 'input' => 'date' ],
-'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'e.g. 32 oz/ac' ],
-'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => '', 'step' => null, 'min' => null ],
-'phase_1_treated_size_acres' => [ 'input' => 'number', 'step' => '0.01', 'min' => '0' ],
-'phase_1_protocol_version'   => [ 'input' => 'select' ],
-'phase_1_application_timing' => [ 'input' => 'select' ],
+'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'Enter Amount' ],
+'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => 'Select', 'step' => null, 'min' => null ],
+'phase_1_treated_size_acres' => [ 'input' => 'number', 'placeholder' => 'Enter Size', 'step' => '0.01', 'min' => '0' ],
+'phase_1_protocol_version'   => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_1_application_timing' => [ 'input' => 'select', 'placeholder' => 'Select' ],
 'phase_1_retailer_training_discussion_date' => [ 'input' => 'date' ],
 ],
 'optional' => [
-'retailer_key_contact'        => [ 'input' => 'text', 'placeholder' => 'Retailer contact name' ],
 'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
 'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
 'phase_1_product_being_tested' => [ 'input' => 'text', 'placeholder' => 'Product name' ],
@@ -105,7 +118,8 @@ $field_groups = [
 $retailer_name_options = trufield_get_retailer_name_options();
 $phase_one_substeps = [];
 $phase_two_substeps = [];
-$phase_initial_step = max( 1, min( trufield_get_phase_step_count( $phase ), (int) sanitize_key( wp_unslash( $_GET['phase_step'] ?? '1' ) ) ) );
+$phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
+$phase_initial_step = max( 1, min( trufield_get_phase_step_count( $phase ), (int) sanitize_key( wp_unslash( $_GET[ $phase_step_query_arg ] ?? '1' ) ) ) );
 $phase_substeps = [];
 
 if ( 1 === $phase ) {
@@ -113,41 +127,43 @@ if ( 1 === $phase ) {
 		1 => [
 			'key'            => 'retailer',
 			'title'          => __( 'Retailer Information', 'trufield-portal' ),
-			'description'    => __( 'Enter the retailer contact details and verify the field location.', 'trufield-portal' ),
+			'description'    => __( 'Enter the retailer contact details for this record.', 'trufield-portal' ),
 			'required_fields'=> [
-				'field_location_address',
-				'field_location_lat',
-				'field_location_lng',
 				'retailer_name',
+				'retailer_key_contact',
+				'retailer_contact_phone',
+				'retailer_address',
+				'retailer_city',
 				'phase_1_state_region',
-				'field_trial_contact',
-				'contact_phone',
-				'field_trial_contact_email',
 			],
 			'fields'         => [
 				'retailer_name',
+				'retailer_branch_location',
+				'retailer_key_contact',
+				'retailer_contact_phone',
+				'retailer_address',
+				'retailer_city',
 				'phase_1_state_region',
-				'field_trial_contact',
-				'contact_phone',
-				'field_trial_contact_email',
 			],
-			'optional_fields'=> [ 'retailer_key_contact' ],
+			'admin_fields'   => [ 'rsm_bam', 'fsa' ],
+			'optional_fields'=> [],
 		],
 		2 => [
 			'key'            => 'field-trial',
 			'title'          => __( 'Field Trial Information', 'trufield-portal' ),
-			'description'    => __( 'Capture the field setup and trial structure for this record.', 'trufield-portal' ),
+			'description'    => __( 'Verify the field location and capture the field setup for this record.', 'trufield-portal' ),
 			'required_fields'=> [
-				'phase_1_trial_type',
-				'phase_1_treated_size_acres',
-				'phase_1_protocol_version',
-				'phase_1_application_timing',
+				'field_trial_contact',
+				'contact_phone',
+				'field_trial_contact_email',
+				'field_location_address',
+				'field_location_lat',
+				'field_location_lng',
 			],
 			'fields'         => [
-				'phase_1_trial_type',
-				'phase_1_treated_size_acres',
-				'phase_1_protocol_version',
-				'phase_1_application_timing',
+				'field_trial_contact',
+				'contact_phone',
+				'field_trial_contact_email',
 			],
 			'optional_fields'=> [
 				'farm_name',
@@ -166,13 +182,21 @@ if ( 1 === $phase ) {
 			'title'          => __( 'Trial Information', 'trufield-portal' ),
 			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
 			'required_fields'=> [
-				'phase_1_application_date',
+				'phase_1_treated_size_acres',
 				'phase_1_application_rate',
+				'phase_1_trial_type',
+				'phase_1_protocol_version',
+				'phase_1_application_timing',
+				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
 			],
 			'fields'         => [
-				'phase_1_application_date',
+				'phase_1_treated_size_acres',
 				'phase_1_application_rate',
+				'phase_1_trial_type',
+				'phase_1_protocol_version',
+				'phase_1_application_timing',
+				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
 			],
 			'optional_fields'=> [
@@ -254,9 +278,17 @@ $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_
 </label>
 <?php if ( $input_type === 'select' ) : ?>
 <select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select">
-<option value=""><?php esc_html_e( 'Select…', 'trufield-portal' ); ?></option>
+<option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
 <?php foreach ( $schema[ $field ]['options'] ?? [] as $option_value => $option_label ) : ?>
 <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+<?php endforeach; ?>
+</select>
+<?php elseif ( $input_type === 'user_select' ) : ?>
+<?php $user_options = trufield_get_assignment_user_options( $field ); ?>
+<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select">
+<option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
+<?php foreach ( $user_options as $option_value => $option_label ) : ?>
+<option value="<?php echo esc_attr( (string) $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 <?php endforeach; ?>
 </select>
 <?php elseif ( $input_type === 'textarea' ) : ?>
@@ -322,7 +354,7 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	<?php endif; ?>
 	</label>
 	<select id="retailer_name_select" name="retailer_name" class="tf-select" data-tf-retailer-select>
-	<option value=""><?php esc_html_e( 'Select…', 'trufield-portal' ); ?></option>
+	<option value=""><?php esc_html_e( 'Select Retailer', 'trufield-portal' ); ?></option>
 	<?php foreach ( $retailer_name_options as $option_value => $option_label ) : ?>
 	<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $selected, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 	<?php endforeach; ?>
@@ -348,34 +380,6 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 $render_phase_one_location = static function () use ( $labels, $post_id, $location_override ): void {
 	?>
 	<div class="tf-phase-location<?php echo $location_override ? ' is-manual' : ''; ?>" data-tf-location>
-	<div class="tf-phase-location__header">
-	<div class="tf-phase-location__intro">
-	<label class="tf-phase-location__label" for="field_location_address"><?php echo esc_html( $labels['field_location_address'] ?? 'Field Location Address' ); ?><?php if ( ! $location_override ) : ?> <span class="tf-required">*</span><?php endif; ?></label>
-	<p class="tf-phase-location__help" data-tf-location-help><?php esc_html_e( 'Search and select a verified address to automatically fill latitude and longitude. If no address is available, turn on manual override and enter coordinates directly.', 'trufield-portal' ); ?></p>
-	</div>
-	<label class="tf-phase-location__toggle">
-	<input type="hidden" name="field_location_manual_override" value="0">
-	<input type="checkbox" name="field_location_manual_override" value="1" <?php checked( $location_override ); ?> data-tf-location-override>
-	<span><?php esc_html_e( 'Address unavailable, enter coordinates manually', 'trufield-portal' ); ?></span>
-	</label>
-	</div>
-	<div class="tf-phase-location__grid">
-	<div class="tf-field-group tf-phase-location__address-wrap">
-	<div class="tf-phase-location__address-row">
-	<input
-	type="text"
-	id="field_location_address"
-	name="field_location_address"
-	class="tf-input"
-	value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_address', true ) ); ?>"
-	placeholder="<?php esc_attr_e( 'Search for the field location', 'trufield-portal' ); ?>"
-	autocomplete="street-address"
-	data-tf-location-address
-	>
-	<button type="submit" name="phase_action" value="verify_address" class="tf-btn tf-btn--secondary tf-phase-location__verify" formnovalidate data-tf-location-verify><?php esc_html_e( 'Verify Address', 'trufield-portal' ); ?></button>
-	</div>
-	<small class="tf-phase-location__status" data-tf-location-status><?php esc_html_e( 'Coordinates are required before Phase 1 can be completed.', 'trufield-portal' ); ?></small>
-	</div>
 	<div class="tf-phase-location__coords">
 	<div class="tf-field-group">
 	<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?> <span class="tf-required">*</span></label>
@@ -406,11 +410,32 @@ $render_phase_one_location = static function () use ( $labels, $post_id, $locati
 	<input type="hidden" name="field_location_lng" value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lng', true ) ); ?>" data-tf-location-lng-hidden>
 	</div>
 	</div>
+	<div class="tf-field-group tf-phase-location__address-wrap">
+	<label class="tf-phase-location__label" for="field_location_address"><?php echo esc_html( $labels['field_location_address'] ?? 'Field Location Address' ); ?><?php if ( ! $location_override ) : ?> <span class="tf-required">*</span><?php endif; ?></label>
+	<div class="tf-phase-location__address-row">
+	<input
+	type="text"
+	id="field_location_address"
+	name="field_location_address"
+	class="tf-input"
+	value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_address', true ) ); ?>"
+	placeholder="<?php esc_attr_e( 'Enter Address', 'trufield-portal' ); ?>"
+	autocomplete="street-address"
+	data-tf-location-address
+	>
+	</div>
+	<button type="submit" name="phase_action" value="verify_address" class="tf-btn tf-btn--secondary tf-phase-location__verify" formnovalidate data-tf-location-verify><?php esc_html_e( 'Verify Address', 'trufield-portal' ); ?></button>
+	<label class="tf-phase-location__toggle">
+	<input type="hidden" name="field_location_manual_override" value="0">
+	<input type="checkbox" name="field_location_manual_override" value="1" <?php checked( $location_override ); ?> data-tf-location-override>
+	<span><?php esc_html_e( 'If unavailable, enter coordinates manually and complete all address fields', 'trufield-portal' ); ?></span>
+	</label>
+	<small class="tf-phase-location__status" data-tf-location-status><?php esc_html_e( 'Coordinates are required before Phase 1 can be completed.', 'trufield-portal' ); ?></small>
+	</div>
 	<small class="tf-phase-location__lock-note" data-tf-location-lock-note><?php esc_html_e( 'Latitude and longitude stay locked until manual override is enabled.', 'trufield-portal' ); ?></small>
 	<div class="tf-phase-location__map-wrap">
 	<div class="tf-phase-location__map" data-tf-location-map aria-hidden="true"></div>
 	<div class="tf-phase-location__map-note" data-tf-location-map-note><?php esc_html_e( 'Map preview will appear after the address is verified.', 'trufield-portal' ); ?></div>
-	</div>
 	</div>
 	</div>
 	<?php
@@ -424,6 +449,10 @@ return '';
 $type = $schema[ $field ]['type'] ?? 'text';
 if ( $type === 'select' ) {
 return $schema[ $field ]['options'][ $value ] ?? (string) $value;
+}
+
+if ( $type === 'user' ) {
+	return trufield_resolve_assignment_user_label( $value );
 }
 
 if ( $type === 'date' ) {
@@ -457,8 +486,6 @@ $readonly_pairs[ $field ] = $format_value( $field, $value );
 $assigned_record_details = [];
 if ( 1 === $phase ) {
 	$assigned_detail_map = [
-		'rsm_bam'             => 'RSM / BAM',
-		'fsa'                 => 'FSA',
 		'retailer_key_contact' => $labels['retailer_key_contact'] ?? 'Retailer Contact',
 		'import_city'         => 'City',
 		'import_state'        => 'Imported State',
@@ -557,49 +584,6 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <input type="hidden" name="phase_step" value="<?php echo esc_attr( (string) $phase_initial_step ); ?>" data-tf-phase-step-input>
 <?php endif; ?>
 
-<div class="tf-phase-disclosures">
-<details class="tf-phase-disclosure">
-<summary class="tf-phase-disclosure__summary"><?php echo esc_html( 1 === $phase ? __( 'Phase 1 notes and assigned details', 'trufield-portal' ) : __( 'Phase 2 notes and assigned details', 'trufield-portal' ) ); ?></summary>
-<div class="tf-phase-disclosure__content tf-phase__intro">
-<p class="tf-phase__intro-copy"><?php echo esc_html( 1 === $phase ? __( 'Complete only the Phase 1 details for this assigned record right now. Future phases are separate forms and are not part of this submission.', 'trufield-portal' ) : __( 'Complete the Phase 2 visit documentation and observations for this trial. Phase 2 submits for admin verification after every required field is filled in.', 'trufield-portal' ) ); ?></p>
-<?php if ( 1 === $phase && ! empty( $assigned_record_details ) ) : ?>
-<div class="tf-assigned-details">
-<p class="tf-assigned-details__title"><?php esc_html_e( 'Assigned record details', 'trufield-portal' ); ?></p>
-<dl class="tf-assigned-details__list">
-<?php foreach ( $assigned_record_details as $label => $value ) : ?>
-<dt><?php echo esc_html( $label ); ?></dt>
-<dd><?php echo esc_html( $value ); ?></dd>
-<?php endforeach; ?>
-</dl>
-</div>
-<?php endif; ?>
-<div class="tf-phase__helper-notes">
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Required fields are marked with *.', 'trufield-portal' ); ?></span>
-<?php if ( 1 === $phase ) : ?>
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Farm Name and Field Name are optional in Phase 1.', 'trufield-portal' ); ?></span>
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Field overview photos can be uploaded directly in Phase 1.', 'trufield-portal' ); ?></span>
-<?php elseif ( 2 === $phase ) : ?>
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Use the upload fields to attach the two required Phase 2 visit photos.', 'trufield-portal' ); ?></span>
-<span class="tf-phase__helper-note"><?php esc_html_e( 'Phase 2 stays editable until you mark it complete for admin verification.', 'trufield-portal' ); ?></span>
-<?php endif; ?>
-</div>
-</div>
-</details>
-
-<?php if ( ! $validation_ok ) : ?>
-<details class="tf-phase-disclosure tf-phase-disclosure--warning">
-<summary class="tf-phase-disclosure__summary"><?php echo esc_html( sprintf( _n( '%d required field still missing before this counts as a valid entry', '%d required fields still missing before this counts as a valid entry', count( $validation_missing ), 'trufield-portal' ), count( $validation_missing ) ) ); ?></summary>
-<div class="tf-phase-disclosure__content">
-<div class="tf-missing-fields" role="status">
-<strong><?php echo esc_html( 1 === $phase ? __( 'This record counts as 1 valid grower entry after the remaining required Phase 1 fields are filled in and saved.', 'trufield-portal' ) : __( 'Mark this phase complete after the remaining required details are filled in.', 'trufield-portal' ) ); ?></strong>
-<span><?php echo esc_html( implode( ', ', 1 === $phase ? $validation_missing : $missing ) ); ?></span>
-<span class="tf-missing-fields__note"><?php esc_html_e( 'If an assigned-record detail is missing and you cannot edit it here, contact the admin team.', 'trufield-portal' ); ?></span>
-</div>
-</div>
-</details>
-<?php endif; ?>
-</div>
-
 <?php if ( ! empty( $phase_substeps ) ) : ?>
 <div class="tf-phase-substeps" data-tf-phase-substeps data-phase="<?php echo esc_attr( (string) $phase ); ?>" data-initial-step="<?php echo esc_attr( (string) $phase_initial_step ); ?>">
 <ol class="tf-phase-substeps__nav" aria-label="<?php echo esc_attr( sprintf( __( 'Phase %d form sections', 'trufield-portal' ), $phase ) ); ?>">
@@ -629,8 +613,18 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 
 <div class="tf-missing-fields tf-missing-fields--inline" hidden data-tf-step-error></div>
 
-<?php if ( 1 === $phase && 1 === $step_index ) : ?>
-<?php $render_phase_one_location(); ?>
+<?php if ( ! empty( $step_config['admin_fields'] ) && $is_admin ) : ?>
+<div class="tf-phase-admin-fields">
+<div class="tf-phase-admin-fields__header">
+<p class="tf-phase-admin-fields__eyebrow"><?php esc_html_e( 'Admin Only', 'trufield-portal' ); ?></p>
+<p class="tf-phase-admin-fields__copy"><?php esc_html_e( 'Assignment details stay editable for admins here and remain hidden from the assigned rep.', 'trufield-portal' ); ?></p>
+</div>
+<div class="tf-form-grid tf-form-grid--phase-step tf-form-grid--admin-fields">
+<?php foreach ( $step_config['admin_fields'] as $field ) : ?>
+<?php $render_field( $field, $admin_phase_one_fields[ $field ] ?? [], true ); ?>
+<?php endforeach; ?>
+</div>
+</div>
 <?php endif; ?>
 
 <div class="tf-form-grid tf-form-grid--phase-step">
@@ -643,7 +637,11 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endforeach; ?>
 </div>
 
-<?php if ( ! empty( $step_config['optional_fields'] ) ) : ?>
+<?php if ( 1 === $phase && 2 === $step_index ) : ?>
+<?php $render_phase_one_location(); ?>
+<?php endif; ?>
+
+<?php if ( $is_admin && ! empty( $step_config['optional_fields'] ) ) : ?>
 <div class="tf-show-more tf-show-more--phase-step">
 <button type="button" class="tf-show-more__toggle" aria-expanded="false" data-show-label="<?php esc_attr_e( 'Show additional fields', 'trufield-portal' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide additional fields', 'trufield-portal' ); ?>">
 <span class="tf-show-more__toggle-text"><?php esc_html_e( 'Show additional fields', 'trufield-portal' ); ?></span>
@@ -667,27 +665,13 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( $step_index < count( $phase_substeps ) ) : ?>
 <button type="button" class="tf-btn tf-btn--primary" data-tf-phase-step-next><?php esc_html_e( 'Next', 'trufield-portal' ); ?></button>
 <?php else : ?>
-<button type="submit" name="phase_action" value="<?php echo esc_attr( 1 === $phase ? 'save' : 'complete' ); ?>" class="tf-btn tf-btn--primary"<?php echo 2 === $phase ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Save Phase 1', 'trufield-portal' ) : __( 'Submit Phase 2', 'trufield-portal' ) ); ?></button>
+<button type="submit" name="phase_action" value="<?php echo esc_attr( 1 === $phase ? 'save' : 'complete' ); ?>" class="tf-btn tf-btn--primary"<?php echo 2 === $phase ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : __( 'Submit Phase 2', 'trufield-portal' ) ); ?></button>
 <?php endif; ?>
 </div>
 </section>
 <?php endforeach; ?>
 </div>
 
-<div class="tf-phase-form__action-help">
-<div class="tf-phase-form__action-help-item">
-<strong><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></strong>
-<span><?php echo esc_html( 1 === $phase ? __( 'Save at any point and return to the same Phase 1 section later.', 'trufield-portal' ) : __( 'Save either Phase 2 section and return to the same part later.', 'trufield-portal' ) ); ?></span>
-</div>
-<div class="tf-phase-form__action-help-item">
-<strong><?php echo esc_html( 1 === $phase ? __( 'Valid Entry', 'trufield-portal' ) : __( 'Admin Verification', 'trufield-portal' ) ); ?></strong>
-<span><?php echo esc_html( 1 === $phase ? __( 'Phase 1 becomes a valid grower entry automatically once every required field across all 3 sections is filled in and saved.', 'trufield-portal' ) : __( 'Once every required Phase 2 field is complete, submit the form for admin verification.', 'trufield-portal' ) ); ?></span>
-</div>
-</div>
-
-<?php if ( $prereq_met && ! $validation_ok ) : ?>
-<p class="tf-phase-form__complete-note"><?php echo esc_html( 1 === $phase ? __( 'Phase 1 will count as a valid grower entry after the required fields across all sections are filled in and saved.', 'trufield-portal' ) : __( 'Phase 2 cannot be submitted until the required fields across both sections are filled in.', 'trufield-portal' ) ); ?></p>
-<?php endif; ?>
 <?php else : ?>
 <div class="tf-form-grid">
 <?php if ( 1 === $phase ) : ?>
@@ -705,6 +689,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endforeach; ?>
 </div>
 
+<?php if ( $is_admin ) : ?>
 <div class="tf-show-more">
 <button type="button" class="tf-show-more__toggle" aria-expanded="false" data-show-label="<?php esc_attr_e( 'Show optional fields', 'trufield-portal' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide optional fields', 'trufield-portal' ); ?>">
 <span class="tf-show-more__toggle-text"><?php esc_html_e( 'Show optional fields', 'trufield-portal' ); ?></span>
@@ -718,17 +703,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </div>
 </div>
 </div>
-
-<div class="tf-phase-form__action-help">
-<div class="tf-phase-form__action-help-item">
-<strong><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></strong>
-<span><?php esc_html_e( 'Keep your draft and come back later.', 'trufield-portal' ); ?></span>
-</div>
-<div class="tf-phase-form__action-help-item">
-<strong><?php echo esc_html( 1 === $phase ? __( 'Valid Entry', 'trufield-portal' ) : __( 'Complete Phase', 'trufield-portal' ) ); ?></strong>
-<span><?php echo esc_html( 1 === $phase ? __( 'Once every required Phase 1 field is present, saving the form makes this record count as 1 valid grower entry automatically.', 'trufield-portal' ) : __( 'Submit this form for verification once every required field is ready.', 'trufield-portal' ) ); ?></span>
-</div>
-</div>
+<?php endif; ?>
 
 <div class="tf-phase-form__actions">
 <button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary" formnovalidate><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
@@ -738,9 +713,6 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </button>
 <?php endif; ?>
 </div>
-<?php if ( $prereq_met && ! $validation_ok ) : ?>
-<p class="tf-phase-form__complete-note"><?php echo esc_html( 1 === $phase ? __( 'Phase 1 will count as a valid grower entry after the required fields above are filled in and saved.', 'trufield-portal' ) : __( 'This phase cannot be completed until all required fields above are filled in.', 'trufield-portal' ) ); ?></p>
-<?php endif; ?>
 <?php endif; ?>
 </form>
 <?php endif; ?>

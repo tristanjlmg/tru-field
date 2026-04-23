@@ -245,10 +245,15 @@
           var tabStep = Number(tab.getAttribute('data-step') || '0');
           var isActive = tabStep === step;
           var isComplete = tabStep < step;
+          var dot = tab.querySelector('.tf-phase-substeps__tab-dot');
 
           tab.classList.toggle('is-active', isActive);
           tab.classList.toggle('is-complete', isComplete);
           tab.setAttribute('aria-current', isActive ? 'step' : 'false');
+
+          if (dot) {
+	        dot.textContent = isComplete ? '✓' : String(tabStep);
+	      }
         });
 
         panels.forEach(function (panel) {

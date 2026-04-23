@@ -166,6 +166,16 @@ img { max-width: 100%; height: auto; }
   transition: border-color .15s, box-shadow .15s;
   width: 100%;
 }
+.tf-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.8rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3 5.25L7 9.25L11 5.25' stroke='%23444' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .95rem center;
+  background-size: 14px 14px;
+}
 .tf-input:focus, .tf-textarea:focus, .tf-select:focus {
   outline: none; border-color: var(--tf-green); box-shadow: 0 0 0 3px rgba(45,122,60,.15);
 }
@@ -624,11 +634,13 @@ img { max-width: 100%; height: auto; }
 }
 .tf-phase-location {
   grid-column: 1 / -1;
-  padding: 1.15rem 1.2rem 1.2rem;
-  border: 1px solid rgba(45,122,60,.14);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(244,249,245,.98), rgba(255,255,255,.98));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .tf-phase-location__intro {
   display: flex;
@@ -661,29 +673,33 @@ img { max-width: 100%; height: auto; }
 }
 .tf-phase-location__address-wrap {
   display: grid;
-  gap: .4rem;
+  gap: .8rem;
 }
 .tf-phase-location__address-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: .75rem;
-  align-items: center;
+  align-items: start;
 }
 .tf-phase-location__verify {
-  min-height: 3rem;
+  justify-self: start;
+  min-width: 210px;
+  min-height: 3.2rem;
   white-space: nowrap;
+  border-radius: 18px;
 }
 .tf-phase-location__coords {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 220px));
-  gap: .9rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   align-items: start;
+  padding: 1.15rem 1rem;
+  border: 1px solid rgba(38,50,56,.18);
+  border-radius: 0;
+  background: rgba(244,244,244,.92);
 }
 .tf-phase-location.is-locked .tf-phase-location__coords {
-  padding: .85rem;
-  border: 1px solid #dfe6ef;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  border-radius: 0;
 }
 .tf-phase-location.is-locked .tf-phase-location__coords .tf-field-group {
   opacity: .82;
@@ -696,31 +712,34 @@ img { max-width: 100%; height: auto; }
   max-width: 40rem;
 }
 .tf-phase-location__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  padding: .6rem .8rem;
-  border-radius: 999px;
-  background: var(--tf-white);
-  border: 1px solid var(--tf-border);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: .7rem;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
   font-size: .85rem;
   color: var(--tf-grey-700);
-  line-height: 1.3;
-  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  line-height: 1.4;
+  box-shadow: none;
 }
 .tf-phase-location__toggle input {
-  margin: 0;
+  margin: .1rem 0 0;
   accent-color: var(--tf-green);
+  width: 1.2rem;
+  height: 1.2rem;
 }
 .tf-phase-location__status {
   display: block;
-  margin-top: 0;
+  margin-top: .2rem;
   font-size: .82rem;
   color: var(--tf-grey-400);
 }
 .tf-phase-location__lock-note {
   display: block;
-  margin-top: .15rem;
+  margin-top: -.15rem;
   font-size: .8rem;
   color: var(--tf-grey-400);
 }
@@ -743,6 +762,10 @@ img { max-width: 100%; height: auto; }
   min-height: 260px;
   border: 0;
 }
+.tf-phase-location__map-note {
+  font-size: .82rem;
+  color: var(--tf-grey-400);
+}
 .tf-phase-substeps {
   display: flex;
   flex-direction: column;
@@ -756,11 +779,16 @@ img { max-width: 100%; height: auto; }
   padding: 0;
   list-style: none;
 }
+.tf-phase-substeps__nav-item {
+  display: flex;
+}
 .tf-phase-substeps[data-phase="2"] .tf-phase-substeps__nav {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .tf-phase-substeps__tab {
   width: 100%;
+  min-height: 5.75rem;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -828,8 +856,38 @@ img { max-width: 100%; height: auto; }
   color: var(--tf-grey-700);
   font-size: .92rem;
 }
+.tf-phase-admin-fields {
+  display: grid;
+  gap: .85rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(38,50,56,.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(248,250,252,.98), rgba(255,255,255,.98));
+}
+.tf-phase-admin-fields__header {
+  display: grid;
+  gap: .2rem;
+}
+.tf-phase-admin-fields__eyebrow {
+  margin: 0;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--tf-green);
+}
+.tf-phase-admin-fields__copy {
+  margin: 0;
+  color: var(--tf-grey-700);
+  font-size: .85rem;
+  line-height: 1.45;
+}
 .tf-phase-form .tf-form-grid--phase-step {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tf-phase-form .tf-form-grid--admin-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem 1rem;
 }
 .tf-phase-substeps__actions {
   display: flex;
@@ -1191,16 +1249,16 @@ img { max-width: 100%; height: auto; }
     font-size: .95rem;
   }
   .tf-phase-location {
-    padding: .9rem;
-    border-radius: 14px;
+    padding: 0;
+    border-radius: 0;
   }
-  .tf-phase-location__header { flex-direction: column; align-items: stretch; gap: .85rem; }
   .tf-phase-location__address-row { grid-template-columns: 1fr; gap: .65rem; }
   .tf-phase-location__verify {
     width: 100%;
     min-height: 2.8rem;
   }
-  .tf-phase-location__coords { grid-template-columns: 1fr; }
+  .tf-phase-location__coords { grid-template-columns: 1fr; padding: 1rem .9rem; }
+  .tf-phase-location__map-wrap { gap: .35rem; }
   .tf-phase-location__map,
   .tf-phase-location__map-frame { min-height: 180px; }
   .tf-phase-disclosures {
@@ -1218,6 +1276,7 @@ img { max-width: 100%; height: auto; }
     gap: .5rem;
   }
   .tf-phase-substeps__tab {
+    min-height: 5rem;
     padding: .7rem .45rem;
     border-radius: 14px;
   }
@@ -1239,9 +1298,19 @@ img { max-width: 100%; height: auto; }
   .tf-phase-substeps__panel-copy {
     font-size: .88rem;
   }
+  .tf-phase-admin-fields {
+    padding: .9rem;
+    border-radius: 14px;
+  }
+  .tf-phase-admin-fields__copy {
+    font-size: .82rem;
+  }
   .tf-phase-form .tf-form-grid--phase-step {
     grid-template-columns: 1fr;
     gap: .85rem;
+  }
+  .tf-phase-form .tf-form-grid--admin-fields {
+    grid-template-columns: 1fr;
   }
   .tf-phase-substeps__actions {
     flex-direction: column;

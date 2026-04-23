@@ -29,20 +29,79 @@ return in_array( 'administrator', (array) $user->roles, true )
 return current_user_can( 'administrator' ) || current_user_can( 'manage_options' );
 }
 
+function trufield_state_region_options(): array {
+return [
+'AL' => 'Alabama',
+'AK' => 'Alaska',
+'AZ' => 'Arizona',
+'AR' => 'Arkansas',
+'CA' => 'California',
+'CO' => 'Colorado',
+'CT' => 'Connecticut',
+'DE' => 'Delaware',
+'FL' => 'Florida',
+'GA' => 'Georgia',
+'HI' => 'Hawaii',
+'ID' => 'Idaho',
+'IL' => 'Illinois',
+'IN' => 'Indiana',
+'IA' => 'Iowa',
+'KS' => 'Kansas',
+'KY' => 'Kentucky',
+'LA' => 'Louisiana',
+'ME' => 'Maine',
+'MD' => 'Maryland',
+'MA' => 'Massachusetts',
+'MI' => 'Michigan',
+'MN' => 'Minnesota',
+'MS' => 'Mississippi',
+'MO' => 'Missouri',
+'MT' => 'Montana',
+'NE' => 'Nebraska',
+'NV' => 'Nevada',
+'NH' => 'New Hampshire',
+'NJ' => 'New Jersey',
+'NM' => 'New Mexico',
+'NY' => 'New York',
+'NC' => 'North Carolina',
+'ND' => 'North Dakota',
+'OH' => 'Ohio',
+'OK' => 'Oklahoma',
+'OR' => 'Oregon',
+'PA' => 'Pennsylvania',
+'RI' => 'Rhode Island',
+'SC' => 'South Carolina',
+'SD' => 'South Dakota',
+'TN' => 'Tennessee',
+'TX' => 'Texas',
+'UT' => 'Utah',
+'VT' => 'Vermont',
+'VA' => 'Virginia',
+'WA' => 'Washington',
+'WV' => 'West Virginia',
+'WI' => 'Wisconsin',
+'WY' => 'Wyoming',
+];
+}
+
 function trufield_get_required_fields( int $phase ): array {
 $required = [
 1 => [
 'retailer_name',
+'retailer_key_contact',
+'retailer_contact_phone',
+'retailer_address',
+'retailer_city',
+'phase_1_state_region',
+'field_trial_contact',
 'contact_phone',
 'field_trial_contact_email',
-'field_trial_contact',
-'phase_1_state_region',
-'phase_1_application_date',
-'phase_1_application_rate',
 'phase_1_trial_type',
 'phase_1_treated_size_acres',
 'phase_1_protocol_version',
 'phase_1_application_timing',
+'phase_1_application_date',
+'phase_1_application_rate',
 'phase_1_retailer_training_discussion_date',
 ],
 2 => [
@@ -93,33 +152,39 @@ function trufield_get_validation_fields( int $phase ): array {
 
 function trufield_field_labels(): array {
 return [
+'rsm_bam'                              => 'RSM/RAM',
+'fsa'                                  => 'FSA',
 'retailer_name'                       => 'Retailer Name',
+'retailer_branch_location'            => 'Retailer Branch Location',
 'retailer_key_contact'                => 'Retailer Contact',
+'retailer_contact_phone'              => 'Retailer Contact Number',
+'retailer_address'                    => 'Retailer Address',
+'retailer_city'                       => 'City',
 'farm_name'                           => 'Grower Name / Farm Name',
-'field_trial_contact'                 => 'Crop Specialist / Field Trial Contact (First Last)',
-'contact_phone'                       => 'Crop Specialist / Field Trial Contact Phone',
+'field_trial_contact'                 => 'Field Trial Contact',
+'contact_phone'                       => 'Field Trial Phone Number',
 'field_trial_contact_email'           => 'Field Trial Contact Email',
 'field_name'                          => 'Field Name / Field ID',
 'field_location_address'              => 'Field Location Address',
-'field_location_lat'                  => 'Field Latitude',
-'field_location_lng'                  => 'Field Longitude',
+'field_location_lat'                  => 'Field Trial Latitude',
+'field_location_lng'                  => 'Field Trial Longitude',
 'field_location_manual_override'      => 'Address unavailable - manual coordinate override',
 'phase_1_state_region'                => 'State',
 'phase_1_product_being_tested'        => 'Product Being Tested',
 'phase_1_application_type'            => 'Application Type',
 'phase_1_application_date'            => 'Application Date',
-'phase_1_application_rate'            => 'Applied Rate (oz/ac)',
+'phase_1_application_rate'            => 'Applied Rate',
 'phase_1_trial_design'                => 'Trial Design',
 'phase_1_growth_stage_at_application' => 'Growth Stage at Application',
 'phase_1_weather_conditions_at_application' => 'Weather Conditions at Application',
 'phase_1_soil_conditions_at_application' => 'Soil Conditions at Application',
 'phase_1_field_overview_photo'        => 'Field Overview Photo',
 'phase_1_trial_type'                  => 'Trial Type',
-'phase_1_treated_size_acres'          => 'Treated Size (Acres)',
+'phase_1_treated_size_acres'          => 'Treated Size',
 'phase_1_carrier_volume_gal'          => 'Carrier Volume (Gal)',
 'phase_1_protocol_version'            => 'Protocol Version',
 'phase_1_application_timing'          => 'Application Timing',
-'phase_1_retailer_training_discussion_date' => 'Retailer Product Training/Discussion Date',
+'phase_1_retailer_training_discussion_date' => 'Product Training Date',
 'phase_1_hybrid_variety'              => 'Hybrid Variety',
 'phase_1_planting_date'               => 'Planting Date',
 'phase_1_planting_population'         => 'Planting Population',
@@ -189,15 +254,87 @@ function trufield_get_retailer_name_options(): array {
 	return $options;
 }
 
+function trufield_assignment_user_roles_for_field( string $field ): array {
+	$map = [
+		'rsm_bam' => [ 'sales_rep' ],
+		'fsa'     => [ 'fsa', 'administrator' ],
+	];
+
+	$roles = $map[ $field ] ?? [];
+
+	return array_values(
+		array_filter(
+			apply_filters( 'trufield_assignment_user_roles', $roles, $field ),
+			static fn( $role ): bool => is_string( $role ) && '' !== trim( $role )
+		)
+	);
+}
+
+function trufield_get_assignment_user_options( string $field ): array {
+	static $cache = [];
+
+	if ( isset( $cache[ $field ] ) ) {
+		return $cache[ $field ];
+	}
+
+	$options = [];
+	$seen    = [];
+
+	foreach ( trufield_assignment_user_roles_for_field( $field ) as $role ) {
+		$users = get_users(
+			[
+				'role'    => $role,
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+				'fields'  => [ 'ID', 'display_name' ],
+			]
+		);
+
+		foreach ( $users as $user ) {
+			$user_id = (int) $user->ID;
+			if ( $user_id <= 0 || isset( $seen[ $user_id ] ) ) {
+				continue;
+			}
+
+			$seen[ $user_id ]    = true;
+			$options[ $user_id ] = $user->display_name;
+		}
+	}
+
+	$cache[ $field ] = $options;
+
+	return $options;
+}
+
+function trufield_resolve_assignment_user_label( $value ): string {
+	if ( is_numeric( $value ) ) {
+		$user = get_userdata( (int) $value );
+		if ( $user ) {
+			return (string) $user->display_name;
+		}
+	}
+
+	return trim( sanitize_text_field( (string) $value ) );
+}
+
 function trufield_phase_field_schema(): array {
 return [
+'rsm_bam' => [ 'type' => 'user' ],
+'fsa' => [ 'type' => 'user' ],
 'field_location_address' => [ 'type' => 'text' ],
 'field_location_lat' => [ 'type' => 'number' ],
 'field_location_lng' => [ 'type' => 'number' ],
 'field_location_manual_override' => [ 'type' => 'boolean' ],
+'retailer_branch_location' => [ 'type' => 'text' ],
+'retailer_contact_phone' => [ 'type' => 'text' ],
+'retailer_address' => [ 'type' => 'text' ],
+'retailer_city' => [ 'type' => 'text' ],
 'contact_phone' => [ 'type' => 'text' ],
 'field_trial_contact_email' => [ 'type' => 'email' ],
-'phase_1_state_region' => [ 'type' => 'text' ],
+'phase_1_state_region' => [
+'type'    => 'select',
+'options' => trufield_state_region_options(),
+],
 'phase_1_product_being_tested' => [ 'type' => 'text' ],
 'phase_1_application_type' => [
 'type'    => 'select',
@@ -549,7 +686,11 @@ function trufield_rep_editable_phase_fields( int $phase ): array {
 $fields = [
 1 => [
 'retailer_name',
+'retailer_branch_location',
 'retailer_key_contact',
+'retailer_contact_phone',
+'retailer_address',
+'retailer_city',
 'farm_name',
 'field_trial_contact',
 'contact_phone',
@@ -614,6 +755,17 @@ $fields = [
 return $fields[ $phase ] ?? [];
 }
 
+function trufield_admin_only_phase_fields( int $phase ): array {
+	$fields = [
+		1 => [
+			'rsm_bam',
+			'fsa',
+		],
+	];
+
+	return $fields[ $phase ] ?? [];
+}
+
 function trufield_validate_date_value( string $value ): string {
 $value = sanitize_text_field( $value );
 if ( $value === '' ) {
@@ -638,6 +790,10 @@ switch ( $type ) {
 case 'boolean':
 	return ! empty( $value ) ? '1' : '';
 
+case 'user':
+	$value = trim( (string) $value );
+	return $value === '' ? '' : absint( $value );
+
 case 'integer':
 $value = trim( (string) $value );
 return $value === '' ? '' : absint( $value );
@@ -659,9 +815,21 @@ $value = sanitize_textarea_field( (string) $value );
 return trim( $value );
 
 case 'select':
-$value   = sanitize_key( (string) $value );
-$options = array_keys( $schema[ $field ]['options'] ?? [] );
-return in_array( $value, $options, true ) ? $value : '';
+	$value   = trim( sanitize_text_field( (string) $value ) );
+	$options = array_keys( $schema[ $field ]['options'] ?? [] );
+
+	if ( in_array( $value, $options, true ) ) {
+		return $value;
+	}
+
+	$normalized_value = sanitize_key( $value );
+	foreach ( $options as $option_key ) {
+		if ( sanitize_key( (string) $option_key ) === $normalized_value ) {
+			return (string) $option_key;
+		}
+	}
+
+	return '';
 
 case 'date':
 return trufield_validate_date_value( (string) $value );
@@ -773,7 +941,9 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 
 	$redirect_base = wp_get_referer() ?: get_permalink( $post_id );
 	$phase_step    = max( 1, min( trufield_get_phase_step_count( $phase ), (int) ( $_POST['phase_step'] ?? 1 ) ) );
-	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( 'phase_step', $phase_step, $redirect_base ) : $redirect_base;
+	$phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
+	$redirect_clean = remove_query_arg( 'phase_step', $redirect_base );
+	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $phase_step, $redirect_clean ) : $redirect_clean;
 	$action        = sanitize_key( $_POST['phase_action'] ?? 'save' );
 
 	if ( 1 === $phase && array_key_exists( 'retailer_name', $_POST ) ) {
@@ -787,7 +957,11 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		}
 	}
 
-$editable = trufield_rep_editable_phase_fields( $phase );
+	$editable = trufield_rep_editable_phase_fields( $phase );
+	if ( trufield_user_is_admin( $user_id ) ) {
+		$editable = array_merge( $editable, trufield_admin_only_phase_fields( $phase ) );
+	}
+
 foreach ( $editable as $field ) {
 if ( ! array_key_exists( $field, $_POST ) ) {
 continue;
@@ -801,6 +975,16 @@ continue;
 
 update_post_meta( $post_id, $field, $sanitized );
 }
+
+	if ( 1 === $phase && trufield_user_is_admin( $user_id ) && array_key_exists( 'rsm_bam', $_POST ) ) {
+		$assigned_rep_id = absint( (string) $_POST['rsm_bam'] );
+
+		if ( $assigned_rep_id > 0 ) {
+			update_post_meta( $post_id, 'assigned_sales_rep', $assigned_rep_id );
+		} else {
+			delete_post_meta( $post_id, 'assigned_sales_rep' );
+		}
+	}
 
 	foreach ( trufield_phase_file_fields( $phase ) as $file_field ) {
 		if ( ! empty( $_POST[ $file_field . '_remove' ] ) ) {
