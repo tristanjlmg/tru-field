@@ -233,6 +233,16 @@
         return invalidLabels.length === 0;
       }
 
+      function syncStepQuery(step) {
+        if (!window.history || typeof window.history.replaceState !== 'function' || !window.URL) {
+          return;
+        }
+
+        var url = new window.URL(window.location.href);
+        url.searchParams.set('phase_' + String(phase || 1) + '_step', String(step));
+        window.history.replaceState({}, '', url.toString());
+      }
+
       function syncStepState(step) {
         currentStep = step;
         hiddenInput.value = String(step);
@@ -240,6 +250,8 @@
         if (storageKey && window.sessionStorage) {
           window.sessionStorage.setItem(storageKey, String(step));
         }
+
+        syncStepQuery(step);
 
         tabs.forEach(function (tab) {
           var tabStep = Number(tab.getAttribute('data-step') || '0');
@@ -972,12 +984,51 @@
     }, 250);
   }
 
+  function initStandCountDelta() {
+    document.querySelectorAll('form.tf-phase-form').forEach(function (form) {
+      var treatedInput = form.querySelector('[data-tf-stand-count-treated]');
+      var untreatedInput = form.querySelector('[data-tf-stand-count-untreated]');
+      var deltaInput = form.querySelector('[data-tf-stand-count-delta]');
+
+      if (!treatedInput || !untreatedInput || !deltaInput) {
+        return;
+      }
+
+      function formatDelta(value) {
+        var rounded = Math.round(value * 100) / 100;
+
+        if (Math.abs(rounded - Math.round(rounded)) < 0.000001) {
+          return String(Math.round(rounded));
+        }
+
+        return String(rounded).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+      }
+
+      function syncDelta() {
+        var treated = String(treatedInput.value || '').trim();
+        var untreated = String(untreatedInput.value || '').trim();
+
+        if (treated === '' || untreated === '' || isNaN(Number(treated)) || isNaN(Number(untreated))) {
+          deltaInput.value = '';
+          return;
+        }
+
+        deltaInput.value = formatDelta(Number(treated) - Number(untreated));
+      }
+
+      treatedInput.addEventListener('input', syncDelta);
+      untreatedInput.addEventListener('input', syncDelta);
+      syncDelta();
+    });
+  }
+
   function initPortal() {
     initAlertDismiss();
     initNavToggle();
     initShowMore();
     initRetailerPickers();
     initPhaseSubsteps();
+    initStandCountDelta();
     initTrialSearch();
     initLeaderboardSearch();
     ensurePhaseLocationBindings(0);

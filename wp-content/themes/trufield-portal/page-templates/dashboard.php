@@ -11,8 +11,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 get_header();
 
 $current_user = wp_get_current_user();
-$fields       = trufield_get_visible_fields();
 $is_sales_rep = in_array( 'sales_rep', (array) $current_user->roles, true );
+$is_admin     = trufield_user_is_admin( (int) $current_user->ID );
+$selected_sales_rep = $is_admin ? absint( wp_unslash( $_GET['sales_rep'] ?? 0 ) ) : 0;
+$sales_rep_options  = $is_admin ? trufield_get_sales_rep_users() : [];
+$valid_sales_rep_ids = $is_admin ? array_map( static fn( $user ): int => (int) $user->ID, $sales_rep_options ) : [];
+
+if ( $selected_sales_rep > 0 && ! in_array( $selected_sales_rep, $valid_sales_rep_ids, true ) ) {
+	$selected_sales_rep = 0;
+}
+
+$field_query_args = [];
+if ( $is_admin && $selected_sales_rep > 0 ) {
+	$field_query_args['meta_query'] = [
+		[
+			'key'     => 'assigned_sales_rep',
+			'value'   => $selected_sales_rep,
+			'compare' => '=',
+			'type'    => 'NUMERIC',
+		],
+	];
+}
+
+$fields       = trufield_get_visible_fields( $field_query_args );
 $can_create   = current_user_can( 'publish_plant_fields' );
 $leaderboard  = trufield_get_leaderboard();
 $leaderboard_url = get_permalink( trufield_get_leaderboard_page_id() );
@@ -210,17 +231,33 @@ $team_points = array_sum(
 			</div>
 
 			<?php if ( ! empty( $fields ) ) : ?>
-				<div class="tf-trial-search" data-tf-trial-search>
-					<label class="tf-trial-search__label" for="tf-trial-search-input"><?php esc_html_e( 'Search trials', 'trufield-portal' ); ?></label>
-					<input
-						type="search"
-						id="tf-trial-search-input"
-						class="tf-input tf-trial-search__input"
-						placeholder="<?php esc_attr_e( 'Search by trial, retailer, farm, or address', 'trufield-portal' ); ?>"
-						data-tf-trial-search-input
-						autocomplete="off"
-					>
-					<p class="tf-trial-search__hint" data-tf-trial-search-hint><?php esc_html_e( 'Start typing to filter the visible field cards instantly.', 'trufield-portal' ); ?></p>
+				<div class="tf-trial-filters">
+					<?php if ( $is_admin ) : ?>
+						<form method="get" action="<?php echo esc_url( get_permalink() ?: trufield_dashboard_url() ); ?>" class="tf-trial-filter-form">
+							<label class="tf-trial-filter-form__label" for="tf-sales-rep-filter"><?php esc_html_e( 'Filter by sales rep', 'trufield-portal' ); ?></label>
+							<div class="tf-trial-filter-form__controls">
+								<select id="tf-sales-rep-filter" name="sales_rep" class="tf-select tf-trial-filter-form__select" onchange="this.form.submit()">
+									<option value="0"><?php esc_html_e( 'All sales reps', 'trufield-portal' ); ?></option>
+									<?php foreach ( $sales_rep_options as $sales_rep_user ) : ?>
+										<option value="<?php echo esc_attr( (string) $sales_rep_user->ID ); ?>" <?php selected( $selected_sales_rep, (int) $sales_rep_user->ID ); ?>><?php echo esc_html( $sales_rep_user->display_name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<noscript><button type="submit" class="tf-btn tf-btn--ghost tf-btn--sm"><?php esc_html_e( 'Apply', 'trufield-portal' ); ?></button></noscript>
+							</div>
+						</form>
+					<?php endif; ?>
+					<div class="tf-trial-search" data-tf-trial-search>
+						<label class="tf-trial-search__label" for="tf-trial-search-input"><?php esc_html_e( 'Search trials', 'trufield-portal' ); ?></label>
+						<input
+							type="search"
+							id="tf-trial-search-input"
+							class="tf-input tf-trial-search__input"
+							placeholder="<?php esc_attr_e( 'Search by trial, retailer, farm, or address', 'trufield-portal' ); ?>"
+							data-tf-trial-search-input
+							autocomplete="off"
+						>
+						<p class="tf-trial-search__hint" data-tf-trial-search-hint><?php esc_html_e( 'Start typing to filter the visible field cards instantly.', 'trufield-portal' ); ?></p>
+					</div>
 				</div>
 			<?php endif; ?>
 

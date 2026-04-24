@@ -107,11 +107,14 @@ $required = [
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
+'phase_2_rsm_visit_1_photos_taken_date',
+'phase_2_rsm_visit_1_photo_type',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
+'phase_2_rsm_visit_2_photos_taken_date',
+'phase_2_rsm_visit_2_photo_type',
 'phase_2_residue_degradation_observed',
 'phase_2_emergence_stand_collected',
-'phase_2_stand_count_data',
 'phase_2_average_stand_count_treated',
 'phase_2_average_stand_count_untreated',
 'phase_2_most_significant_visual_difference',
@@ -192,13 +195,27 @@ return [
 'phase_1_planting_speed'              => 'Planting Speed',
 'phase_2_rsm_visit_1_date'            => 'RSM Visit Date 1',
 'phase_2_rsm_visit_1_upload_photos'   => 'RSM Visit Date 1 Upload Photos',
+'phase_2_rsm_visit_1_photos_taken_date' => 'RSM Visit Date 1 Photos Taken Date',
+'phase_2_rsm_visit_1_photo_type'      => 'RSM Visit Date 1 Photo Type',
 'phase_2_rsm_visit_2_date'            => 'RSM Visit Date 2',
 'phase_2_rsm_visit_2_upload_photos'   => 'RSM Visit Date 2 Upload Photos',
+'phase_2_rsm_visit_2_photos_taken_date' => 'RSM Visit Date 2 Photos Taken Date',
+'phase_2_rsm_visit_2_photo_type'      => 'RSM Visit Date 2 Photo Type',
+'phase_2_rsm_visit_3_date'            => 'RSM Visit Date 3',
+'phase_2_rsm_visit_3_upload_photos'   => 'RSM Visit Date 3 Upload Photos',
+'phase_2_rsm_visit_3_photos_taken_date' => 'RSM Visit Date 3 Photos Taken Date',
+'phase_2_rsm_visit_3_photo_type'      => 'RSM Visit Date 3 Photo Type',
+'phase_2_rsm_visit_3_comments'        => 'RSM Visit Date 3 Comments',
+'phase_2_rsm_visit_4_date'            => 'RSM Visit Date 4',
+'phase_2_rsm_visit_4_upload_photos'   => 'RSM Visit Date 4 Upload Photos',
+'phase_2_rsm_visit_4_photos_taken_date' => 'RSM Visit Date 4 Photos Taken Date',
+'phase_2_rsm_visit_4_photo_type'      => 'RSM Visit Date 4 Photo Type',
+'phase_2_rsm_visit_4_comments'        => 'RSM Visit Date 4 Comments',
 'phase_2_residue_degradation_observed'=> 'Residue Degradation Observed',
 'phase_2_emergence_stand_collected'   => 'Emergence, Stand Collected',
-'phase_2_stand_count_data'            => 'Stand Count Data',
-'phase_2_average_stand_count_treated' => 'Average Stand Counts - TREATED',
-'phase_2_average_stand_count_untreated' => 'Average Stand Counts - UNTREATED',
+'phase_2_stand_count_data'            => 'Stand Count Deltas',
+'phase_2_average_stand_count_treated' => 'Average of 3 Stand Counts - TREATED',
+'phase_2_average_stand_count_untreated' => 'Average of 3 Stand Counts - UNTREATED',
 'phase_2_most_significant_visual_difference' => 'Most Significant Visual Difference',
 'phase_3_yield_bu_ac'                 => 'Yield (bu/ac)',
 'phase_3_moisture_percent'            => 'Moisture (%)',
@@ -394,8 +411,54 @@ return [
 'phase_1_planting_speed' => [ 'type' => 'number' ],
 'phase_2_rsm_visit_1_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_1_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_1_photos_taken_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_1_photo_type' => [
+'type'    => 'select',
+'options' => [
+'treated'   => 'Treated',
+'untreated' => 'Untreated',
+'overview'  => 'Overview',
+'other'     => 'Other',
+],
+],
 'phase_2_rsm_visit_2_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_2_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_2_photos_taken_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_2_photo_type' => [
+'type'    => 'select',
+'options' => [
+'treated'   => 'Treated',
+'untreated' => 'Untreated',
+'overview'  => 'Overview',
+'other'     => 'Other',
+],
+],
+'phase_2_rsm_visit_3_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_3_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_3_photos_taken_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_3_photo_type' => [
+'type'    => 'select',
+'options' => [
+'treated'   => 'Treated',
+'untreated' => 'Untreated',
+'overview'  => 'Overview',
+'other'     => 'Other',
+],
+],
+'phase_2_rsm_visit_3_comments' => [ 'type' => 'textarea' ],
+'phase_2_rsm_visit_4_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_4_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_4_photos_taken_date' => [ 'type' => 'date' ],
+'phase_2_rsm_visit_4_photo_type' => [
+'type'    => 'select',
+'options' => [
+'treated'   => 'Treated',
+'untreated' => 'Untreated',
+'overview'  => 'Overview',
+'other'     => 'Other',
+],
+],
+'phase_2_rsm_visit_4_comments' => [ 'type' => 'textarea' ],
 'phase_2_residue_degradation_observed' => [
 'type'    => 'select',
 'options' => [
@@ -725,11 +788,24 @@ $fields = [
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
+'phase_2_rsm_visit_1_photos_taken_date',
+'phase_2_rsm_visit_1_photo_type',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
+'phase_2_rsm_visit_2_photos_taken_date',
+'phase_2_rsm_visit_2_photo_type',
+'phase_2_rsm_visit_3_date',
+'phase_2_rsm_visit_3_upload_photos',
+'phase_2_rsm_visit_3_photos_taken_date',
+'phase_2_rsm_visit_3_photo_type',
+'phase_2_rsm_visit_3_comments',
+'phase_2_rsm_visit_4_date',
+'phase_2_rsm_visit_4_upload_photos',
+'phase_2_rsm_visit_4_photos_taken_date',
+'phase_2_rsm_visit_4_photo_type',
+'phase_2_rsm_visit_4_comments',
 'phase_2_residue_degradation_observed',
 'phase_2_emergence_stand_collected',
-'phase_2_stand_count_data',
 'phase_2_average_stand_count_treated',
 'phase_2_average_stand_count_untreated',
 'phase_2_most_significant_visual_difference',
@@ -845,12 +921,42 @@ function trufield_phase_photo_attachment_meta_key( string $field ): string {
 	return $field . '_attachment_id';
 }
 
+function trufield_calculate_phase_2_stand_count_delta( $treated_value, $untreated_value ): string {
+	$treated = trim( (string) $treated_value );
+	$untreated = trim( (string) $untreated_value );
+
+	if ( '' === $treated || '' === $untreated || ! is_numeric( $treated ) || ! is_numeric( $untreated ) ) {
+		return '';
+	}
+
+	$delta = round( (float) $treated - (float) $untreated, 2 );
+	$formatted = number_format( $delta, 2, '.', '' );
+	$formatted = rtrim( rtrim( $formatted, '0' ), '.' );
+
+	return '-0' === $formatted ? '0' : $formatted;
+}
+
+function trufield_sync_phase_2_stand_count_delta( int $post_id ): void {
+	$treated = get_post_meta( $post_id, 'phase_2_average_stand_count_treated', true );
+	$untreated = get_post_meta( $post_id, 'phase_2_average_stand_count_untreated', true );
+	$delta = trufield_calculate_phase_2_stand_count_delta( $treated, $untreated );
+
+	if ( '' === $delta ) {
+		delete_post_meta( $post_id, 'phase_2_stand_count_data' );
+		return;
+	}
+
+	update_post_meta( $post_id, 'phase_2_stand_count_data', $delta );
+}
+
 function trufield_phase_file_fields( int $phase ): array {
 	$fields = [
 		1 => [ 'phase_1_field_overview_photo' ],
 		2 => [
 			'phase_2_rsm_visit_1_upload_photos',
 			'phase_2_rsm_visit_2_upload_photos',
+			'phase_2_rsm_visit_3_upload_photos',
+			'phase_2_rsm_visit_4_upload_photos',
 		],
 		3 => [],
 	];
@@ -996,6 +1102,10 @@ update_post_meta( $post_id, $field, $sanitized );
 			wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $upload_result->get_error_message() ), $redirect ) );
 			exit;
 		}
+	}
+
+	if ( 2 === $phase ) {
+		trufield_sync_phase_2_stand_count_delta( $post_id );
 	}
 
 if ( $action === 'verify_address' ) {

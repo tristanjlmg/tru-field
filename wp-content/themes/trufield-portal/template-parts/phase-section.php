@@ -82,16 +82,31 @@ $field_groups = [
 'required' => [
 'phase_2_rsm_visit_1_date'                 => [ 'input' => 'date' ],
 'phase_2_rsm_visit_1_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 1 photo for this trial.' ],
+'phase_2_rsm_visit_1_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_1_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_2_date'                 => [ 'input' => 'date' ],
 'phase_2_rsm_visit_2_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 2 photo for this trial.' ],
+'phase_2_rsm_visit_2_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_2_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_residue_degradation_observed'     => [ 'input' => 'select' ],
 'phase_2_emergence_stand_collected'        => [ 'input' => 'select' ],
-'phase_2_stand_count_data'                 => [ 'input' => 'text', 'placeholder' => 'Describe the stand count data collected' ],
-'phase_2_average_stand_count_treated'      => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
-'phase_2_average_stand_count_untreated'    => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_2_stand_count_data'                 => [ 'input' => 'text', 'placeholder' => 'Auto-calculated', 'readonly' => true, 'disabled' => true, 'help' => 'Reference only. This field auto-populates as treated minus untreated.', 'attributes' => [ 'data-tf-stand-count-delta' => 'true' ] ],
+'phase_2_average_stand_count_treated'      => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'help' => 'Enter the average of three stand counts for the treated area.', 'attributes' => [ 'data-tf-stand-count-treated' => 'true' ] ],
+'phase_2_average_stand_count_untreated'    => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'help' => 'Enter the average of three stand counts for the untreated area.', 'attributes' => [ 'data-tf-stand-count-untreated' => 'true' ] ],
 'phase_2_most_significant_visual_difference' => [ 'input' => 'textarea', 'rows' => 4, 'placeholder' => 'What was the most significant visual difference you saw?' ],
 ],
-'optional' => [],
+'optional' => [
+'phase_2_rsm_visit_3_date'                 => [ 'input' => 'date' ],
+'phase_2_rsm_visit_3_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 3 photo for this trial.' ],
+'phase_2_rsm_visit_3_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_3_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
+'phase_2_rsm_visit_3_comments'             => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Add notes for visit 3' ],
+'phase_2_rsm_visit_4_date'                 => [ 'input' => 'date' ],
+'phase_2_rsm_visit_4_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 4 photo for this trial.' ],
+'phase_2_rsm_visit_4_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_4_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
+'phase_2_rsm_visit_4_comments'             => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Add notes for visit 4' ],
+],
 ],
 3 => [
 'required' => [
@@ -215,29 +230,47 @@ if ( 1 === $phase ) {
 		1 => [
 			'key'            => 'visits',
 			'title'          => __( 'RSM Visits & Field Documentation', 'trufield-portal' ),
-			'description'    => __( 'Record both RSM visit dates and upload the required visit photos.', 'trufield-portal' ),
+			'description'    => __( 'Record up to four RSM visits, including visit dates, uploaded photos, and photo details for each documented stop.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_2_rsm_visit_1_date',
 				'phase_2_rsm_visit_1_upload_photos',
+				'phase_2_rsm_visit_1_photos_taken_date',
+				'phase_2_rsm_visit_1_photo_type',
 				'phase_2_rsm_visit_2_date',
 				'phase_2_rsm_visit_2_upload_photos',
+				'phase_2_rsm_visit_2_photos_taken_date',
+				'phase_2_rsm_visit_2_photo_type',
 			],
 			'fields'         => [
 				'phase_2_rsm_visit_1_date',
 				'phase_2_rsm_visit_1_upload_photos',
+				'phase_2_rsm_visit_1_photos_taken_date',
+				'phase_2_rsm_visit_1_photo_type',
 				'phase_2_rsm_visit_2_date',
 				'phase_2_rsm_visit_2_upload_photos',
+				'phase_2_rsm_visit_2_photos_taken_date',
+				'phase_2_rsm_visit_2_photo_type',
 			],
-			'optional_fields'=> [],
+			'optional_fields'=> [
+				'phase_2_rsm_visit_3_date',
+				'phase_2_rsm_visit_3_upload_photos',
+				'phase_2_rsm_visit_3_photos_taken_date',
+				'phase_2_rsm_visit_3_photo_type',
+				'phase_2_rsm_visit_3_comments',
+				'phase_2_rsm_visit_4_date',
+				'phase_2_rsm_visit_4_upload_photos',
+				'phase_2_rsm_visit_4_photos_taken_date',
+				'phase_2_rsm_visit_4_photo_type',
+				'phase_2_rsm_visit_4_comments',
+			],
 		],
 		2 => [
 			'key'            => 'observations',
 			'title'          => __( 'Field Observations', 'trufield-portal' ),
-			'description'    => __( 'Capture residue, stand-count observations, and the strongest visible difference in the field.', 'trufield-portal' ),
+			'description'    => __( 'Capture residue observations, enter the average of three stand counts for treated and untreated areas, and summarize the strongest visible difference in the field.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_2_residue_degradation_observed',
 				'phase_2_emergence_stand_collected',
-				'phase_2_stand_count_data',
 				'phase_2_average_stand_count_treated',
 				'phase_2_average_stand_count_untreated',
 				'phase_2_most_significant_visual_difference',
@@ -245,9 +278,9 @@ if ( 1 === $phase ) {
 			'fields'         => [
 				'phase_2_residue_degradation_observed',
 				'phase_2_emergence_stand_collected',
-				'phase_2_stand_count_data',
 				'phase_2_average_stand_count_treated',
 				'phase_2_average_stand_count_untreated',
+				'phase_2_stand_count_data',
 				'phase_2_most_significant_visual_difference',
 			],
 			'optional_fields'=> [],
@@ -267,7 +300,24 @@ $max         = $config['max'] ?? null;
 $step        = $config['step'] ?? null;
 $accept      = $config['accept'] ?? '';
 $help        = $config['help'] ?? '';
+$readonly    = ! empty( $config['readonly'] );
+$disabled    = ! empty( $config['disabled'] );
+$static_value = $config['static_value'] ?? null;
+$attributes  = (array) ( $config['attributes'] ?? [] );
 $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), true );
+
+$attribute_markup = '';
+foreach ( $attributes as $attribute_name => $attribute_value ) {
+	if ( ! is_string( $attribute_name ) || '' === $attribute_name ) {
+		continue;
+	}
+
+	$attribute_markup .= ' ' . esc_attr( $attribute_name ) . '="' . esc_attr( (string) $attribute_value ) . '"';
+}
+
+if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_value ) {
+	$value = $static_value;
+}
 ?>
 <div class="tf-field-group">
 <label for="<?php echo esc_attr( $field ); ?>">
@@ -277,7 +327,7 @@ $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_
 <?php endif; ?>
 </label>
 <?php if ( $input_type === 'select' ) : ?>
-<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select">
+<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
 <?php foreach ( $schema[ $field ]['options'] ?? [] as $option_value => $option_label ) : ?>
 <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
@@ -292,7 +342,7 @@ $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_
 <?php endforeach; ?>
 </select>
 <?php elseif ( $input_type === 'textarea' ) : ?>
-<textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"><?php echo esc_textarea( (string) $value ); ?></textarea>
+<textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"<?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_textarea( (string) $value ); ?></textarea>
 <?php elseif ( $input_type === 'file' ) : ?>
 <div class="tf-upload-field">
 <?php if ( $value ) : ?>
@@ -328,6 +378,9 @@ name="<?php echo esc_attr( $field ); ?>"
 class="tf-input"
 value="<?php echo esc_attr( (string) $value ); ?>"
 placeholder="<?php echo esc_attr( $placeholder ); ?>"
+<?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $min !== null ? ' min="' . esc_attr( (string) $min ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $max !== null ? ' max="' . esc_attr( (string) $max ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $step !== null ? ' step="' . esc_attr( (string) $step ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

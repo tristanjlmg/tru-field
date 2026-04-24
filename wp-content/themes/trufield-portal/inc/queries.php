@@ -41,17 +41,28 @@ $query = new WP_Query( wp_parse_args( $extra_args, $defaults ) );
 return $query->posts;
 }
 
-function trufield_get_visible_fields(): array {
+function trufield_get_sales_rep_users(): array {
+	return get_users(
+		[
+			'role'    => 'sales_rep',
+			'orderby' => 'display_name',
+			'order'   => 'ASC',
+			'fields'  => [ 'ID', 'display_name' ],
+		]
+	);
+}
+
+function trufield_get_visible_fields( array $extra_args = [] ): array {
 $user = wp_get_current_user();
 if ( ! $user->exists() ) {
 return [];
 }
 
 if ( in_array( 'administrator', (array) $user->roles, true ) || in_array( 'leadership', (array) $user->roles, true ) ) {
-return trufield_get_all_fields();
+	return trufield_get_all_fields( $extra_args );
 }
 
-return trufield_get_assigned_fields( $user->ID );
+	return trufield_get_assigned_fields( $user->ID, $extra_args );
 }
 
 function trufield_search_grower_names( string $search = '', int $limit = 20 ): array {
