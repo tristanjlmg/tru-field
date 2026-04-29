@@ -130,6 +130,11 @@ if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
 return;
 }
 
+	$current_script = isset( $GLOBALS['pagenow'] ) ? (string) $GLOBALS['pagenow'] : '';
+	if ( $current_script === 'admin-post.php' ) {
+		return;
+	}
+
 $user = wp_get_current_user();
 if ( ! $user->exists() ) {
 return;

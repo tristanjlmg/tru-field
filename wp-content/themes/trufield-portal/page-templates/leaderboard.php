@@ -8,7 +8,22 @@ exit;
 }
 
 get_header();
-$leaderboard = trufield_get_leaderboard();
+$sales_reps        = trufield_get_sales_rep_users();
+$selected_rep_id   = absint( (string) ( $_GET['sales_rep'] ?? 0 ) );
+$selected_rep      = null;
+
+foreach ( $sales_reps as $sales_rep ) {
+	if ( (int) $sales_rep->ID === $selected_rep_id ) {
+		$selected_rep = $sales_rep;
+		break;
+	}
+}
+
+if ( ! $selected_rep ) {
+	$selected_rep_id = 0;
+}
+
+$leaderboard = trufield_get_leaderboard( $selected_rep_id );
 $current_uid = get_current_user_id();
 $top_rankings = array_slice( $leaderboard, 0, 3 );
 $rank_labels  = [
@@ -23,7 +38,7 @@ $rank_labels  = [
 <p class="tf-leaderboard-hero__copy">
 <?php
 	printf(
-		esc_html__( 'Each retailer awards %1$s points once a rep reaches at least %2$s valid grower entries for that retailer. Rankings are based on total points across all phases.', 'trufield-portal' ),
+		esc_html__( 'Each rep earns %1$s points for every %2$s valid Phase 1 entries. Rankings are based on total points across all phases.', 'trufield-portal' ),
 		number_format_i18n( trufield_get_retailer_points_award() ),
 		number_format_i18n( trufield_get_retailer_points_threshold() )
 	);
@@ -31,9 +46,32 @@ $rank_labels  = [
 </p>
 </header>
 
+<section class="tf-leaderboard-filters" aria-label="<?php esc_attr_e( 'Leaderboard filters', 'trufield-portal' ); ?>">
+<form method="get" class="tf-leaderboard-filters__form">
+	<label class="tf-leaderboard-filters__field" for="tf-sales-rep-filter">
+		<span class="tf-leaderboard-filters__label"><?php esc_html_e( 'Sales Rep', 'trufield-portal' ); ?></span>
+		<select id="tf-sales-rep-filter" name="sales_rep" class="tf-select tf-leaderboard-filters__select" onchange="this.form.submit()">
+			<option value="0"><?php esc_html_e( 'All Sales Reps', 'trufield-portal' ); ?></option>
+			<?php foreach ( $sales_reps as $sales_rep ) : ?>
+			<option value="<?php echo esc_attr( (string) $sales_rep->ID ); ?>" <?php selected( $selected_rep_id, (int) $sales_rep->ID ); ?>><?php echo esc_html( $sales_rep->display_name ); ?></option>
+			<?php endforeach; ?>
+		</select>
+	</label>
+	<noscript>
+		<button type="submit" class="tf-btn tf-btn--secondary tf-btn--sm"><?php esc_html_e( 'Apply', 'trufield-portal' ); ?></button>
+	</noscript>
+	<?php if ( $selected_rep_id > 0 ) : ?>
+	<a href="<?php echo esc_url( get_permalink() ); ?>" class="tf-btn tf-btn--ghost tf-btn--sm"><?php esc_html_e( 'Clear Filter', 'trufield-portal' ); ?></a>
+	<?php endif; ?>
+</form>
+<?php if ( $selected_rep ) : ?>
+<p class="tf-leaderboard-filters__summary"><?php echo esc_html( sprintf( __( 'Showing leaderboard results for %s.', 'trufield-portal' ), $selected_rep->display_name ) ); ?></p>
+<?php endif; ?>
+</section>
+
 <?php if ( empty( $leaderboard ) ) : ?>
 <div class="tf-empty-state tf-empty-state--leaderboard">
-<p><?php esc_html_e( 'No rep activity yet.', 'trufield-portal' ); ?></p>
+<p><?php echo esc_html( $selected_rep ? sprintf( __( 'No leaderboard activity yet for %s.', 'trufield-portal' ), $selected_rep->display_name ) : __( 'No rep activity yet.', 'trufield-portal' ) ); ?></p>
 </div>
 <?php else : ?>
 <?php if ( ! empty( $top_rankings ) ) : ?>

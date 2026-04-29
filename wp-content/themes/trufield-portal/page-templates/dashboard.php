@@ -55,13 +55,9 @@ foreach ( $leaderboard as $index => $row ) {
 }
 
 $verified_phase_1_count = 0;
-$verified_phase_2_count = 0;
 foreach ( $fields as $field_post ) {
 	if ( get_post_meta( $field_post->ID, 'phase_1_verified', true ) ) {
 		$verified_phase_1_count++;
-	}
-	if ( get_post_meta( $field_post->ID, 'phase_2_verified', true ) ) {
-		$verified_phase_2_count++;
 	}
 }
 
@@ -78,6 +74,24 @@ $team_points = array_sum(
 	array_map(
 		static function ( array $row ): int {
 			return (int) ( $row['points'] ?? 0 );
+		},
+		$leaderboard
+	)
+);
+
+$team_valid_entries = array_sum(
+	array_map(
+		static function ( array $row ): int {
+			return (int) ( $row['valid_entries'] ?? 0 );
+		},
+		$leaderboard
+	)
+);
+
+$team_awarded_retailers = array_sum(
+	array_map(
+		static function ( array $row ): int {
+			return (int) ( $row['awarded_retailers'] ?? 0 );
 		},
 		$leaderboard
 	)
@@ -139,7 +153,7 @@ $team_points = array_sum(
 						} elseif ( $is_sales_rep ) {
 							esc_html_e( 'Your ranking will appear here as soon as your assigned trials start earning verified points.', 'trufield-portal' );
 						} else {
-							echo esc_html( sprintf( __( 'The portal is tracking %1$s live trials across %2$s active reps, with %3$s total points awarded.', 'trufield-portal' ), number_format_i18n( $field_count ), number_format_i18n( $active_rep_count ), number_format_i18n( $team_points ) ) );
+							echo esc_html( sprintf( __( 'The portal is tracking %1$s live trials across %2$s active reps, with %3$s total points awarded. Points are awarded for every %4$s valid Phase 1 entries per rep.', 'trufield-portal' ), number_format_i18n( $field_count ), number_format_i18n( $active_rep_count ), number_format_i18n( $team_points ), number_format_i18n( trufield_get_retailer_points_threshold() ) ) );
 						}
 						?>
 					</p>
@@ -159,7 +173,7 @@ $team_points = array_sum(
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( (int) ( $current_score['valid_entries'] ?? 0 ) ) ); ?></strong>
 							</div>
 							<div class="tf-dashboard-stat">
-								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Awarded Retailers', 'trufield-portal' ); ?></span>
+								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Point Awards', 'trufield-portal' ); ?></span>
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( (int) ( $current_score['awarded_retailers'] ?? 0 ) ) ); ?></strong>
 							</div>
 						<?php else : ?>
@@ -172,12 +186,12 @@ $team_points = array_sum(
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $active_rep_count ) ); ?></strong>
 							</div>
 							<div class="tf-dashboard-stat">
-								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Verified Phase 1', 'trufield-portal' ); ?></span>
-								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $verified_phase_1_count ) ); ?></strong>
+								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Valid Phase 1 Entries', 'trufield-portal' ); ?></span>
+								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $team_valid_entries ) ); ?></strong>
 							</div>
 							<div class="tf-dashboard-stat">
-								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Verified Phase 2', 'trufield-portal' ); ?></span>
-								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $verified_phase_2_count ) ); ?></strong>
+								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Point Awards', 'trufield-portal' ); ?></span>
+								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $team_awarded_retailers ) ); ?></strong>
 							</div>
 						<?php endif; ?>
 					</div>

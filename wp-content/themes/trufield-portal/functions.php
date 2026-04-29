@@ -68,13 +68,33 @@ function trufield_get_google_maps_api_key(): string {
 		return $api_key;
 	}
 
+	$env_sources = [
+		getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ),
+		$_ENV['TRUFIELD_GOOGLE_MAPS_API_KEY'] ?? null,
+		$_SERVER['TRUFIELD_GOOGLE_MAPS_API_KEY'] ?? null,
+	];
+
 	if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
 		$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
-	} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
-		$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
 	} else {
 		$api_key = '';
+
+		foreach ( $env_sources as $candidate ) {
+			if ( is_string( $candidate ) && trim( $candidate ) !== '' ) {
+				$api_key = trim( $candidate );
+				break;
+			}
+		}
+
+		if ( '' === $api_key ) {
+			$option_key = get_option( 'trufield_google_maps_api_key', '' );
+			if ( is_string( $option_key ) && trim( $option_key ) !== '' ) {
+				$api_key = trim( $option_key );
+			}
+		}
 	}
+
+	$api_key = trim( (string) apply_filters( 'trufield_google_maps_api_key', $api_key ) );
 
 	return $api_key;
 }

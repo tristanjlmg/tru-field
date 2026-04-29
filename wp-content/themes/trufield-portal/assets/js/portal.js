@@ -71,15 +71,163 @@
     });
   }
 
+  function initDateInputs() {
+    document.querySelectorAll('[data-tf-date-input]').forEach(function (input) {
+      var placeholder = input.getAttribute('data-date-placeholder') || 'MM/DD/YYYY';
+
+      function syncMode() {
+        var value = String(input.value || '').trim();
+
+        if (value === '') {
+          if (input.type !== 'text') {
+            input.type = 'text';
+          }
+          input.placeholder = placeholder;
+          return;
+        }
+
+        if (input.type !== 'date') {
+          input.type = 'date';
+        }
+      }
+
+      input.addEventListener('focus', function () {
+        if (String(input.value || '').trim() === '') {
+          input.type = 'date';
+        }
+      });
+
+      input.addEventListener('blur', syncMode);
+      input.addEventListener('change', syncMode);
+
+      syncMode();
+    });
+  }
+
   function initRetailerPickers() {
     document.querySelectorAll('[data-tf-retailer-picker]').forEach(function (wrapper) {
       var select = wrapper.querySelector('[data-tf-retailer-select]');
       var manualWrap = wrapper.querySelector('[data-tf-retailer-manual]');
       var manualInput = wrapper.querySelector('[data-tf-retailer-manual-input]');
+      var directory = {};
+      var assignmentControlId = wrapper.getAttribute('data-tf-assignment-control') || '';
+      var assignmentControl = assignmentControlId ? document.getElementById(assignmentControlId) : null;
+      var autoFillFields = {
+        retailer_branch_location: document.getElementById('retailer_branch_location'),
+        retailer_key_contact: document.getElementById('retailer_key_contact'),
+        retailer_contact_phone: document.getElementById('retailer_contact_phone'),
+        retailer_address: document.getElementById('retailer_address'),
+        retailer_city: document.getElementById('retailer_city'),
+        phase_1_state_region: document.getElementById('phase_1_state_region')
+      };
 
       if (!select || !manualWrap || !manualInput) {
         return;
       }
+
+    try {
+      directory = JSON.parse(wrapper.getAttribute('data-tf-retailer-directory') || '{}');
+    } catch (error) {
+      directory = {};
+    }
+
+    function getAssignmentContext() {
+      var fallbackId = String(wrapper.getAttribute('data-tf-assigned-rep-id') || '').trim();
+      var fallbackLabel = String(wrapper.getAttribute('data-tf-assigned-rep-label') || '').trim();
+      var value = '';
+      var label = '';
+
+      if (assignmentControl) {
+        value = String(assignmentControl.value || '').trim();
+        if (assignmentControl.tagName === 'SELECT' && assignmentControl.selectedIndex >= 0) {
+          label = String(assignmentControl.options[assignmentControl.selectedIndex].text || '').trim();
+        }
+
+        return {
+          id: value,
+          label: value ? label : ''
+        };
+      }
+
+      return {
+        id: fallbackId,
+        label: fallbackLabel
+      };
+    }
+
+    function retailerMatchesAssignment(retailer) {
+      var context = getAssignmentContext();
+      var assignmentIds = Array.isArray(retailer.assignment_ids) ? retailer.assignment_ids.map(String) : [];
+      var assignmentLabels = Array.isArray(retailer.assignment_labels) ? retailer.assignment_labels.map(function (item) {
+        return String(item || '').trim().toLowerCase();
+      }) : [];
+
+      if (!context.id && !context.label) {
+        return true;
+      }
+
+      if (context.id && assignmentIds.indexOf(String(context.id)) !== -1) {
+        return true;
+      }
+
+      if (context.label && assignmentLabels.indexOf(String(context.label).toLowerCase()) !== -1) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function applyRetailerData(retailerName) {
+      var retailer = directory && retailerName ? directory[retailerName] : null;
+
+      if (!retailer) {
+        return;
+      }
+
+      Object.keys(autoFillFields).forEach(function (fieldName) {
+        var control = autoFillFields[fieldName];
+        if (!control || control.disabled || control.readOnly) {
+          return;
+        }
+
+        control.value = String(retailer[fieldName] || '');
+      });
+    }
+
+    function syncRetailerOptions() {
+      var hasVisibleRetailers = false;
+      var selectedIsVisible = !select.value || String(select.value).toLowerCase() === 'other';
+
+      Array.prototype.slice.call(select.options).forEach(function (option) {
+        var optionValue = String(option.value || '');
+        var retailer = directory[optionValue];
+
+        if (!optionValue || optionValue.toLowerCase() === 'other' || !retailer) {
+          option.hidden = false;
+          option.disabled = false;
+          return;
+        }
+
+        var isVisible = retailerMatchesAssignment(retailer);
+        option.hidden = !isVisible;
+        option.disabled = !isVisible;
+
+        if (isVisible) {
+          hasVisibleRetailers = true;
+        }
+
+        if (isVisible && optionValue === String(select.value || '')) {
+          selectedIsVisible = true;
+        }
+      });
+
+      if (!selectedIsVisible) {
+        select.value = hasVisibleRetailers ? '' : 'other';
+        if (!hasVisibleRetailers) {
+          manualInput.value = '';
+        }
+      }
+    }
 
       function syncRetailerMode() {
         var isOther = String(select.value || '').toLowerCase() === 'other';
@@ -87,10 +235,18 @@
 
         if (!isOther) {
           manualInput.value = '';
+      applyRetailerData(String(select.value || ''));
         }
       }
 
       select.addEventListener('change', syncRetailerMode);
+    if (assignmentControl) {
+      assignmentControl.addEventListener('change', function () {
+        syncRetailerOptions();
+        syncRetailerMode();
+      });
+    }
+    syncRetailerOptions();
       syncRetailerMode();
     });
   }
@@ -153,6 +309,34 @@
         return text.replace('*', '').trim();
       }
 
+    function getFieldValidationMessage(control, fieldName) {
+      if (!control || control.disabled) {
+        return '';
+      }
+
+      var valueMissing = !!(control.validity && control.validity.valueMissing);
+      var isEmpty = String(control.value || '').trim() === '';
+
+      if (valueMissing || isEmpty) {
+        return '';
+      }
+
+      if (typeof control.checkValidity === 'function' && !control.checkValidity()) {
+        return getFieldLabel(fieldName);
+      }
+
+      if (String(control.type || '').toLowerCase() === 'email') {
+        var emailValue = String(control.value || '').trim();
+        var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (emailValue !== '' && !emailPattern.test(emailValue)) {
+          return getFieldLabel(fieldName);
+        }
+      }
+
+      return '';
+    }
+
       function focusControl(fieldName) {
         if (fieldName === 'retailer_name') {
           var retailerSelect = form.querySelector('[data-tf-retailer-select]');
@@ -213,13 +397,25 @@
             if (!firstInvalidField) {
               firstInvalidField = fieldName;
             }
+			return;
+		  }
+
+		  var invalidMessage = getFieldValidationMessage(control, fieldName);
+		  if (invalidMessage !== '') {
+			invalidLabels.push(invalidMessage);
+			if (!firstInvalidField) {
+			  firstInvalidField = fieldName;
+			}
           }
         });
 
         if (errorBox) {
           if (invalidLabels.length) {
             errorBox.hidden = false;
-            errorBox.innerHTML = '<strong>Complete the required fields in this section before continuing.</strong><span>' + invalidLabels.join(', ') + '</span>';
+			var summary = invalidLabels.length === fieldNames.length
+			  ? 'Complete the required fields in this section before continuing.'
+			  : 'Correct the highlighted fields in this section before continuing.';
+			errorBox.innerHTML = '<strong>' + summary + '</strong><span>' + invalidLabels.join(', ') + '</span>';
           } else {
             errorBox.hidden = true;
             errorBox.innerHTML = '';
@@ -296,6 +492,7 @@
       panels.forEach(function (panel) {
         var prevButton = panel.querySelector('[data-tf-phase-step-prev]');
         var nextButton = panel.querySelector('[data-tf-phase-step-next]');
+		var submitButtons = Array.prototype.slice.call(panel.querySelectorAll('button[type="submit"]'));
 
         if (prevButton) {
           prevButton.addEventListener('click', function () {
@@ -312,6 +509,19 @@
             syncStepState(Math.min(panels.length, currentStep + 1));
           });
         }
+
+    submitButtons.forEach(function (button) {
+      button.addEventListener('click', function (event) {
+        var actionValue = String(button.value || button.getAttribute('value') || '');
+        if (actionValue === 'verify_address' || button.hasAttribute('formnovalidate')) {
+          return;
+        }
+
+        if (!validatePanel(panel)) {
+          event.preventDefault();
+        }
+      });
+    });
       });
 
       syncStepState(Math.max(1, Math.min(panels.length, currentStep)));
@@ -1026,6 +1236,7 @@
     initAlertDismiss();
     initNavToggle();
     initShowMore();
+    initDateInputs();
     initRetailerPickers();
     initPhaseSubsteps();
     initStandCountDelta();

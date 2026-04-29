@@ -95,14 +95,7 @@ $required = [
 'phase_1_state_region',
 'field_trial_contact',
 'contact_phone',
-'field_trial_contact_email',
-'phase_1_trial_type',
 'phase_1_treated_size_acres',
-'phase_1_protocol_version',
-'phase_1_application_timing',
-'phase_1_application_date',
-'phase_1_application_rate',
-'phase_1_retailer_training_discussion_date',
 ],
 2 => [
 'phase_2_rsm_visit_1_date',
@@ -165,7 +158,7 @@ return [
 'retailer_city'                       => 'City',
 'farm_name'                           => 'Grower Name / Farm Name',
 'field_trial_contact'                 => 'Field Trial Contact',
-'contact_phone'                       => 'Field Trial Phone Number',
+'contact_phone'                       => 'Field Trial Contact Phone Number',
 'field_trial_contact_email'           => 'Field Trial Contact Email',
 'field_name'                          => 'Field Name / Field ID',
 'field_location_address'              => 'Field Location Address',
@@ -234,38 +227,165 @@ return [
 ];
 }
 
-function trufield_get_retailer_name_options(): array {
-	static $options = null;
+function trufield_get_retailer_assignment_context( int $post_id ): array {
+	$assigned_rep_id = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
+	$assignment_label = '';
 
-	if ( is_array( $options ) ) {
-		return $options;
+	if ( $assigned_rep_id > 0 ) {
+		$user = get_userdata( $assigned_rep_id );
+		if ( $user instanceof WP_User ) {
+			$assignment_label = trim( (string) $user->display_name );
+		}
 	}
 
-	global $wpdb;
+	if ( '' === $assignment_label ) {
+		$assignment_label = trufield_resolve_assignment_user_label( get_post_meta( $post_id, 'rsm_bam', true ) );
+	}
 
-	$rows = $wpdb->get_col(
-		$wpdb->prepare(
-			"SELECT DISTINCT pm.meta_value
-			 FROM {$wpdb->postmeta} pm
-			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-			 WHERE pm.meta_key = %s
-			 AND pm.meta_value <> ''
-			 AND p.post_type = %s
-			 AND p.post_status NOT IN ('trash', 'auto-draft')
-			 ORDER BY pm.meta_value ASC",
-			'retailer_name',
-			'plant_field'
-		)
+	return [
+		'id'    => $assigned_rep_id > 0 ? (string) $assigned_rep_id : '',
+		'label' => $assignment_label,
+	];
+}
+
+function trufield_pick_first_non_empty_meta_value( int $post_id, array $meta_keys, string $fallback = '' ): string {
+	foreach ( $meta_keys as $meta_key ) {
+		$value = trim( (string) get_post_meta( $post_id, $meta_key, true ) );
+		if ( '' !== $value ) {
+			return $value;
+		}
+	}
+
+	return trim( $fallback );
+}
+
+function trufield_get_retailer_directory(): array {
+	static $directory = null;
+
+	if ( is_array( $directory ) ) {
+		return $directory;
+	}
+
+	$directory = [];
+	$post_ids   = get_posts(
+		[
+			'post_type'              => 'plant_field',
+			'post_status'            => [ 'publish', 'pending', 'draft', 'private', 'future' ],
+			'posts_per_page'         => -1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'orderby'                => 'title',
+			'order'                  => 'ASC',
+			'update_post_meta_cache' => true,
+			'update_post_term_cache' => false,
+			'meta_query'             => [
+				[
+					'key'     => 'retailer_name',
+					'value'   => '',
+					'compare' => '!=',
+				],
+			],
+		]
 	);
 
-	$options = [];
-	foreach ( $rows as $row ) {
-		$name = trim( sanitize_text_field( (string) $row ) );
-		if ( '' === $name ) {
+	foreach ( $post_ids as $post_id ) {
+		$retailer_name = trim( (string) get_post_meta( $post_id, 'retailer_name', true ) );
+		if ( '' === $retailer_name ) {
 			continue;
 		}
 
-		$options[ $name ] = $name;
+		if ( ! isset( $directory[ $retailer_name ] ) ) {
+			$directory[ $retailer_name ] = [
+				'name'                    => $retailer_name,
+				'retailer_branch_location'=> '',
+				'retailer_key_contact'    => '',
+				'retailer_contact_phone'  => '',
+				'retailer_address'        => '',
+				'retailer_city'           => '',
+				'phase_1_state_region'    => '',
+				'assignment_ids'          => [],
+				'assignment_labels'       => [],
+			];
+		}
+
+		$entry =& $directory[ $retailer_name ];
+
+		if ( '' === $entry['retailer_branch_location'] ) {
+			$entry['retailer_branch_location'] = trufield_pick_first_non_empty_meta_value(
+				$post_id,
+				[ 'retailer_branch_location', 'field_name' ],
+				get_the_title( $post_id )
+			);
+		}
+
+		if ( '' === $entry['retailer_key_contact'] ) {
+			$entry['retailer_key_contact'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_key_contact', 'field_trial_contact' ] );
+		}
+
+		if ( '' === $entry['retailer_contact_phone'] ) {
+			$entry['retailer_contact_phone'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_contact_phone', 'contact_phone' ] );
+		}
+
+		if ( '' === $entry['retailer_address'] ) {
+			$entry['retailer_address'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_address', 'field_location_address' ] );
+		}
+
+		if ( '' === $entry['retailer_city'] ) {
+			$entry['retailer_city'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_city', 'import_city' ] );
+		}
+
+		if ( '' === $entry['phase_1_state_region'] ) {
+			$entry['phase_1_state_region'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'phase_1_state_region', 'import_state' ] );
+		}
+
+		$assignment = trufield_get_retailer_assignment_context( $post_id );
+		if ( '' !== $assignment['id'] ) {
+			$entry['assignment_ids'][ $assignment['id'] ] = true;
+		}
+
+		if ( '' !== $assignment['label'] ) {
+			$entry['assignment_labels'][ $assignment['label'] ] = true;
+		}
+
+		unset( $entry );
+	}
+
+	foreach ( $directory as $retailer_name => $entry ) {
+		$entry['assignment_ids']    = array_values( array_keys( $entry['assignment_ids'] ) );
+		$entry['assignment_labels'] = array_values( array_keys( $entry['assignment_labels'] ) );
+		$directory[ $retailer_name ] = $entry;
+	}
+
+	ksort( $directory, SORT_NATURAL | SORT_FLAG_CASE );
+
+	return $directory;
+}
+
+function trufield_get_retailer_name_options( int $post_id = 0 ): array {
+	$directory = trufield_get_retailer_directory();
+	$options   = [];
+	$context   = $post_id > 0 ? trufield_get_retailer_assignment_context( $post_id ) : [ 'id' => '', 'label' => '' ];
+
+	foreach ( $directory as $retailer_name => $entry ) {
+		$matches_assignment = true;
+
+		if ( '' !== $context['id'] ) {
+			$matches_assignment = in_array( $context['id'], $entry['assignment_ids'], true );
+		} elseif ( '' !== $context['label'] ) {
+			$matches_assignment = in_array( $context['label'], $entry['assignment_labels'], true );
+		}
+
+		if ( ! $matches_assignment ) {
+			continue;
+		}
+
+		$options[ $retailer_name ] = $retailer_name;
+	}
+
+	if ( [] === $options && $post_id > 0 ) {
+		foreach ( $directory as $retailer_name => $entry ) {
+			$options[ $retailer_name ] = $retailer_name;
+		}
 	}
 
 	return $options;
@@ -287,10 +407,83 @@ function trufield_assignment_user_roles_for_field( string $field ): array {
 	);
 }
 
+function trufield_get_rsm_bam_display_names(): array {
+	return [
+		'Anthony Finke',
+		'Beau Matson',
+		'Chris Person',
+		'Chris Pevestorf',
+		'Ethan Noll',
+		'Jesse Wiant',
+		'Joe Duck',
+		'Lane Danielson',
+		'Michael Edens',
+		'Nick Thompson',
+		'Peter White',
+		'Quintin Leffel',
+		'Tim Robie',
+		'Zach Ekeler',
+	];
+}
+
+function trufield_get_rsm_bam_user_options(): array {
+	static $options = null;
+
+	if ( is_array( $options ) ) {
+		return $options;
+	}
+
+	$allowed_names = trufield_get_rsm_bam_display_names();
+	$users         = get_users(
+		[
+			'role__in' => trufield_assignment_user_roles_for_field( 'rsm_bam' ),
+			'orderby'  => 'display_name',
+			'order'    => 'ASC',
+			'fields'   => [ 'ID', 'display_name' ],
+		]
+	);
+	$users_by_name = [];
+
+	foreach ( $users as $user ) {
+		$name = trim( (string) $user->display_name );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$users_by_name[ $name ] = (int) $user->ID;
+	}
+
+	$options = [];
+	foreach ( $allowed_names as $name ) {
+		$user_id = $users_by_name[ $name ] ?? 0;
+		if ( $user_id <= 0 ) {
+			continue;
+		}
+
+		$options[ $user_id ] = $name;
+	}
+
+	return $options;
+}
+
+function trufield_get_rsm_bam_user_ids(): array {
+	return array_map( 'intval', array_keys( trufield_get_rsm_bam_user_options() ) );
+}
+
+function trufield_is_allowed_rsm_bam_user_id( int $user_id ): bool {
+	return $user_id > 0 && in_array( $user_id, trufield_get_rsm_bam_user_ids(), true );
+}
+
 function trufield_get_assignment_user_options( string $field ): array {
 	static $cache = [];
 
 	if ( isset( $cache[ $field ] ) ) {
+		return $cache[ $field ];
+	}
+
+	if ( 'rsm_bam' === $field ) {
+		$cache[ $field ] = trufield_get_rsm_bam_user_options();
+
 		return $cache[ $field ];
 	}
 
@@ -757,7 +950,6 @@ $fields = [
 'farm_name',
 'field_trial_contact',
 'contact_phone',
-'field_trial_contact_email',
 'field_name',
 'field_location_address',
 'field_location_lat',
@@ -766,24 +958,25 @@ $fields = [
 'phase_1_state_region',
 'phase_1_product_being_tested',
 'phase_1_application_type',
-'phase_1_application_date',
-'phase_1_application_rate',
 'phase_1_trial_design',
 'phase_1_growth_stage_at_application',
 'phase_1_weather_conditions_at_application',
 'phase_1_soil_conditions_at_application',
 'phase_1_field_overview_photo',
-'phase_1_trial_type',
 'phase_1_treated_size_acres',
 'phase_1_carrier_volume_gal',
-'phase_1_protocol_version',
-'phase_1_application_timing',
-'phase_1_retailer_training_discussion_date',
 'phase_1_hybrid_variety',
 'phase_1_planting_date',
 'phase_1_planting_population',
 'phase_1_row_spacing',
 'phase_1_planting_speed',
+'field_trial_contact_email',
+'phase_1_application_date',
+'phase_1_application_rate',
+'phase_1_trial_type',
+'phase_1_protocol_version',
+'phase_1_application_timing',
+'phase_1_retailer_training_discussion_date',
 ],
 2 => [
 'phase_2_rsm_visit_1_date',
@@ -868,7 +1061,17 @@ case 'boolean':
 
 case 'user':
 	$value = trim( (string) $value );
-	return $value === '' ? '' : absint( $value );
+	if ( $value === '' ) {
+		return '';
+	}
+
+	$value = absint( $value );
+
+	if ( 'rsm_bam' === $field && ! trufield_is_allowed_rsm_bam_user_id( $value ) ) {
+		return '';
+	}
+
+	return $value;
 
 case 'integer':
 $value = trim( (string) $value );
@@ -1017,6 +1220,24 @@ add_action( 'admin_post_trufield_save_phase', 'trufield_handle_save_phase' );
 add_action( 'admin_post_nopriv_trufield_save_phase', 'trufield_handle_save_phase_nopriv' );
 add_action( 'admin_post_trufield_reopen_phase', 'trufield_handle_reopen_phase' );
 add_action( 'admin_post_trufield_verify_phase', 'trufield_handle_verify_phase' );
+
+function trufield_admin_action_redirect_url( int $post_id, string $query_key, int $phase ): string {
+	$referer = wp_get_referer();
+
+	if ( is_string( $referer ) && $referer !== '' ) {
+		$site_host    = wp_parse_url( home_url(), PHP_URL_HOST );
+		$referer_host = wp_parse_url( $referer, PHP_URL_HOST );
+		$referer_path = wp_parse_url( $referer, PHP_URL_PATH );
+		$record_url   = get_permalink( $post_id );
+		$record_path  = is_string( $record_url ) ? wp_parse_url( $record_url, PHP_URL_PATH ) : null;
+
+		if ( ( $referer_host === null || $referer_host === $site_host ) && is_string( $referer_path ) && is_string( $record_path ) && untrailingslashit( $referer_path ) === untrailingslashit( $record_path ) ) {
+			return add_query_arg( $query_key, $phase, $referer );
+		}
+	}
+
+	return admin_url( "post.php?post={$post_id}&action=edit&{$query_key}={$phase}" );
+}
 
 function trufield_handle_save_phase_nopriv(): void {
 wp_safe_redirect( wp_login_url( wp_get_referer() ) );
@@ -1178,7 +1399,7 @@ if ( is_wp_error( $result ) ) {
 wp_die( esc_html( $result->get_error_message() ), 403 );
 }
 
-wp_safe_redirect( admin_url( "post.php?post={$post_id}&action=edit&tf_reopened={$phase}" ) );
+wp_safe_redirect( trufield_admin_action_redirect_url( $post_id, 'tf_reopened', $phase ) );
 exit;
 }
 
@@ -1196,6 +1417,6 @@ if ( is_wp_error( $result ) ) {
 wp_die( esc_html( $result->get_error_message() ), 403 );
 }
 
-wp_safe_redirect( admin_url( "post.php?post={$post_id}&action=edit&tf_verified={$phase}" ) );
+wp_safe_redirect( trufield_admin_action_redirect_url( $post_id, 'tf_verified', $phase ) );
 exit;
 }

@@ -51,25 +51,25 @@ $field_groups = [
 'phase_1_state_region'       => [ 'input' => 'select', 'placeholder' => 'Select State' ],
 'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
 'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
-'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
-'phase_1_application_date'   => [ 'input' => 'date' ],
-'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'Enter Amount' ],
-'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => 'Select', 'step' => null, 'min' => null ],
 'phase_1_treated_size_acres' => [ 'input' => 'number', 'placeholder' => 'Enter Size', 'step' => '0.01', 'min' => '0' ],
-'phase_1_protocol_version'   => [ 'input' => 'select', 'placeholder' => 'Select' ],
-'phase_1_application_timing' => [ 'input' => 'select', 'placeholder' => 'Select' ],
-'phase_1_retailer_training_discussion_date' => [ 'input' => 'date' ],
 ],
 'optional' => [
 'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
 'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
+'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'phase_1_product_being_tested' => [ 'input' => 'text', 'placeholder' => 'Product name' ],
 'phase_1_application_type'   => [ 'input' => 'select' ],
+'phase_1_application_date'   => [ 'input' => 'date' ],
+'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'Enter Amount' ],
 'phase_1_trial_design'       => [ 'input' => 'select' ],
+'phase_1_trial_type'         => [ 'input' => 'select', 'placeholder' => 'Select', 'step' => null, 'min' => null ],
 'phase_1_growth_stage_at_application' => [ 'input' => 'text', 'placeholder' => 'e.g. V3' ],
 'phase_1_weather_conditions_at_application' => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Weather conditions at application' ],
 'phase_1_soil_conditions_at_application' => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Soil conditions at application' ],
 'phase_1_carrier_volume_gal' => [ 'input' => 'number', 'step' => '0.1', 'min' => '0' ],
+'phase_1_protocol_version'   => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_1_application_timing' => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_1_retailer_training_discussion_date' => [ 'input' => 'date' ],
 'phase_1_hybrid_variety'      => [ 'input' => 'text' ],
 'phase_1_planting_date'       => [ 'input' => 'date' ],
 'phase_1_planting_population' => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
@@ -130,7 +130,9 @@ $field_groups = [
 ],
 ];
 
-$retailer_name_options = trufield_get_retailer_name_options();
+$retailer_name_options = trufield_get_retailer_name_options( $post_id );
+$retailer_directory    = trufield_get_retailer_directory();
+$retailer_assignment   = trufield_get_retailer_assignment_context( $post_id );
 $phase_one_substeps = [];
 $phase_two_substeps = [];
 $phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
@@ -170,7 +172,6 @@ if ( 1 === $phase ) {
 			'required_fields'=> [
 				'field_trial_contact',
 				'contact_phone',
-				'field_trial_contact_email',
 				'field_location_address',
 				'field_location_lat',
 				'field_location_lng',
@@ -178,11 +179,11 @@ if ( 1 === $phase ) {
 			'fields'         => [
 				'field_trial_contact',
 				'contact_phone',
-				'field_trial_contact_email',
 			],
 			'optional_fields'=> [
 				'farm_name',
 				'field_name',
+				'field_trial_contact_email',
 				'phase_1_trial_design',
 				'phase_1_product_being_tested',
 				'phase_1_hybrid_variety',
@@ -198,23 +199,17 @@ if ( 1 === $phase ) {
 			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_1_treated_size_acres',
-				'phase_1_application_rate',
-				'phase_1_trial_type',
-				'phase_1_protocol_version',
-				'phase_1_application_timing',
-				'phase_1_application_date',
-				'phase_1_retailer_training_discussion_date',
 			],
 			'fields'         => [
 				'phase_1_treated_size_acres',
+			],
+			'optional_fields'=> [
 				'phase_1_application_rate',
 				'phase_1_trial_type',
 				'phase_1_protocol_version',
 				'phase_1_application_timing',
 				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
-			],
-			'optional_fields'=> [
 				'phase_1_application_type',
 				'phase_1_growth_stage_at_application',
 				'phase_1_weather_conditions_at_application',
@@ -370,6 +365,26 @@ class="tf-input tf-input--file"
 <?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
 </div>
+<?php elseif ( $input_type === 'date' ) : ?>
+<?php $date_placeholder = $placeholder ?: __( 'MM/DD/YYYY', 'trufield-portal' ); ?>
+<input
+type="<?php echo esc_attr( trim( (string) $value ) === '' ? 'text' : 'date' ); ?>"
+id="<?php echo esc_attr( $field ); ?>"
+name="<?php echo esc_attr( $field ); ?>"
+class="tf-input tf-input--date"
+value="<?php echo esc_attr( (string) $value ); ?>"
+placeholder="<?php echo esc_attr( $date_placeholder ); ?>"
+inputmode="numeric"
+autocomplete="off"
+data-tf-date-input
+data-date-placeholder="<?php echo esc_attr( $date_placeholder ); ?>"
+<?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $min !== null ? ' min="' . esc_attr( (string) $min ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $max !== null ? ' max="' . esc_attr( (string) $max ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $step !== null ? ' step="' . esc_attr( (string) $step ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+>
 <?php else : ?>
 <input
 type="<?php echo esc_attr( $input_type ); ?>"
@@ -393,13 +408,21 @@ placeholder="<?php echo esc_attr( $placeholder ); ?>"
 <?php
 };
 
-$render_retailer_name_field = static function ( bool $required = false ) use ( $post_id, $labels, $retailer_name_options ): void {
+$render_retailer_name_field = static function ( bool $required = false ) use ( $post_id, $labels, $retailer_name_options, $retailer_directory, $retailer_assignment ): void {
 	$current_value = trim( (string) get_post_meta( $post_id, 'retailer_name', true ) );
 	$is_known      = '' !== $current_value && isset( $retailer_name_options[ $current_value ] );
 	$selected      = $is_known ? $current_value : ( '' !== $current_value ? 'other' : '' );
 	$manual_value  = $is_known ? '' : $current_value;
+	$directory_json = wp_json_encode( $retailer_directory );
 	?>
-	<div class="tf-field-group tf-retailer-picker" data-tf-retailer-picker>
+	<div
+		class="tf-field-group tf-retailer-picker"
+		data-tf-retailer-picker
+		data-tf-retailer-directory="<?php echo esc_attr( is_string( $directory_json ) ? $directory_json : '{}' ); ?>"
+		data-tf-assigned-rep-id="<?php echo esc_attr( $retailer_assignment['id'] ); ?>"
+		data-tf-assigned-rep-label="<?php echo esc_attr( $retailer_assignment['label'] ); ?>"
+		data-tf-assignment-control="rsm_bam"
+	>
 	<label for="retailer_name_select">
 	<?php echo esc_html( $labels['retailer_name'] ?? 'Retailer Name' ); ?>
 	<?php if ( $required ) : ?>
@@ -718,7 +741,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( $step_index < count( $phase_substeps ) ) : ?>
 <button type="button" class="tf-btn tf-btn--primary" data-tf-phase-step-next><?php esc_html_e( 'Next', 'trufield-portal' ); ?></button>
 <?php else : ?>
-<button type="submit" name="phase_action" value="<?php echo esc_attr( 1 === $phase ? 'save' : 'complete' ); ?>" class="tf-btn tf-btn--primary"<?php echo 2 === $phase ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : __( 'Submit Phase 2', 'trufield-portal' ) ); ?></button>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo 2 === $phase ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : __( 'Submit Phase 2', 'trufield-portal' ) ); ?></button>
 <?php endif; ?>
 </div>
 </section>

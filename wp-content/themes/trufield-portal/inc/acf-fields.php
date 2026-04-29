@@ -975,6 +975,31 @@ function trufield_relax_required_acf_fields_for_admins( array $field ): array {
 	return $field;
 }
 
+add_filter( 'acf/fields/user/query/key=field_tf_rsm_bam', 'trufield_limit_rsm_bam_acf_user_query', 20, 3 );
+function trufield_limit_rsm_bam_acf_user_query( array $args, array $field, $post_id ): array {
+	unset( $field, $post_id );
+
+	$args['include'] = array_keys( trufield_get_rsm_bam_user_options() );
+	$args['orderby'] = 'include';
+	$args['order']   = 'ASC';
+
+	if ( empty( $args['include'] ) ) {
+		$args['include'] = [ 0 ];
+	}
+
+	return $args;
+}
+
+add_filter( 'acf/load_value/key=field_tf_rsm_bam', 'trufield_filter_rsm_bam_acf_value', 20, 3 );
+add_filter( 'acf/update_value/key=field_tf_rsm_bam', 'trufield_filter_rsm_bam_acf_value', 20, 3 );
+function trufield_filter_rsm_bam_acf_value( $value, $post_id, array $field ) {
+	unset( $post_id, $field );
+
+	$value = absint( (string) $value );
+
+	return trufield_is_allowed_rsm_bam_user_id( $value ) ? $value : '';
+}
+
 add_filter( 'acf/validate_value', 'trufield_allow_admin_incomplete_plant_fields', 20, 4 );
 function trufield_allow_admin_incomplete_plant_fields( $valid, $value, array $field, $input_name ) {
 	if ( true === $valid || empty( $field['required'] ) || ! trufield_should_relax_admin_plant_field_validation() ) {
@@ -1048,13 +1073,7 @@ if ( ! function_exists( 'acf_update_setting' ) ) {
 return;
 }
 
-$api_key = '';
-
-if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
-$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
-} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
-$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
-}
+$api_key = trufield_get_google_maps_api_key();
 
 if ( $api_key !== '' ) {
 acf_update_setting( 'google_api_key', $api_key );
@@ -1063,13 +1082,7 @@ acf_update_setting( 'google_api_key', $api_key );
 
 add_filter( 'acf/fields/google_map/api', 'trufield_acf_google_map_api' );
 function trufield_acf_google_map_api( array $api ): array {
-$api_key = '';
-
-if ( defined( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
-$api_key = (string) TRUFIELD_GOOGLE_MAPS_API_KEY;
-} elseif ( getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' ) ) {
-$api_key = (string) getenv( 'TRUFIELD_GOOGLE_MAPS_API_KEY' );
-}
+$api_key = trufield_get_google_maps_api_key();
 
 if ( $api_key !== '' ) {
 $api['key'] = $api_key;

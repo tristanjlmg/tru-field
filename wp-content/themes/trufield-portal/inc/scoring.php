@@ -27,6 +27,16 @@ function trufield_get_phase_points_award( int $phase ): int {
 	return (int) ( TRUFIELD_PHASE_POINTS[ $phase ] ?? 0 );
 }
 
+function trufield_get_valid_entry_award_count( int $valid_entries ): int {
+	$threshold = trufield_get_retailer_points_threshold();
+
+	if ( $threshold <= 0 || $valid_entries < $threshold ) {
+		return 0;
+	}
+
+	return (int) floor( $valid_entries / $threshold );
+}
+
 function trufield_phase_uses_retailer_threshold_scoring( int $phase ): bool {
 	return 1 === $phase;
 }
@@ -88,7 +98,7 @@ $agg    = [
 'retailer_count'   => 0,
 'points'           => 0,
 ];
-	$retailer_valid_counts = [];
+	$retailer_keys = [];
 
 foreach ( $fields as $post ) {
 $score = trufield_get_field_score( $post->ID );
@@ -107,30 +117,17 @@ $agg['completed_fields']++;
 			$retailer_name = (string) ( $score['retailer_name'] ?? '' );
 			$retailer_key  = trufield_normalize_retailer_key( $retailer_name );
 			if ( $retailer_key !== '' ) {
-				if ( ! isset( $retailer_valid_counts[ $retailer_key ] ) ) {
-					$retailer_valid_counts[ $retailer_key ] = [
-						'name'  => $retailer_name,
-						'count' => 0,
-					];
-				}
-
-				$retailer_valid_counts[ $retailer_key ]['count']++;
+				$retailer_keys[ $retailer_key ] = true;
 			}
 
 			$agg['valid_entries']++;
 		}
 }
 
-	$threshold = trufield_get_retailer_points_threshold();
-	$award     = trufield_get_retailer_points_award();
-
-	foreach ( $retailer_valid_counts as $retailer_data ) {
-		if ( (int) $retailer_data['count'] >= $threshold ) {
-			$agg['awarded_retailers']++;
-		}
-	}
-
-	$agg['retailer_count'] = count( $retailer_valid_counts );
+	$award_blocks           = trufield_get_valid_entry_award_count( (int) $agg['valid_entries'] );
+	$award                  = trufield_get_retailer_points_award();
+	$agg['awarded_retailers'] = $award_blocks;
+	$agg['retailer_count']  = count( $retailer_keys );
 	$agg['points']         = $agg['total'] + ( $agg['awarded_retailers'] * $award );
 	$agg['verified']      += $agg['awarded_retailers'] * $award;
 	$agg['total']          = $agg['points'];
@@ -138,13 +135,25 @@ $agg['completed_fields']++;
 return $agg;
 }
 
-function trufield_get_leaderboard(): array {
-$reps = get_users( [
-'role'    => 'sales_rep',
-'orderby' => 'display_name',
-'order'   => 'ASC',
-'fields'  => [ 'ID', 'display_name' ],
-] );
+function trufield_get_leaderboard( int $sales_rep_id = 0 ): array {
+	$reps = $sales_rep_id > 0
+		? get_users(
+			[
+				'include' => [ $sales_rep_id ],
+				'role'    => 'sales_rep',
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+				'fields'  => [ 'ID', 'display_name' ],
+			]
+		)
+		: get_users(
+			[
+				'role'    => 'sales_rep',
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+				'fields'  => [ 'ID', 'display_name' ],
+			]
+		);
 
 $rows = [];
 foreach ( $reps as $rep ) {
