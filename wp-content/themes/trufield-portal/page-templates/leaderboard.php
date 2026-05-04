@@ -11,6 +11,7 @@ get_header();
 $sales_reps        = trufield_get_sales_rep_users();
 $selected_rep_id   = absint( (string) ( $_GET['sales_rep'] ?? 0 ) );
 $selected_rep      = null;
+$full_leaderboard  = trufield_get_leaderboard();
 
 foreach ( $sales_reps as $sales_rep ) {
 	if ( (int) $sales_rep->ID === $selected_rep_id ) {
@@ -25,7 +26,7 @@ if ( ! $selected_rep ) {
 
 $leaderboard = trufield_get_leaderboard( $selected_rep_id );
 $current_uid = get_current_user_id();
-$top_rankings = array_slice( $leaderboard, 0, 3 );
+$top_rankings = array_slice( $full_leaderboard, 0, 3 );
 $rank_labels  = [
 	1 => __( '1st Rank', 'trufield-portal' ),
 	2 => __( '2nd Rank', 'trufield-portal' ),

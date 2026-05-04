@@ -61,8 +61,21 @@ function trufield_handle_create_plant_field(): void {
 	}
 
 	$title = sanitize_text_field( wp_unslash( $_POST['trial_name'] ?? '' ) );
+	$rsm_bam = absint( wp_unslash( $_POST['rsm_bam'] ?? 0 ) );
+	$fsa     = absint( wp_unslash( $_POST['fsa'] ?? 0 ) );
 	if ( '' === $title ) {
 		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Trial name is required.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
+		exit;
+	}
+
+	if ( ! trufield_is_allowed_rsm_bam_user_id( $rsm_bam ) ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Select a valid RSM / BAM before creating the trial.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
+		exit;
+	}
+
+	$fsa_options = trufield_get_assignment_user_options( 'fsa' );
+	if ( $fsa <= 0 || ! isset( $fsa_options[ $fsa ] ) ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Select a valid FSA before creating the trial.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
 		exit;
 	}
 
@@ -84,6 +97,9 @@ function trufield_handle_create_plant_field(): void {
 	update_post_meta( $post_id, 'record_status', 'active' );
 	update_post_meta( $post_id, 'current_phase', 1 );
 	update_post_meta( $post_id, 'phase_1_status', 'pending' );
+	update_post_meta( $post_id, 'rsm_bam', $rsm_bam );
+	update_post_meta( $post_id, 'assigned_sales_rep', $rsm_bam );
+	update_post_meta( $post_id, 'fsa', $fsa );
 
 	wp_safe_redirect(
 		add_query_arg(

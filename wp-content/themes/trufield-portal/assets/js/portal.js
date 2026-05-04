@@ -180,7 +180,19 @@
     function applyRetailerData(retailerName) {
       var retailer = directory && retailerName ? directory[retailerName] : null;
 
+      function clearAutoFillFields() {
+        Object.keys(autoFillFields).forEach(function (fieldName) {
+          var control = autoFillFields[fieldName];
+          if (!control || control.disabled || control.readOnly) {
+            return;
+          }
+
+          control.value = '';
+        });
+      }
+
       if (!retailer) {
+        clearAutoFillFields();
         return;
       }
 
@@ -233,9 +245,11 @@
         var isOther = String(select.value || '').toLowerCase() === 'other';
         manualWrap.hidden = !isOther;
 
-        if (!isOther) {
+        if (isOther) {
+          applyRetailerData('');
+        } else {
           manualInput.value = '';
-      applyRetailerData(String(select.value || ''));
+          applyRetailerData(String(select.value || ''));
         }
       }
 
@@ -354,7 +368,7 @@
         }
       }
 
-      function validatePanel(panel) {
+      function validatePanel(panel, shouldFocus) {
         var errorBox = panel.querySelector('[data-tf-step-error]');
         var fieldNames = String(panel.getAttribute('data-required-fields') || '')
           .split(',')
@@ -422,7 +436,7 @@
           }
         }
 
-        if (firstInvalidField) {
+        if (shouldFocus !== false && firstInvalidField) {
           focusControl(firstInvalidField);
         }
 
@@ -493,6 +507,32 @@
         var prevButton = panel.querySelector('[data-tf-phase-step-prev]');
         var nextButton = panel.querySelector('[data-tf-phase-step-next]');
 		var submitButtons = Array.prototype.slice.call(panel.querySelectorAll('button[type="submit"]'));
+    var requiredFieldNames = String(panel.getAttribute('data-required-fields') || '')
+      .split(',')
+      .map(function (fieldName) { return fieldName.trim(); })
+      .filter(Boolean);
+
+    function shouldRevalidateField(target) {
+      var targetName = target && (target.name || target.id || '');
+
+      if (!targetName) {
+        return false;
+      }
+
+      if (requiredFieldNames.indexOf(targetName) !== -1) {
+        return true;
+      }
+
+      if (targetName === 'retailer_name_manual' && requiredFieldNames.indexOf('retailer_name') !== -1) {
+        return true;
+      }
+
+      if (targetName === 'field_location_manual_override' && requiredFieldNames.indexOf('field_location_address') !== -1) {
+        return true;
+      }
+
+      return false;
+    }
 
         if (prevButton) {
           prevButton.addEventListener('click', function () {
@@ -509,6 +549,22 @@
             syncStepState(Math.min(panels.length, currentStep + 1));
           });
         }
+
+        panel.addEventListener('input', function (event) {
+          if (!shouldRevalidateField(event.target)) {
+            return;
+          }
+
+          validatePanel(panel, false);
+        });
+
+        panel.addEventListener('change', function (event) {
+          if (!shouldRevalidateField(event.target)) {
+            return;
+          }
+
+          validatePanel(panel, false);
+        });
 
     submitButtons.forEach(function (button) {
       button.addEventListener('click', function (event) {

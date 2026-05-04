@@ -179,11 +179,11 @@ if ( 1 === $phase ) {
 			'fields'         => [
 				'field_trial_contact',
 				'contact_phone',
+				'field_trial_contact_email',
 			],
 			'optional_fields'=> [
 				'farm_name',
 				'field_name',
-				'field_trial_contact_email',
 				'phase_1_trial_design',
 				'phase_1_product_being_tested',
 				'phase_1_hybrid_variety',

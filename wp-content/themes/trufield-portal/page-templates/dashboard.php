@@ -13,6 +13,9 @@ get_header();
 $current_user = wp_get_current_user();
 $is_sales_rep = in_array( 'sales_rep', (array) $current_user->roles, true );
 $is_admin     = trufield_user_is_admin( (int) $current_user->ID );
+$can_create   = current_user_can( 'publish_plant_fields' );
+$rsm_bam_options = $can_create ? trufield_get_assignment_user_options( 'rsm_bam' ) : [];
+$fsa_options     = $can_create ? trufield_get_assignment_user_options( 'fsa' ) : [];
 $selected_sales_rep = $is_admin ? absint( wp_unslash( $_GET['sales_rep'] ?? 0 ) ) : 0;
 $sales_rep_options  = $is_admin ? trufield_get_sales_rep_users() : [];
 $valid_sales_rep_ids = $is_admin ? array_map( static fn( $user ): int => (int) $user->ID, $sales_rep_options ) : [];
@@ -34,7 +37,6 @@ if ( $is_admin && $selected_sales_rep > 0 ) {
 }
 
 $fields       = trufield_get_visible_fields( $field_query_args );
-$can_create   = current_user_can( 'publish_plant_fields' );
 $leaderboard  = trufield_get_leaderboard();
 $leaderboard_url = get_permalink( trufield_get_leaderboard_page_id() );
 
@@ -212,13 +214,33 @@ $team_awarded_retailers = array_sum(
 						<div class="tf-create-panel__header">
 							<p class="tf-create-panel__eyebrow"><?php esc_html_e( 'Admin action', 'trufield-portal' ); ?></p>
 							<h2 id="create-trial-heading" class="tf-create-panel__title"><?php esc_html_e( 'Create trial', 'trufield-portal' ); ?></h2>
-							<p class="tf-create-panel__copy"><?php esc_html_e( 'Start a new field record and assign the details afterward.', 'trufield-portal' ); ?></p>
+							<p class="tf-create-panel__copy"><?php esc_html_e( 'Start a new field record and assign it immediately so the trial is ready to work from the first save.', 'trufield-portal' ); ?></p>
 						</div>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form">
 							<?php wp_nonce_field( 'trufield_create_plant_field' ); ?>
 							<input type="hidden" name="action" value="trufield_create_plant_field">
-							<label class="screen-reader-text" for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
-							<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Trial name', 'trufield-portal' ); ?>">
+							<div class="tf-field-group tf-quick-create-form__field">
+								<label for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
+								<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Trial name', 'trufield-portal' ); ?>" required>
+							</div>
+							<div class="tf-field-group tf-quick-create-form__field">
+								<label for="quick_create_rsm_bam"><?php esc_html_e( 'RSM / BAM', 'trufield-portal' ); ?></label>
+								<select id="quick_create_rsm_bam" name="rsm_bam" class="tf-select" required>
+									<option value=""><?php esc_html_e( 'Select RSM / BAM', 'trufield-portal' ); ?></option>
+									<?php foreach ( $rsm_bam_options as $option_value => $option_label ) : ?>
+										<option value="<?php echo esc_attr( (string) $option_value ); ?>"><?php echo esc_html( $option_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div class="tf-field-group tf-quick-create-form__field">
+								<label for="quick_create_fsa"><?php esc_html_e( 'FSA', 'trufield-portal' ); ?></label>
+								<select id="quick_create_fsa" name="fsa" class="tf-select" required>
+									<option value=""><?php esc_html_e( 'Select FSA', 'trufield-portal' ); ?></option>
+									<?php foreach ( $fsa_options as $option_value => $option_label ) : ?>
+										<option value="<?php echo esc_attr( (string) $option_value ); ?>"><?php echo esc_html( $option_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
 							<button type="submit" class="tf-btn tf-btn--primary"><?php esc_html_e( 'Create Trial', 'trufield-portal' ); ?></button>
 						</form>
 					</section>
