@@ -198,18 +198,24 @@ if ( 1 === $phase ) {
 			'title'          => __( 'Trial Information', 'trufield-portal' ),
 			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
 			'required_fields'=> [
-				'phase_1_treated_size_acres',
-			],
-			'fields'         => [
-				'phase_1_treated_size_acres',
-			],
-			'optional_fields'=> [
-				'phase_1_application_rate',
 				'phase_1_trial_type',
+				'phase_1_treated_size_acres',
+				'phase_1_application_rate',
 				'phase_1_protocol_version',
 				'phase_1_application_timing',
 				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
+			],
+			'fields'         => [
+				'phase_1_trial_type',
+				'phase_1_treated_size_acres',
+				'phase_1_application_rate',
+				'phase_1_protocol_version',
+				'phase_1_application_timing',
+				'phase_1_application_date',
+				'phase_1_retailer_training_discussion_date',
+			],
+			'optional_fields'=> [
 				'phase_1_application_type',
 				'phase_1_growth_stage_at_application',
 				'phase_1_weather_conditions_at_application',
