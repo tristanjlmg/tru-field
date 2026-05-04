@@ -393,7 +393,7 @@ function trufield_get_retailer_name_options( int $post_id = 0 ): array {
 
 function trufield_assignment_user_roles_for_field( string $field ): array {
 	$map = [
-		'rsm_bam' => [ 'sales_rep' ],
+		'rsm_bam' => [ 'sales_rep', 'administrator' ],
 		'fsa'     => [ 'fsa', 'administrator' ],
 	];
 

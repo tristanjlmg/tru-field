@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 add_action( 'admin_post_trufield_import_fields', 'trufield_handle_field_import' );
+add_action( 'admin_post_trufield_save_google_maps_key', 'trufield_handle_save_google_maps_key' );
 
 function trufield_import_page_render(): void {
 	if ( ! current_user_can( 'trufield_import_fields' ) ) {
@@ -15,6 +16,8 @@ function trufield_import_page_render(): void {
 	}
 
 	$results = null;
+	$maps_key = get_option( 'trufield_google_maps_api_key', '' );
+	$maps_notice = sanitize_key( wp_unslash( $_GET['tf_maps_key'] ?? '' ) );
 	if ( isset( $_GET['tf_import_results'] ) ) {
 		$results = get_transient( 'trufield_import_results_' . get_current_user_id() );
 		if ( is_array( $results ) ) {
@@ -23,10 +26,42 @@ function trufield_import_page_render(): void {
 	}
 
 	$action_url = wp_nonce_url( admin_url( 'admin-post.php?action=trufield_import_fields' ), 'trufield_import_fields' );
+	$maps_action_url = wp_nonce_url( admin_url( 'admin-post.php?action=trufield_save_google_maps_key' ), 'trufield_save_google_maps_key' );
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import Plant Fields', 'trufield-portal' ); ?></h1>
 		<p><?php esc_html_e( 'Upload the retailer demo XLSX sheet to create Plant Field records in bulk. Imports are create-only and leave Phase 1 as an in-progress draft.', 'trufield-portal' ); ?></p>
+
+		<?php if ( 'saved' === $maps_notice ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Google Maps API key saved.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'cleared' === $maps_notice ) : ?>
+			<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Google Maps API key cleared.', 'trufield-portal' ); ?></p></div>
+		<?php endif; ?>
+
+		<h2><?php esc_html_e( 'Google Maps Configuration', 'trufield-portal' ); ?></h2>
+		<p><?php esc_html_e( 'Add the production Google Maps API key here to enable Places autocomplete and address verification without editing wp-config.php.', 'trufield-portal' ); ?></p>
+		<form method="post" action="<?php echo esc_url( $maps_action_url ); ?>">
+			<table class="form-table" role="presentation">
+				<tbody>
+					<tr>
+						<th scope="row"><label for="trufield-google-maps-api-key"><?php esc_html_e( 'Google Maps API Key', 'trufield-portal' ); ?></label></th>
+						<td>
+							<input
+								type="text"
+								id="trufield-google-maps-api-key"
+								name="trufield_google_maps_api_key"
+								class="regular-text code"
+								value="<?php echo esc_attr( is_string( $maps_key ) ? $maps_key : '' ); ?>"
+								autocomplete="off"
+							>
+							<p class="description"><?php esc_html_e( 'This key is stored in the WordPress database option trufield_google_maps_api_key. Leave it blank and save to remove it.', 'trufield-portal' ); ?></p>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<?php submit_button( __( 'Save Google Maps Key', 'trufield-portal' ), 'secondary', 'submit', false ); ?>
+		</form>
 
 		<?php if ( is_array( $results ) ) : ?>
 			<div class="notice notice-success">
@@ -91,6 +126,29 @@ function trufield_import_page_render(): void {
 		</ul>
 	</div>
 	<?php
+}
+
+function trufield_handle_save_google_maps_key(): void {
+	$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ?? '' ) );
+	if ( ! wp_verify_nonce( $nonce, 'trufield_save_google_maps_key' ) ) {
+		wp_die( esc_html__( 'Security check failed.', 'trufield-portal' ), 403 );
+	}
+
+	if ( ! current_user_can( 'trufield_import_fields' ) ) {
+		wp_die( esc_html__( 'You do not have permission to update the Google Maps key.', 'trufield-portal' ), 403 );
+	}
+
+	$key = trim( sanitize_text_field( wp_unslash( $_POST['trufield_google_maps_api_key'] ?? '' ) ) );
+	if ( '' === $key ) {
+		delete_option( 'trufield_google_maps_api_key' );
+		$status = 'cleared';
+	} else {
+		update_option( 'trufield_google_maps_api_key', $key, false );
+		$status = 'saved';
+	}
+
+	wp_safe_redirect( add_query_arg( 'tf_maps_key', $status, admin_url( 'edit.php?post_type=plant_field&page=trufield-import' ) ) );
+	exit;
 }
 
 function trufield_handle_field_import(): void {

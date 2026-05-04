@@ -319,7 +319,7 @@ $user = wp_signon(
 'user_password' => $password,
 'remember'      => false,
 ],
-false
+		is_ssl()
 );
 
 if ( is_wp_error( $user ) ) {
