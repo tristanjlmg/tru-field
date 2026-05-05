@@ -96,6 +96,7 @@
       var assignmentControlId = wrapper.getAttribute('data-tf-assignment-control') || '';
       var assignmentControl = assignmentControlId ? document.getElementById(assignmentControlId) : null;
       var autoFillFields = {
+        rsm_bam: document.getElementById('rsm_bam'),
         retailer_branch_location: document.getElementById('retailer_branch_location'),
         retailer_key_contact: document.getElementById('retailer_key_contact'),
         retailer_contact_phone: document.getElementById('retailer_contact_phone'),

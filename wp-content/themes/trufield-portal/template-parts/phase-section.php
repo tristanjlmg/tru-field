@@ -368,10 +368,11 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 </select>
 <?php elseif ( $input_type === 'user_select' ) : ?>
 <?php $user_options = trufield_get_assignment_user_options( $field ); ?>
+<?php $selected_user_value = (string) trufield_resolve_assignment_user_id( $value, $field ); ?>
 <select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
 <?php foreach ( $user_options as $option_value => $option_label ) : ?>
-<option value="<?php echo esc_attr( (string) $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+<option value="<?php echo esc_attr( (string) $option_value ); ?>" <?php selected( $selected_user_value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 <?php endforeach; ?>
 </select>
 <?php elseif ( $input_type === 'textarea' ) : ?>

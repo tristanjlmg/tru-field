@@ -423,37 +423,42 @@ function trufield_import_row_value( array $row, array $keys ): string {
 	return '';
 }
 
-function trufield_import_resolve_sales_rep_user( string $rep_email, string $rep_name ): ?WP_User {
-	$rep_email = sanitize_email( $rep_email );
-	$rep_name  = trim( sanitize_text_field( $rep_name ) );
+function trufield_import_resolve_assignment_user( string $field, string $email, string $name ): ?WP_User {
+	$email = sanitize_email( $email );
+	$name  = trim( sanitize_text_field( $name ) );
+	$roles = trufield_assignment_user_roles_for_field( $field );
 
-	if ( '' !== $rep_email ) {
-		$user = get_user_by( 'email', $rep_email );
-		if ( $user instanceof WP_User && in_array( 'sales_rep', (array) $user->roles, true ) ) {
+	if ( '' !== $email ) {
+		$user = get_user_by( 'email', $email );
+		if ( $user instanceof WP_User && [] !== array_intersect( $roles, (array) $user->roles ) ) {
 			return $user;
 		}
 	}
 
-	if ( '' === $rep_name ) {
+	if ( '' === $name ) {
 		return null;
 	}
 
 	$users = get_users(
 		[
-			'role'    => 'sales_rep',
-			'search'  => $rep_name,
-			'fields'  => [ 'ID', 'display_name', 'user_email' ],
-			'number'  => 20,
+			'role__in' => $roles,
+			'search'   => $name,
+			'fields'   => [ 'ID', 'display_name', 'user_email' ],
+			'number'   => 20,
 		]
 	);
 
 	foreach ( $users as $user ) {
-		if ( 0 === strcasecmp( $rep_name, (string) $user->display_name ) ) {
+		if ( 0 === strcasecmp( $name, (string) $user->display_name ) ) {
 			return $user;
 		}
 	}
 
 	return null;
+}
+
+function trufield_import_resolve_sales_rep_user( string $rep_email, string $rep_name ): ?WP_User {
+	return trufield_import_resolve_assignment_user( 'rsm_bam', $rep_email, $rep_name );
 }
 
 function trufield_import_column_to_index( string $column_ref ): int {
@@ -616,7 +621,7 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'field_trial_contact'         => $field_trial_contact,
 		'contact_phone'               => $contact_phone,
 		'field_trial_contact_email'   => $field_trial_email,
-		'rsm_bam'                     => $rsm_bam,
+		'rsm_bam'                     => $sales_rep_user instanceof WP_User ? $sales_rep_user->ID : $rsm_bam,
 		'import_source_email'         => $rep_email,
 		'import_city'                 => $city,
 		'import_state'                => $state,

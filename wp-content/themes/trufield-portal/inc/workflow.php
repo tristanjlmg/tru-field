@@ -327,6 +327,7 @@ function trufield_get_retailer_directory(): array {
 				'retailer_address'        => '',
 				'retailer_city'           => '',
 				'phase_1_state_region'    => '',
+				'rsm_bam'                 => '',
 				'assignment_ids'          => [],
 				'assignment_labels'       => [],
 			];
@@ -360,6 +361,15 @@ function trufield_get_retailer_directory(): array {
 
 		if ( '' === $entry['phase_1_state_region'] ) {
 			$entry['phase_1_state_region'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'phase_1_state_region', 'import_state' ] );
+		}
+
+		if ( '' === $entry['rsm_bam'] ) {
+			$rsm_bam_id = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'rsm_bam', true ), 'rsm_bam' );
+			if ( $rsm_bam_id <= 0 ) {
+				$rsm_bam_id = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'assigned_sales_rep', true ), 'rsm_bam' );
+			}
+
+			$entry['rsm_bam'] = $rsm_bam_id > 0 ? (string) $rsm_bam_id : '';
 		}
 
 		$assignment = trufield_get_retailer_assignment_context( $post_id );
@@ -519,6 +529,32 @@ function trufield_get_assignment_user_options( string $field ): array {
 	$cache[ $field ] = $options;
 
 	return $options;
+}
+
+function trufield_get_assignment_user_id_by_name( string $field, string $name ): int {
+	$name = trim( sanitize_text_field( $name ) );
+	if ( '' === $name ) {
+		return 0;
+	}
+
+	foreach ( trufield_get_assignment_user_options( $field ) as $user_id => $display_name ) {
+		if ( 0 === strcasecmp( $name, (string) $display_name ) ) {
+			return (int) $user_id;
+		}
+	}
+
+	return 0;
+}
+
+function trufield_resolve_assignment_user_id( $value, string $field ): int {
+	if ( is_numeric( $value ) ) {
+		$user_id = absint( (string) $value );
+		$options = trufield_get_assignment_user_options( $field );
+
+		return isset( $options[ $user_id ] ) ? $user_id : 0;
+	}
+
+	return trufield_get_assignment_user_id_by_name( $field, (string) $value );
 }
 
 function trufield_resolve_assignment_user_label( $value ): string {
