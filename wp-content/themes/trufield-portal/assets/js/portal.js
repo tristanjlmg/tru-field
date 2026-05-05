@@ -73,34 +73,17 @@
 
   function initDateInputs() {
     document.querySelectorAll('[data-tf-date-input]').forEach(function (input) {
-      var placeholder = input.getAttribute('data-date-placeholder') || 'MM/DD/YYYY';
-
-      function syncMode() {
-        var value = String(input.value || '').trim();
-
-        if (value === '') {
-          if (input.type !== 'text') {
-            input.type = 'text';
+      function tryOpenPicker() {
+        if (typeof input.showPicker === 'function') {
+          try {
+            input.showPicker();
+          } catch (error) {
           }
-          input.placeholder = placeholder;
-          return;
-        }
-
-        if (input.type !== 'date') {
-          input.type = 'date';
         }
       }
 
-      input.addEventListener('focus', function () {
-        if (String(input.value || '').trim() === '') {
-          input.type = 'date';
-        }
-      });
-
-      input.addEventListener('blur', syncMode);
-      input.addEventListener('change', syncMode);
-
-      syncMode();
+      input.addEventListener('click', tryOpenPicker);
+      input.addEventListener('focus', tryOpenPicker);
     });
   }
 
@@ -155,28 +138,6 @@
       };
     }
 
-    function retailerMatchesAssignment(retailer) {
-      var context = getAssignmentContext();
-      var assignmentIds = Array.isArray(retailer.assignment_ids) ? retailer.assignment_ids.map(String) : [];
-      var assignmentLabels = Array.isArray(retailer.assignment_labels) ? retailer.assignment_labels.map(function (item) {
-        return String(item || '').trim().toLowerCase();
-      }) : [];
-
-      if (!context.id && !context.label) {
-        return true;
-      }
-
-      if (context.id && assignmentIds.indexOf(String(context.id)) !== -1) {
-        return true;
-      }
-
-      if (context.label && assignmentLabels.indexOf(String(context.label).toLowerCase()) !== -1) {
-        return true;
-      }
-
-      return false;
-    }
-
     function applyRetailerData(retailerName) {
       var retailer = directory && retailerName ? directory[retailerName] : null;
 
@@ -207,38 +168,18 @@
     }
 
     function syncRetailerOptions() {
-      var hasVisibleRetailers = false;
-      var selectedIsVisible = !select.value || String(select.value).toLowerCase() === 'other';
-
       Array.prototype.slice.call(select.options).forEach(function (option) {
         var optionValue = String(option.value || '');
-        var retailer = directory[optionValue];
 
-        if (!optionValue || optionValue.toLowerCase() === 'other' || !retailer) {
+        if (!optionValue || optionValue.toLowerCase() === 'other') {
           option.hidden = false;
           option.disabled = false;
           return;
         }
 
-        var isVisible = retailerMatchesAssignment(retailer);
-        option.hidden = !isVisible;
-        option.disabled = !isVisible;
-
-        if (isVisible) {
-          hasVisibleRetailers = true;
-        }
-
-        if (isVisible && optionValue === String(select.value || '')) {
-          selectedIsVisible = true;
-        }
+        option.hidden = false;
+        option.disabled = false;
       });
-
-      if (!selectedIsVisible) {
-        select.value = hasVisibleRetailers ? '' : 'other';
-        if (!hasVisibleRetailers) {
-          manualInput.value = '';
-        }
-      }
     }
 
       function syncRetailerMode() {
@@ -323,6 +264,17 @@
         return text.replace('*', '').trim();
       }
 
+      function shouldSkipConditionalField(fieldName) {
+        var workshopAnswer;
+
+        if (fieldName !== 'phase_3_event_date' && fieldName !== 'phase_3_event_location' && fieldName !== 'phase_3_attendee_count') {
+          return false;
+        }
+
+        workshopAnswer = getControl('phase_3_event_type');
+        return !workshopAnswer || String(workshopAnswer.value || '').toLowerCase() !== 'yes';
+      }
+
     function getFieldValidationMessage(control, fieldName) {
       if (!control || control.disabled) {
         return '';
@@ -368,7 +320,10 @@
         }
       }
 
-      function validatePanel(panel, shouldFocus) {
+      function validatePanel(panel, options) {
+        options = options || {};
+        var shouldFocus = options.shouldFocus !== false;
+        var shouldShowErrors = options.shouldShowErrors !== false;
         var errorBox = panel.querySelector('[data-tf-step-error]');
         var fieldNames = String(panel.getAttribute('data-required-fields') || '')
           .split(',')
@@ -379,9 +334,17 @@
         var manualOverride = getControl('field_location_manual_override');
         var manualOverrideEnabled = !!(manualOverride && manualOverride.checked);
 
+        if (shouldShowErrors) {
+          panel.setAttribute('data-tf-validation-attempted', 'true');
+        }
+
         fieldNames.forEach(function (fieldName) {
           var control;
           var value;
+
+          if (shouldSkipConditionalField(fieldName)) {
+            return;
+          }
 
           if (fieldName === 'field_location_address' && manualOverrideEnabled) {
             return;
@@ -424,7 +387,7 @@
         });
 
         if (errorBox) {
-          if (invalidLabels.length) {
+          if (invalidLabels.length && panel.getAttribute('data-tf-validation-attempted') === 'true') {
             errorBox.hidden = false;
 			var summary = invalidLabels.length === fieldNames.length
 			  ? 'Complete the required fields in this section before continuing.'
@@ -436,7 +399,7 @@
           }
         }
 
-        if (shouldFocus !== false && firstInvalidField) {
+        if (shouldFocus && firstInvalidField) {
           focusControl(firstInvalidField);
         }
 
@@ -495,7 +458,7 @@
             return;
           }
 
-          if (targetStep > currentStep && activePanel && !validatePanel(activePanel)) {
+          if (targetStep > currentStep && activePanel && !validatePanel(activePanel, { shouldShowErrors: true })) {
             return;
           }
 
@@ -542,7 +505,7 @@
 
         if (nextButton) {
           nextButton.addEventListener('click', function () {
-            if (!validatePanel(panel)) {
+            if (!validatePanel(panel, { shouldShowErrors: true })) {
               return;
             }
 
@@ -555,7 +518,9 @@
             return;
           }
 
-          validatePanel(panel, false);
+          if (panel.getAttribute('data-tf-validation-attempted') === 'true') {
+            validatePanel(panel, { shouldFocus: false, shouldShowErrors: true });
+          }
         });
 
         panel.addEventListener('change', function (event) {
@@ -563,7 +528,9 @@
             return;
           }
 
-          validatePanel(panel, false);
+          if (panel.getAttribute('data-tf-validation-attempted') === 'true') {
+            validatePanel(panel, { shouldFocus: false, shouldShowErrors: true });
+          }
         });
 
     submitButtons.forEach(function (button) {
@@ -573,7 +540,7 @@
           return;
         }
 
-        if (!validatePanel(panel)) {
+        if (!validatePanel(panel, { shouldShowErrors: true })) {
           event.preventDefault();
         }
       });

@@ -95,6 +95,7 @@ $required = [
 'phase_1_state_region',
 'field_trial_contact',
 'contact_phone',
+'field_trial_contact_email',
 'phase_1_treated_size_acres',
 ],
 2 => [
@@ -217,13 +218,36 @@ return [
 'phase_3_root_vigor'                  => 'Root Vigor',
 'phase_3_harvest_photos'              => 'Harvest Photos',
 'phase_3_comments'                    => 'Comments',
-'phase_3_event_date'                  => 'Event Date',
-'phase_3_event_type'                  => 'Event Type',
-'phase_3_event_location'              => 'Event Location',
-'phase_3_attendee_count'              => 'Attendee Count',
+'phase_3_event_date'                  => 'TruField In Person Workshop/Demo Day Date Held',
+'phase_3_event_type'                  => 'TruField In Person Workshop/Demo Day (Yes or No)',
+'phase_3_event_location'              => 'TruField In Person Workshop/Demo Day Location',
+'phase_3_attendee_count'              => 'TruField In Person Workshop/Demo Day Number of Attendees',
 'phase_3_required_event_media'        => 'Required Event Media',
 'phase_3_optional_video'              => 'Optional Video',
 'phase_3_testimonial'                 => 'Testimonial',
+'phase_3_tillage_type'                => 'Tillage Type',
+'phase_3_soil_temp_f_at_application'  => 'Soil Temp (F) at application',
+'phase_3_carrier_volume_gal'          => 'Carrier Volume (Gal)',
+'phase_3_tank_mix_partners'           => 'Tank Mix Partners',
+'phase_3_planting_date'               => 'Planting Date',
+'phase_3_hybrid_variety'              => 'Hybrid/Variety',
+'phase_3_planting_population'         => 'Planting Population',
+'phase_3_row_spacing_in'              => 'Row Spacing (in)',
+'phase_3_planting_speed_mph'          => 'Planting Speed (mph)',
+'phase_3_plant_heights_avg_untreated_v7_in' => 'Plant Heights Avg Untreated @ V7 (In)',
+'phase_3_plant_heights_avg_treated_v7_in'   => 'Plant Heights Avg Treated @ V7 (In)',
+'phase_3_stalk_diameter_untreated_v7_mm'    => 'Stalk Diameter Untreated @ V7 (mm)',
+'phase_3_stalk_diameter_treated_v7_mm2'     => 'Stalk Diameter Treated @ V7 (mm)2',
+'phase_3_yield_untreated_bu_ac'       => 'Yield Untreated (bu/ac)',
+'phase_3_yield_treated_bu_ac'         => 'Yield Treated (bu/ac)',
+'phase_3_moisture_untreated_percent'  => 'Moisture Untreated (%)',
+'phase_3_moisture_treated_percent'    => 'Moisture Treated (%)',
+'phase_3_test_weight_untreated_lbs_bu' => 'Test Weight Untreated (lb/bu)',
+'phase_3_test_weight_treated_lbs_bu'   => 'Test Weight Treated (lb/bu)',
+'phase_3_as_applied_gis_data'         => 'As Applied GIS Data (Y/N)',
+'phase_3_planting_gis_data'           => 'Planting GIS Data (Y/N)',
+'phase_3_harvest_gis_data'            => 'Harvest GIS Data (Y/N)',
+'phase_3_agronomy_comments'           => 'Agronomy Comments',
 ];
 }
 
@@ -364,28 +388,9 @@ function trufield_get_retailer_directory(): array {
 function trufield_get_retailer_name_options( int $post_id = 0 ): array {
 	$directory = trufield_get_retailer_directory();
 	$options   = [];
-	$context   = $post_id > 0 ? trufield_get_retailer_assignment_context( $post_id ) : [ 'id' => '', 'label' => '' ];
 
 	foreach ( $directory as $retailer_name => $entry ) {
-		$matches_assignment = true;
-
-		if ( '' !== $context['id'] ) {
-			$matches_assignment = in_array( $context['id'], $entry['assignment_ids'], true );
-		} elseif ( '' !== $context['label'] ) {
-			$matches_assignment = in_array( $context['label'], $entry['assignment_labels'], true );
-		}
-
-		if ( ! $matches_assignment ) {
-			continue;
-		}
-
 		$options[ $retailer_name ] = $retailer_name;
-	}
-
-	if ( [] === $options && $post_id > 0 ) {
-		foreach ( $directory as $retailer_name => $entry ) {
-			$options[ $retailer_name ] = $retailer_name;
-		}
 	}
 
 	return $options;
@@ -536,10 +541,10 @@ return [
 'field_location_lng' => [ 'type' => 'number' ],
 'field_location_manual_override' => [ 'type' => 'boolean' ],
 'retailer_branch_location' => [ 'type' => 'text' ],
-'retailer_contact_phone' => [ 'type' => 'text' ],
+'retailer_contact_phone' => [ 'type' => 'phone' ],
 'retailer_address' => [ 'type' => 'text' ],
 'retailer_city' => [ 'type' => 'text' ],
-'contact_phone' => [ 'type' => 'text' ],
+'contact_phone' => [ 'type' => 'phone' ],
 'field_trial_contact_email' => [ 'type' => 'email' ],
 'phase_1_state_region' => [
 'type'    => 'select',
@@ -608,10 +613,14 @@ return [
 'phase_2_rsm_visit_1_photo_type' => [
 'type'    => 'select',
 'options' => [
-'treated'   => 'Treated',
-'untreated' => 'Untreated',
-'overview'  => 'Overview',
-'other'     => 'Other',
+'treated'        => 'Treated',
+'untreated'      => 'Untreated',
+'both'           => 'Both',
+'at_application' => 'At Application',
+'at_planting'    => 'At Planting',
+'in_season'      => 'In Season',
+'pre_harvest'    => 'Pre-Harvest',
+'drone'          => 'Drone',
 ],
 ],
 'phase_2_rsm_visit_2_date' => [ 'type' => 'date' ],
@@ -620,10 +629,14 @@ return [
 'phase_2_rsm_visit_2_photo_type' => [
 'type'    => 'select',
 'options' => [
-'treated'   => 'Treated',
-'untreated' => 'Untreated',
-'overview'  => 'Overview',
-'other'     => 'Other',
+'treated'        => 'Treated',
+'untreated'      => 'Untreated',
+'both'           => 'Both',
+'at_application' => 'At Application',
+'at_planting'    => 'At Planting',
+'in_season'      => 'In Season',
+'pre_harvest'    => 'Pre-Harvest',
+'drone'          => 'Drone',
 ],
 ],
 'phase_2_rsm_visit_3_date' => [ 'type' => 'date' ],
@@ -632,10 +645,14 @@ return [
 'phase_2_rsm_visit_3_photo_type' => [
 'type'    => 'select',
 'options' => [
-'treated'   => 'Treated',
-'untreated' => 'Untreated',
-'overview'  => 'Overview',
-'other'     => 'Other',
+'treated'        => 'Treated',
+'untreated'      => 'Untreated',
+'both'           => 'Both',
+'at_application' => 'At Application',
+'at_planting'    => 'At Planting',
+'in_season'      => 'In Season',
+'pre_harvest'    => 'Pre-Harvest',
+'drone'          => 'Drone',
 ],
 ],
 'phase_2_rsm_visit_3_comments' => [ 'type' => 'textarea' ],
@@ -645,10 +662,14 @@ return [
 'phase_2_rsm_visit_4_photo_type' => [
 'type'    => 'select',
 'options' => [
-'treated'   => 'Treated',
-'untreated' => 'Untreated',
-'overview'  => 'Overview',
-'other'     => 'Other',
+'treated'        => 'Treated',
+'untreated'      => 'Untreated',
+'both'           => 'Both',
+'at_application' => 'At Application',
+'at_planting'    => 'At Planting',
+'in_season'      => 'In Season',
+'pre_harvest'    => 'Pre-Harvest',
+'drone'          => 'Drone',
 ],
 ],
 'phase_2_rsm_visit_4_comments' => [ 'type' => 'textarea' ],
@@ -689,10 +710,8 @@ return [
 'phase_3_event_type' => [
 'type'    => 'select',
 'options' => [
-'field_day'      => 'Field Day',
-'grower_meeting' => 'Grower Meeting',
-'dealer_meeting' => 'Dealer Meeting',
-'other'          => 'Other',
+'yes' => 'Yes',
+'no'  => 'No',
 ],
 ],
 'phase_3_event_location' => [ 'type' => 'text' ],
@@ -700,6 +719,47 @@ return [
 'phase_3_required_event_media' => [ 'type' => 'textarea' ],
 'phase_3_optional_video' => [ 'type' => 'url' ],
 'phase_3_testimonial' => [ 'type' => 'textarea' ],
+'phase_3_tillage_type' => [ 'type' => 'text' ],
+'phase_3_soil_temp_f_at_application' => [ 'type' => 'number' ],
+'phase_3_carrier_volume_gal' => [ 'type' => 'number' ],
+'phase_3_tank_mix_partners' => [ 'type' => 'textarea' ],
+'phase_3_planting_date' => [ 'type' => 'date' ],
+'phase_3_hybrid_variety' => [ 'type' => 'text' ],
+'phase_3_planting_population' => [ 'type' => 'integer' ],
+'phase_3_row_spacing_in' => [ 'type' => 'number' ],
+'phase_3_planting_speed_mph' => [ 'type' => 'number' ],
+'phase_3_plant_heights_avg_untreated_v7_in' => [ 'type' => 'number' ],
+'phase_3_plant_heights_avg_treated_v7_in' => [ 'type' => 'number' ],
+'phase_3_stalk_diameter_untreated_v7_mm' => [ 'type' => 'number' ],
+'phase_3_stalk_diameter_treated_v7_mm2' => [ 'type' => 'number' ],
+'phase_3_yield_untreated_bu_ac' => [ 'type' => 'number' ],
+'phase_3_yield_treated_bu_ac' => [ 'type' => 'number' ],
+'phase_3_moisture_untreated_percent' => [ 'type' => 'number' ],
+'phase_3_moisture_treated_percent' => [ 'type' => 'number' ],
+'phase_3_test_weight_untreated_lbs_bu' => [ 'type' => 'number' ],
+'phase_3_test_weight_treated_lbs_bu' => [ 'type' => 'number' ],
+'phase_3_as_applied_gis_data' => [
+'type'    => 'select',
+'options' => [
+'yes' => 'Yes',
+'no'  => 'No',
+],
+],
+'phase_3_planting_gis_data' => [
+'type'    => 'select',
+'options' => [
+'yes' => 'Yes',
+'no'  => 'No',
+],
+],
+'phase_3_harvest_gis_data' => [
+'type'    => 'select',
+'options' => [
+'yes' => 'Yes',
+'no'  => 'No',
+],
+],
+'phase_3_agronomy_comments' => [ 'type' => 'textarea' ],
 ];
 }
 
@@ -707,11 +767,19 @@ function trufield_location_override_enabled( int $post_id ): bool {
 	return (bool) get_post_meta( $post_id, 'field_location_manual_override', true );
 }
 
+function trufield_phase_3_workshop_requires_details( int $post_id ): bool {
+	return 'yes' === strtolower( trim( (string) get_post_meta( $post_id, 'phase_3_event_type', true ) ) );
+}
+
 function trufield_get_missing_required_fields( int $post_id, int $phase ): array {
 $labels  = trufield_field_labels();
 $missing = [];
 
 foreach ( trufield_get_required_fields( $phase ) as $field ) {
+	if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) && ! trufield_phase_3_workshop_requires_details( $post_id ) ) {
+		continue;
+	}
+
 $value = get_post_meta( $post_id, $field, true );
 if ( trim( (string) $value ) === '' ) {
 $missing[] = $labels[ $field ] ?? $field;
@@ -745,6 +813,10 @@ function trufield_get_missing_validation_fields( int $post_id, int $phase ): arr
 	$missing = [];
 
 	foreach ( trufield_get_validation_fields( $phase ) as $field ) {
+		if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) && ! trufield_phase_3_workshop_requires_details( $post_id ) ) {
+			continue;
+		}
+
 		if ( 1 === $phase && in_array( $field, [ 'field_location_address', 'field_location_lat', 'field_location_lng' ], true ) ) {
 			continue;
 		}
@@ -1030,6 +1102,31 @@ function trufield_admin_only_phase_fields( int $phase ): array {
 			'rsm_bam',
 			'fsa',
 		],
+		3 => [
+			'phase_3_tillage_type',
+			'phase_3_soil_temp_f_at_application',
+			'phase_3_carrier_volume_gal',
+			'phase_3_tank_mix_partners',
+			'phase_3_planting_date',
+			'phase_3_hybrid_variety',
+			'phase_3_planting_population',
+			'phase_3_row_spacing_in',
+			'phase_3_planting_speed_mph',
+			'phase_3_plant_heights_avg_untreated_v7_in',
+			'phase_3_plant_heights_avg_treated_v7_in',
+			'phase_3_stalk_diameter_untreated_v7_mm',
+			'phase_3_stalk_diameter_treated_v7_mm2',
+			'phase_3_yield_untreated_bu_ac',
+			'phase_3_yield_treated_bu_ac',
+			'phase_3_moisture_untreated_percent',
+			'phase_3_moisture_treated_percent',
+			'phase_3_test_weight_untreated_lbs_bu',
+			'phase_3_test_weight_treated_lbs_bu',
+			'phase_3_as_applied_gis_data',
+			'phase_3_planting_gis_data',
+			'phase_3_harvest_gis_data',
+			'phase_3_agronomy_comments',
+		],
 	];
 
 	return $fields[ $phase ] ?? [];
@@ -1048,6 +1145,54 @@ return '';
 }
 
 return $date->format( 'Y-m-d' ) === $value ? $value : '';
+}
+
+function trufield_normalize_phone_value( string $value ): string {
+	$value = trim( $value );
+	if ( '' === $value ) {
+		return '';
+	}
+
+	if ( function_exists( 'trufield_import_sanitize_phone' ) ) {
+		return trufield_import_sanitize_phone( $value );
+	}
+
+	$digits = preg_replace( '/\D+/', '', $value );
+	if ( ! is_string( $digits ) ) {
+		return '';
+	}
+
+	if ( strlen( $digits ) === 11 && 0 === strpos( $digits, '1' ) ) {
+		$digits = substr( $digits, 1 );
+	}
+
+	if ( strlen( $digits ) !== 10 ) {
+		return '';
+	}
+
+	return sprintf( '%s-%s-%s', substr( $digits, 0, 3 ), substr( $digits, 3, 3 ), substr( $digits, 6, 4 ) );
+}
+
+function trufield_validate_phase_field_submission( string $field, $raw_value ): string {
+	$schema = trufield_phase_field_schema();
+	$labels = trufield_field_labels();
+	$type   = $schema[ $field ]['type'] ?? 'text';
+	$value  = trim( is_string( $raw_value ) ? wp_unslash( $raw_value ) : (string) $raw_value );
+	$label  = $labels[ $field ] ?? $field;
+
+	if ( '' === $value ) {
+		return '';
+	}
+
+	if ( 'email' === $type && ! is_email( $value ) ) {
+		return sprintf( __( '%s must be a valid email address.', 'trufield-portal' ), $label );
+	}
+
+	if ( 'phone' === $type && '' === trufield_normalize_phone_value( $value ) ) {
+		return sprintf( __( '%s must be a valid phone number.', 'trufield-portal' ), $label );
+	}
+
+	return '';
 }
 
 function trufield_sanitize_phase_field_value( string $field, $raw_value ) {
@@ -1087,7 +1232,10 @@ return $value === '' ? '' : esc_url_raw( $value );
 
 case 'email':
 	$value = trim( (string) $value );
-	return $value === '' ? '' : sanitize_email( $value );
+	return $value === '' || ! is_email( $value ) ? '' : sanitize_email( $value );
+
+case 'phone':
+	return trufield_normalize_phone_value( (string) $value );
 
 case 'textarea':
 $value = sanitize_textarea_field( (string) $value );
@@ -1287,6 +1435,23 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	$editable = trufield_rep_editable_phase_fields( $phase );
 	if ( trufield_user_is_admin( $user_id ) ) {
 		$editable = array_merge( $editable, trufield_admin_only_phase_fields( $phase ) );
+	}
+
+	$field_errors = [];
+	foreach ( $editable as $field ) {
+		if ( ! array_key_exists( $field, $_POST ) ) {
+			continue;
+		}
+
+		$field_error = trufield_validate_phase_field_submission( $field, $_POST[ $field ] );
+		if ( '' !== $field_error ) {
+			$field_errors[] = $field_error;
+		}
+	}
+
+	if ( [] !== $field_errors ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( implode( ' ', $field_errors ) ), $redirect ) );
+		exit;
 	}
 
 foreach ( $editable as $field ) {

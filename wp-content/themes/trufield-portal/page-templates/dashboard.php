@@ -113,6 +113,15 @@ $team_awarded_retailers = array_sum(
 					),
 					esc_url( get_permalink( $created_post_id ) )
 				);
+			} elseif ( 'phase_3_test_record_created' === $success && $created_post_id > 0 ) {
+				printf(
+					wp_kses(
+						/* translators: %s = trial link. */
+						__( 'Phase 3 test record created. <a href="%s">Open the record</a>.', 'trufield-portal' ),
+						[ 'a' => [ 'href' => [] ] ]
+					),
+					esc_url( get_permalink( $created_post_id ) )
+				);
 			} elseif ( preg_match( '/^phase_(\d)_completed$/', $success, $m ) ) {
 				$phase = (int) $m[1];
 				printf(
@@ -243,6 +252,13 @@ $team_awarded_retailers = array_sum(
 							</div>
 							<button type="submit" class="tf-btn tf-btn--primary"><?php esc_html_e( 'Create Trial', 'trufield-portal' ); ?></button>
 						</form>
+						<?php if ( $is_admin ) : ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form" style="margin-top: .75rem;">
+								<?php wp_nonce_field( 'trufield_create_phase_3_test_record' ); ?>
+								<input type="hidden" name="action" value="trufield_create_phase_3_test_record">
+								<button type="submit" class="tf-btn tf-btn--ghost"><?php esc_html_e( 'Create Phase 3 Test Record', 'trufield-portal' ); ?></button>
+							</form>
+						<?php endif; ?>
 					</section>
 				<?php endif; ?>
 			</div>

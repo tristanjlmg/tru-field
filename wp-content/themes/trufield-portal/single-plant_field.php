@@ -28,8 +28,8 @@ $assigned_rep    = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
 $record_status   = get_post_meta( $post_id, 'record_status', true ) ?: 'active';
 $retailer_name   = get_post_meta( $post_id, 'retailer_name', true );
 $retailer_contact = get_post_meta( $post_id, 'retailer_key_contact', true );
-$rsm_bam         = get_post_meta( $post_id, 'rsm_bam', true );
-$fsa             = get_post_meta( $post_id, 'fsa', true );
+$rsm_bam         = trufield_resolve_assignment_user_label( get_post_meta( $post_id, 'rsm_bam', true ) );
+$fsa             = trufield_resolve_assignment_user_label( get_post_meta( $post_id, 'fsa', true ) );
 $import_city     = get_post_meta( $post_id, 'import_city', true );
 $import_state    = get_post_meta( $post_id, 'import_state', true );
 $farm_name       = get_post_meta( $post_id, 'farm_name', true );
@@ -95,6 +95,36 @@ if ( 2 === $current_phase ) {
 		$phase_panel_note  = $current_phase_can_edit
 			? __( 'Complete the two Phase 2 sections below and submit when all required details are ready.', 'trufield-portal' )
 			: __( 'If this record should be editable for your Phase 2 work, contact the admin team.', 'trufield-portal' );
+	}
+	} elseif ( 3 === $current_phase ) {
+	if ( $current_phase_verified ) {
+		$phase_panel_title = __( 'Phase 3 verified', 'trufield-portal' );
+		$phase_panel_copy  = __( 'The Phase 3 harvest and engagement details have been verified by the admin team.', 'trufield-portal' );
+		$phase_panel_note  = __( 'No additional Phase 3 updates are needed right now.', 'trufield-portal' );
+	} elseif ( $current_phase_status === 'completed' ) {
+		$phase_panel_title = __( 'Phase 3 submitted', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Phase 3 has been submitted and is read-only while the admin team reviews it.', 'trufield-portal' );
+		$phase_panel_note  = __( 'If anything needs to change, the admin team can reopen this phase.', 'trufield-portal' );
+	} elseif ( $current_phase_status === 'in_progress' ) {
+		$phase_panel_title = __( 'Continue Phase 3', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Finish the required Phase 3 harvest and engagement details below.', 'trufield-portal' );
+		$phase_panel_note  = empty( $current_phase_missing )
+			? __( 'Every required Phase 3 field is ready. Submit the form when you are ready for admin verification.', 'trufield-portal' )
+			: sprintf(
+				_n(
+					'%d required Phase 3 field still needs attention before this phase can be submitted.',
+					'%d required Phase 3 fields still need attention before this phase can be submitted.',
+					count( $current_phase_missing ),
+					'trufield-portal'
+				),
+				count( $current_phase_missing )
+			);
+	} else {
+		$phase_panel_title = __( 'Start Phase 3', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Phase 2 is verified, so this trial is ready for the Phase 3 harvest and engagement workflow.', 'trufield-portal' );
+		$phase_panel_note  = $current_phase_can_edit
+			? __( 'Complete the Phase 3 form below and submit when all required details are ready.', 'trufield-portal' )
+			: __( 'If this record should be editable for your Phase 3 work, contact the admin team.', 'trufield-portal' );
 	}
 } else {
 	$phase_1_validation_missing = trufield_get_missing_validation_fields( $post_id, 1 );
@@ -163,7 +193,7 @@ if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 <h1><?php echo esc_html( $phase_titles[ $current_phase ] ?? get_the_title() ); ?></h1>
 <span class="tf-status-badge tf-status-badge--<?php echo esc_attr( $record_status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $record_status ) ) ); ?></span>
 </div>
-<p class="tf-record-header__support"><?php echo esc_html( 2 === $current_phase ? __( 'This trial is now in the Phase 2 workflow. Complete the two sections below and submit the phase when every required detail is ready.', 'trufield-portal' ) : __( 'This trial is currently in the Phase 1 workflow. Complete the active form below to move the trial forward.', 'trufield-portal' ) ); ?></p>
+<p class="tf-record-header__support"><?php echo esc_html( 2 === $current_phase ? __( 'This trial is now in the Phase 2 workflow. Complete the two sections below and submit the phase when every required detail is ready.', 'trufield-portal' ) : ( 3 === $current_phase ? __( 'This trial is now in the Phase 3 workflow. Complete the active form below to test the harvest and engagement step.', 'trufield-portal' ) : __( 'This trial is currently in the Phase 1 workflow. Complete the active form below to move the trial forward.', 'trufield-portal' ) ) ); ?></p>
 
 <div class="tf-record-meta">
 <?php if ( $assigned_rep ) : ?>

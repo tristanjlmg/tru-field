@@ -51,12 +51,12 @@ $field_groups = [
 'phase_1_state_region'       => [ 'input' => 'select', 'placeholder' => 'Select State' ],
 'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
 'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
+'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'phase_1_treated_size_acres' => [ 'input' => 'number', 'placeholder' => 'Enter Size', 'step' => '0.01', 'min' => '0' ],
 ],
 'optional' => [
 'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
 'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
-'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'phase_1_product_being_tested' => [ 'input' => 'text', 'placeholder' => 'Product name' ],
 'phase_1_application_type'   => [ 'input' => 'select' ],
 'phase_1_application_date'   => [ 'input' => 'date' ],
@@ -113,10 +113,10 @@ $field_groups = [
 'phase_3_yield_bu_ac'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
 'phase_3_moisture_percent'     => [ 'input' => 'number', 'min' => '0', 'max' => '100', 'step' => '0.1' ],
 'phase_3_test_weight_lbs_bu'   => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
-'phase_3_event_date'           => [ 'input' => 'date' ],
+'phase_3_event_date'           => [ 'input' => 'date', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
 'phase_3_event_type'           => [ 'input' => 'select' ],
-'phase_3_event_location'       => [ 'input' => 'text' ],
-'phase_3_attendee_count'       => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
+'phase_3_event_location'       => [ 'input' => 'text', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
+'phase_3_attendee_count'       => [ 'input' => 'number', 'min' => '0', 'step' => '1', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
 'phase_3_required_event_media' => [ 'input' => 'textarea', 'rows' => 2, 'help' => 'Enter event media URLs or descriptions, one per line.' ],
 ],
 'optional' => [
@@ -126,6 +126,29 @@ $field_groups = [
 'phase_3_comments'          => [ 'input' => 'textarea', 'rows' => 3 ],
 'phase_3_optional_video'    => [ 'input' => 'url', 'placeholder' => 'Video URL (optional)' ],
 'phase_3_testimonial'       => [ 'input' => 'textarea', 'rows' => 3 ],
+'phase_3_tillage_type'      => [ 'input' => 'text' ],
+'phase_3_soil_temp_f_at_application' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_3_carrier_volume_gal' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_3_tank_mix_partners' => [ 'input' => 'textarea', 'rows' => 3 ],
+'phase_3_planting_date'     => [ 'input' => 'date' ],
+'phase_3_hybrid_variety'    => [ 'input' => 'text' ],
+'phase_3_planting_population' => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
+'phase_3_row_spacing_in'    => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_3_planting_speed_mph' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
+'phase_3_plant_heights_avg_untreated_v7_in' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_plant_heights_avg_treated_v7_in' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_stalk_diameter_untreated_v7_mm' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_stalk_diameter_treated_v7_mm2' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_yield_untreated_bu_ac' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_yield_treated_bu_ac' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_moisture_untreated_percent' => [ 'input' => 'number', 'min' => '0', 'max' => '100', 'step' => '0.1' ],
+'phase_3_moisture_treated_percent' => [ 'input' => 'number', 'min' => '0', 'max' => '100', 'step' => '0.1' ],
+'phase_3_test_weight_untreated_lbs_bu' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_test_weight_treated_lbs_bu' => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
+'phase_3_as_applied_gis_data' => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_3_planting_gis_data'  => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_3_harvest_gis_data'   => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_3_agronomy_comments'  => [ 'input' => 'textarea', 'rows' => 4 ],
 ],
 ],
 ];
@@ -172,6 +195,7 @@ if ( 1 === $phase ) {
 			'required_fields'=> [
 				'field_trial_contact',
 				'contact_phone',
+				'field_trial_contact_email',
 				'field_location_address',
 				'field_location_lat',
 				'field_location_lng',
@@ -306,6 +330,14 @@ $disabled    = ! empty( $config['disabled'] );
 $static_value = $config['static_value'] ?? null;
 $attributes  = (array) ( $config['attributes'] ?? [] );
 $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), true );
+$required_markup = $required ? ' required aria-required="true"' : '';
+$input_type_markup = $input_type;
+$validation_markup = '';
+
+if ( in_array( $field, [ 'retailer_contact_phone', 'contact_phone' ], true ) ) {
+	$input_type_markup = 'tel';
+	$validation_markup = ' inputmode="tel" autocomplete="tel" pattern="(?:\\+?1[ .-]?)?(?:\\([0-9]{3}\\)|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}" title="Enter a valid phone number"';
+}
 
 $attribute_markup = '';
 foreach ( $attributes as $attribute_name => $attribute_value ) {
@@ -328,7 +360,7 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 <?php endif; ?>
 </label>
 <?php if ( $input_type === 'select' ) : ?>
-<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
 <?php foreach ( $schema[ $field ]['options'] ?? [] as $option_value => $option_label ) : ?>
 <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
@@ -336,14 +368,14 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 </select>
 <?php elseif ( $input_type === 'user_select' ) : ?>
 <?php $user_options = trufield_get_assignment_user_options( $field ); ?>
-<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select">
+<select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
 <?php foreach ( $user_options as $option_value => $option_label ) : ?>
 <option value="<?php echo esc_attr( (string) $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 <?php endforeach; ?>
 </select>
 <?php elseif ( $input_type === 'textarea' ) : ?>
-<textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"<?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_textarea( (string) $value ); ?></textarea>
+<textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_textarea( (string) $value ); ?></textarea>
 <?php elseif ( $input_type === 'file' ) : ?>
 <div class="tf-upload-field">
 <?php if ( $value ) : ?>
@@ -368,13 +400,14 @@ type="file"
 id="<?php echo esc_attr( $field ); ?>_upload"
 name="<?php echo esc_attr( $field ); ?>_upload"
 class="tf-input tf-input--file"
+<?php echo $required && ! $value ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
 </div>
 <?php elseif ( $input_type === 'date' ) : ?>
 <?php $date_placeholder = $placeholder ?: __( 'MM/DD/YYYY', 'trufield-portal' ); ?>
 <input
-type="<?php echo esc_attr( trim( (string) $value ) === '' ? 'text' : 'date' ); ?>"
+type="date"
 id="<?php echo esc_attr( $field ); ?>"
 name="<?php echo esc_attr( $field ); ?>"
 class="tf-input tf-input--date"
@@ -384,6 +417,7 @@ inputmode="numeric"
 autocomplete="off"
 data-tf-date-input
 data-date-placeholder="<?php echo esc_attr( $date_placeholder ); ?>"
+<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -393,14 +427,16 @@ data-date-placeholder="<?php echo esc_attr( $date_placeholder ); ?>"
 >
 <?php else : ?>
 <input
-type="<?php echo esc_attr( $input_type ); ?>"
+type="<?php echo esc_attr( $input_type_markup ); ?>"
 id="<?php echo esc_attr( $field ); ?>"
 name="<?php echo esc_attr( $field ); ?>"
 class="tf-input"
 value="<?php echo esc_attr( (string) $value ); ?>"
 placeholder="<?php echo esc_attr( $placeholder ); ?>"
+<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $validation_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $min !== null ? ' min="' . esc_attr( (string) $min ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $max !== null ? ' max="' . esc_attr( (string) $max ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -435,7 +471,7 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	<span class="tf-required">*</span>
 	<?php endif; ?>
 	</label>
-	<select id="retailer_name_select" name="retailer_name" class="tf-select" data-tf-retailer-select>
+	<select id="retailer_name_select" name="retailer_name" class="tf-select"<?php echo $required ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-tf-retailer-select>
 	<option value=""><?php esc_html_e( 'Select Retailer', 'trufield-portal' ); ?></option>
 	<?php foreach ( $retailer_name_options as $option_value => $option_label ) : ?>
 	<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $selected, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
@@ -551,6 +587,10 @@ return (string) $value;
 
 $readonly_fields = array_merge( array_keys( $field_groups[ $phase ]['required'] ), array_keys( $field_groups[ $phase ]['optional'] ) );
 $phase_file_fields = trufield_phase_file_fields( $phase );
+
+if ( ! $is_admin ) {
+	$readonly_fields = array_values( array_diff( $readonly_fields, trufield_admin_only_phase_fields( $phase ) ) );
+}
 
 if ( 1 === $phase ) {
 	$readonly_fields[] = 'field_location_lat';
@@ -747,7 +787,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( $step_index < count( $phase_substeps ) ) : ?>
 <button type="button" class="tf-btn tf-btn--primary" data-tf-phase-step-next><?php esc_html_e( 'Next', 'trufield-portal' ); ?></button>
 <?php else : ?>
-<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo 2 === $phase ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : __( 'Submit Phase 2', 'trufield-portal' ) ); ?></button>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo $phase > 1 ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : sprintf( __( 'Submit Phase %d', 'trufield-portal' ), $phase ) ); ?></button>
 <?php endif; ?>
 </div>
 </section>
@@ -763,10 +803,16 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( 1 === $phase && 'field_location_address' === $field ) {
 	continue;
 } ?>
+<?php
+	$is_field_required = true;
+	if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) ) {
+		$is_field_required = 'yes' === strtolower( trim( (string) get_post_meta( $post_id, 'phase_3_event_type', true ) ) );
+	}
+?>
 <?php if ( 'retailer_name' === $field ) : ?>
 <?php $render_retailer_name_field( true ); ?>
 <?php else : ?>
-<?php $render_field( $field, $config, true ); ?>
+<?php $render_field( $field, $config, $is_field_required ); ?>
 <?php endif; ?>
 <?php endforeach; ?>
 </div>

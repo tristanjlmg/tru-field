@@ -122,6 +122,16 @@ img { max-width: 100%; height: auto; }
 .tf-header__user { display: flex; align-items: center; gap: 1rem; font-size: .875rem; color: var(--tf-grey-700); white-space: nowrap; }
 .tf-header__greeting { font-weight: 600; color: var(--tf-grey-900); }
 
+body.admin-bar .tf-header {
+  top: 32px;
+}
+
+@media (max-width: 782px) {
+  body.admin-bar .tf-header {
+    top: 46px;
+  }
+}
+
 @media (max-width: 1100px) {
   .tf-header__inner {
     gap: .9rem;
