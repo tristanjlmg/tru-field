@@ -316,6 +316,12 @@ if ( 1 === $phase ) {
 
 $render_field = static function ( string $field, array $config, bool $required = false ) use ( $post_id, $labels, $schema ): void {
 $value       = get_post_meta( $post_id, $field, true );
+	if ( 'retailer_branch_location' === $field ) {
+		$value = trufield_normalize_retailer_branch_location(
+			(string) get_post_meta( $post_id, 'retailer_name', true ),
+			(string) $value
+		);
+	}
 $label       = $labels[ $field ] ?? $field;
 $input_type  = $config['input'] ?? 'text';
 $placeholder = $config['placeholder'] ?? '';
@@ -601,6 +607,12 @@ if ( 1 === $phase ) {
 $readonly_pairs  = [];
 foreach ( $readonly_fields as $field ) {
 $value = get_post_meta( $post_id, $field, true );
+	if ( 'retailer_branch_location' === $field ) {
+		$value = trufield_normalize_retailer_branch_location(
+			(string) get_post_meta( $post_id, 'retailer_name', true ),
+			(string) $value
+		);
+	}
 if ( trim( (string) $value ) !== '' ) {
 $readonly_pairs[ $field ] = $format_value( $field, $value );
 }

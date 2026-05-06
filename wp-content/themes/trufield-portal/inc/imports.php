@@ -581,7 +581,8 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 }
 
 function trufield_prepare_import_row( array $row, string $api_key ) {
-	$location            = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_branch_location', 'Retailer Branch Location', 'Location' ] ) );
+	$location            = sanitize_text_field( trufield_import_row_value( $row, [ 'field_name', 'Field Name', 'Location' ] ) );
+	$retailer_location   = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_branch_location', 'Retailer Branch Location', 'Branch Location' ] ) );
 	$retailer            = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_name', 'Retailer Name', 'Retailer' ] ) );
 	$address             = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_address', 'Retailer Address', 'field_location_address', 'Field Location Address', 'Address' ] ) );
 	$city                = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_city', 'Retailer City', 'City' ] ) );
@@ -605,6 +606,8 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		return new WP_Error( 'trufield_import_retailer_missing', __( 'Retailer is required.', 'trufield-portal' ) );
 	}
 
+	$retailer_location = trufield_normalize_retailer_branch_location( $retailer, $retailer_location );
+
 	$meta = [
 		'record_status'               => 'active',
 		'validation_status'           => 'pending',
@@ -612,7 +615,7 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'phase_1_status'              => 'in_progress',
 		'field_name'                  => $location,
 		'retailer_name'               => $retailer,
-		'retailer_branch_location'    => $location,
+		'retailer_branch_location'    => $retailer_location,
 		'retailer_key_contact'        => $key_contact,
 		'retailer_contact_phone'      => $contact_phone,
 		'retailer_address'            => $address,

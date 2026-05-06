@@ -149,7 +149,7 @@ function trufield_get_validation_fields( int $phase ): array {
 
 function trufield_field_labels(): array {
 return [
-'rsm_bam'                              => 'RSM/RAM',
+'rsm_bam'                              => 'RSM/BAM',
 'fsa'                                  => 'FSA',
 'retailer_name'                       => 'Retailer Name',
 'retailer_branch_location'            => 'Retailer Branch Location',
@@ -283,6 +283,28 @@ function trufield_pick_first_non_empty_meta_value( int $post_id, array $meta_key
 	return trim( $fallback );
 }
 
+function trufield_normalize_retailer_branch_location( string $retailer_name, string $branch_location ): string {
+	$normalized = trim( $branch_location );
+	if ( '' === $normalized ) {
+		return '';
+	}
+
+	$corrections = [
+		'ag partners' => [
+			'q' => 'Hiawatha',
+		],
+	];
+
+	$retailer_key = strtolower( trim( $retailer_name ) );
+	$branch_key   = strtolower( $normalized );
+
+	if ( isset( $corrections[ $retailer_key ][ $branch_key ] ) ) {
+		return $corrections[ $retailer_key ][ $branch_key ];
+	}
+
+	return $normalized;
+}
+
 function trufield_get_retailer_directory(): array {
 	static $directory = null;
 
@@ -335,12 +357,13 @@ function trufield_get_retailer_directory(): array {
 
 		$entry =& $directory[ $retailer_name ];
 
-		if ( '' === $entry['retailer_branch_location'] ) {
-			$entry['retailer_branch_location'] = trufield_pick_first_non_empty_meta_value(
-				$post_id,
-				[ 'retailer_branch_location', 'field_name' ],
-				get_the_title( $post_id )
-			);
+		$candidate_branch_location = trufield_normalize_retailer_branch_location(
+			$retailer_name,
+			trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_branch_location' ] )
+		);
+
+		if ( '' !== $candidate_branch_location && strlen( $candidate_branch_location ) > strlen( $entry['retailer_branch_location'] ) ) {
+			$entry['retailer_branch_location'] = $candidate_branch_location;
 		}
 
 		if ( '' === $entry['retailer_key_contact'] ) {

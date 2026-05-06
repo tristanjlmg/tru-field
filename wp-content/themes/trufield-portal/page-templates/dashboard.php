@@ -269,7 +269,7 @@ $team_awarded_retailers = array_sum(
 			<?php if ( ! empty( $fields ) ) : ?>
 				<div class="tf-trial-filters">
 					<?php if ( $is_admin ) : ?>
-						<form method="get" action="<?php echo esc_url( get_permalink() ?: trufield_dashboard_url() ); ?>" class="tf-trial-filter-form">
+						<form method="get" action="<?php echo esc_url( ( get_permalink() ?: trufield_dashboard_url() ) . '#tf-current-trials' ); ?>" class="tf-trial-filter-form">
 							<label class="tf-trial-filter-form__label" for="tf-sales-rep-filter"><?php esc_html_e( 'Filter by sales rep', 'trufield-portal' ); ?></label>
 							<div class="tf-trial-filter-form__controls">
 								<select id="tf-sales-rep-filter" name="sales_rep" class="tf-select tf-trial-filter-form__select" onchange="this.form.submit()">
