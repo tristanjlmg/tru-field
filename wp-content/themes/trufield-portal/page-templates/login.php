@@ -73,9 +73,6 @@ $reset_success = sanitize_text_field( wp_unslash( $_GET['reset'] ?? '' ) ) === '
 		</form>
 
 		<div class="tf-auth-card__links" aria-label="<?php esc_attr_e( 'Sign in help links', 'trufield-portal' ); ?>">
-			<a href="<?php echo esc_url( trufield_forgot_username_url() ); ?>">
-				<?php esc_html_e( 'Forgot username?', 'trufield-portal' ); ?>
-			</a>
 			<a href="<?php echo esc_url( trufield_forgot_password_url() ); ?>">
 				<?php esc_html_e( 'Forgot password?', 'trufield-portal' ); ?>
 			</a>

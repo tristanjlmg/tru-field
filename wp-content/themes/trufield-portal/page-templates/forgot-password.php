@@ -125,9 +125,6 @@ $username_error_messages = [
       </button>
       </form>
       <div class="tf-auth-card__links tf-auth-card__links--stacked">
-            <a href="<?php echo esc_url( trufield_forgot_username_url() ); ?>">
-                  <?php esc_html_e( 'Forgot username?', 'trufield-portal' ); ?>
-            </a>
             <a href="<?php echo esc_url( trufield_login_url() ); ?>">
                   <?php esc_html_e( 'Back to sign in', 'trufield-portal' ); ?>
             </a>
