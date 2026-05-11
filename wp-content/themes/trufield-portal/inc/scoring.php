@@ -289,24 +289,18 @@ return $agg;
 }
 
 function trufield_get_leaderboard( int $sales_rep_id = 0 ): array {
-	$reps = $sales_rep_id > 0
-		? get_users(
-			[
-				'include' => [ $sales_rep_id ],
-				'role'    => 'sales_rep',
-				'orderby' => 'display_name',
-				'order'   => 'ASC',
-				'fields'  => [ 'ID', 'display_name' ],
-			]
-		)
-		: get_users(
-			[
-				'role'    => 'sales_rep',
-				'orderby' => 'display_name',
-				'order'   => 'ASC',
-				'fields'  => [ 'ID', 'display_name' ],
-			]
+	$reps = trufield_get_sales_rep_users();
+
+	if ( $sales_rep_id > 0 ) {
+		$reps = array_values(
+			array_filter(
+				$reps,
+				static function ( $rep ) use ( $sales_rep_id ): bool {
+					return isset( $rep->ID ) && (int) $rep->ID === $sales_rep_id;
+				}
+			)
 		);
+	}
 
 $rows = [];
 foreach ( $reps as $rep ) {
