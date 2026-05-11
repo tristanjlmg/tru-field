@@ -48,6 +48,10 @@ function trufield_register_cpt_plant_field(): void {
 	register_post_type( 'plant_field', $args );
 }
 
+function trufield_generate_trial_uuid(): string {
+	return wp_generate_uuid4();
+}
+
 add_action( 'admin_post_trufield_create_plant_field', 'trufield_handle_create_plant_field' );
 function trufield_handle_create_plant_field(): void {
 	$nonce = sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) );
@@ -60,12 +64,20 @@ function trufield_handle_create_plant_field(): void {
 		wp_die( esc_html__( 'You do not have permission to create a trial.', 'trufield-portal' ), 403 );
 	}
 
-	$title = sanitize_text_field( wp_unslash( $_POST['trial_name'] ?? '' ) );
+	$product_tested = sanitize_text_field( wp_unslash( $_POST['phase_1_product_being_tested'] ?? '' ) );
 	$rsm_bam = absint( wp_unslash( $_POST['rsm_bam'] ?? 0 ) );
 	$fsa     = absint( wp_unslash( $_POST['fsa'] ?? 0 ) );
-	if ( '' === $title ) {
-		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Trial name is required.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
+	$product_choices = trufield_get_product_tested_choices();
+	$is_admin_user   = trufield_user_is_admin( $user_id );
+	$title           = trufield_generate_trial_uuid();
+
+	if ( '' === $product_tested || ! isset( $product_choices[ $product_tested ] ) ) {
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( __( 'Select a valid product tested before creating the trial.', 'trufield-portal' ) ), trufield_dashboard_url() ) );
 		exit;
+	}
+
+	if ( ! $is_admin_user ) {
+		$rsm_bam = $user_id;
 	}
 
 	if ( ! trufield_is_allowed_rsm_bam_user_id( $rsm_bam ) ) {
@@ -100,6 +112,8 @@ function trufield_handle_create_plant_field(): void {
 	update_post_meta( $post_id, 'rsm_bam', $rsm_bam );
 	update_post_meta( $post_id, 'assigned_sales_rep', $rsm_bam );
 	update_post_meta( $post_id, 'fsa', $fsa );
+	update_post_meta( $post_id, 'trial_uuid', $title );
+	update_post_meta( $post_id, 'phase_1_product_being_tested', $product_tested );
 
 	wp_safe_redirect(
 		add_query_arg(

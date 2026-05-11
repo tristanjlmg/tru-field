@@ -1,7 +1,6 @@
 /**
  * TruField Portal — Frontend JS
  */
-
 (function () {
   'use strict';
 
@@ -87,6 +86,26 @@
     });
   }
 
+  function initPhotoUploadPrompts() {
+    document.querySelectorAll('[data-tf-photo-upload-field]').forEach(function (uploadInput) {
+      var controllingField = uploadInput.getAttribute('data-tf-photo-upload-field');
+      var typeSelect = controllingField ? document.getElementById(controllingField) : null;
+      var uploadField = uploadInput.closest('.tf-upload-field');
+      var prompt = uploadField ? uploadField.querySelector('[data-tf-upload-prompt]') : null;
+
+      if (!typeSelect || !prompt) {
+        return;
+      }
+
+      function syncPrompt() {
+        prompt.hidden = String(typeSelect.value || '').trim() === '';
+      }
+
+      typeSelect.addEventListener('change', syncPrompt);
+      syncPrompt();
+    });
+  }
+
   function initRetailerPickers() {
     document.querySelectorAll('[data-tf-retailer-picker]').forEach(function (wrapper) {
       var select = wrapper.querySelector('[data-tf-retailer-select]');
@@ -96,12 +115,8 @@
       var assignmentControlId = wrapper.getAttribute('data-tf-assignment-control') || '';
       var assignmentControl = assignmentControlId ? document.getElementById(assignmentControlId) : null;
       var autoFillFields = {
-        rsm_bam: document.getElementById('rsm_bam'),
-        retailer_branch_location: document.getElementById('retailer_branch_location'),
         retailer_key_contact: document.getElementById('retailer_key_contact'),
         retailer_contact_phone: document.getElementById('retailer_contact_phone'),
-        retailer_address: document.getElementById('retailer_address'),
-        retailer_city: document.getElementById('retailer_city'),
         phase_1_state_region: document.getElementById('phase_1_state_region')
       };
 
@@ -557,8 +572,10 @@
     var input = searchWrapper && searchWrapper.querySelector('[data-tf-trial-search-input]');
     var hint = searchWrapper && searchWrapper.querySelector('[data-tf-trial-search-hint]');
     var grid = document.querySelector('[data-tf-trial-grid]');
+    var viewToggle = document.querySelector('[data-tf-trial-view-toggle]');
     var emptyState = document.querySelector('[data-tf-trial-empty]');
     var count = document.querySelector('[data-tf-trial-count]');
+    var storageKey = 'trufieldTrialViewMode';
 
     if (!searchWrapper || !input || !grid) {
       return;
@@ -566,6 +583,27 @@
 
     var cards = Array.prototype.slice.call(grid.querySelectorAll('[data-tf-trial-card]'));
     var totalCount = cards.length;
+
+    function setViewMode(mode) {
+      var nextMode = mode === 'list' ? 'list' : 'grid';
+
+      grid.setAttribute('data-tf-trial-view-mode', nextMode);
+
+      if (viewToggle) {
+        var buttons = Array.prototype.slice.call(viewToggle.querySelectorAll('[data-tf-trial-view]'));
+        buttons.forEach(function (button) {
+          var isActive = button.getAttribute('data-tf-trial-view') === nextMode;
+
+          button.classList.toggle('is-active', isActive);
+          button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+      }
+
+      try {
+        window.localStorage.setItem(storageKey, nextMode);
+      } catch (error) {
+      }
+    }
 
     function updateCount(visibleCount) {
       if (!count) {
@@ -618,6 +656,23 @@
 
     input.addEventListener('input', applyFilter);
     input.addEventListener('search', applyFilter);
+
+    if (viewToggle) {
+      viewToggle.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-tf-trial-view]');
+        if (!button) {
+          return;
+        }
+
+        setViewMode(button.getAttribute('data-tf-trial-view'));
+      });
+    }
+
+    try {
+      setViewMode(window.localStorage.getItem(storageKey) || grid.getAttribute('data-tf-trial-view-mode'));
+    } catch (error) {
+      setViewMode(grid.getAttribute('data-tf-trial-view-mode'));
+    }
 
     updateCount(totalCount);
     updateHint('', totalCount);
@@ -1220,11 +1275,11 @@
 
   function initStandCountDelta() {
     document.querySelectorAll('form.tf-phase-form').forEach(function (form) {
-      var treatedInput = form.querySelector('[data-tf-stand-count-treated]');
-      var untreatedInput = form.querySelector('[data-tf-stand-count-untreated]');
+      var treatedInputs = Array.prototype.slice.call(form.querySelectorAll('[data-tf-stand-count-treated]'));
+      var untreatedInputs = Array.prototype.slice.call(form.querySelectorAll('[data-tf-stand-count-untreated]'));
       var deltaInput = form.querySelector('[data-tf-stand-count-delta]');
 
-      if (!treatedInput || !untreatedInput || !deltaInput) {
+      if (!treatedInputs.length || !untreatedInputs.length || !deltaInput) {
         return;
       }
 
@@ -1239,19 +1294,38 @@
       }
 
       function syncDelta() {
-        var treated = String(treatedInput.value || '').trim();
-        var untreated = String(untreatedInput.value || '').trim();
+        var treatedValues = treatedInputs.map(function (input) {
+          return String(input.value || '').trim();
+        });
+        var untreatedValues = untreatedInputs.map(function (input) {
+          return String(input.value || '').trim();
+        });
+        var treatedNumbers = treatedValues.map(Number);
+        var untreatedNumbers = untreatedValues.map(Number);
+        var treatedValid = treatedValues.every(function (value, index) {
+          return value !== '' && !isNaN(treatedNumbers[index]);
+        });
+        var untreatedValid = untreatedValues.every(function (value, index) {
+          return value !== '' && !isNaN(untreatedNumbers[index]);
+        });
 
-        if (treated === '' || untreated === '' || isNaN(Number(treated)) || isNaN(Number(untreated))) {
+        if (!treatedValid || !untreatedValid) {
           deltaInput.value = '';
           return;
         }
 
-        deltaInput.value = formatDelta(Number(treated) - Number(untreated));
+        var treatedAverage = treatedNumbers.reduce(function (sum, value) { return sum + value; }, 0) / treatedNumbers.length;
+        var untreatedAverage = untreatedNumbers.reduce(function (sum, value) { return sum + value; }, 0) / untreatedNumbers.length;
+
+        deltaInput.value = formatDelta(treatedAverage - untreatedAverage);
       }
 
-      treatedInput.addEventListener('input', syncDelta);
-      untreatedInput.addEventListener('input', syncDelta);
+      treatedInputs.forEach(function (input) {
+        input.addEventListener('input', syncDelta);
+      });
+      untreatedInputs.forEach(function (input) {
+        input.addEventListener('input', syncDelta);
+      });
       syncDelta();
     });
   }
@@ -1261,6 +1335,7 @@
     initNavToggle();
     initShowMore();
     initDateInputs();
+    initPhotoUploadPrompts();
     initRetailerPickers();
     initPhaseSubsteps();
     initStandCountDelta();

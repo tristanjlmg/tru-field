@@ -316,9 +316,12 @@ acf_add_local_field_group( [
 ],
 [ 
 'key'      => 'field_tf_phase_1_product_being_tested',
-'label'    => 'Product Being Tested',
+'label'    => 'Product Tested',
 'name'     => 'phase_1_product_being_tested',
-'type'     => 'text',
+'type'     => 'select',
+		'choices'  => [],
+		'ui'       => 1,
+		'allow_null' => 1,
 'required' => 0,
 ],
 [ 
@@ -459,7 +462,7 @@ acf_add_local_field_group( [
 'type'           => 'date_picker',
 'display_format' => 'm/d/Y',
 'return_format'  => 'Y-m-d',
-'required'       => 1,
+'required'       => 0,
 ],
 [
 'key'           => 'field_tf_phase_2_rsm_visit_1_photo_type',
@@ -505,7 +508,7 @@ acf_add_local_field_group( [
 'type'           => 'date_picker',
 'display_format' => 'm/d/Y',
 'return_format'  => 'Y-m-d',
-'required'       => 1,
+'required'       => 0,
 ],
 [
 'key'           => 'field_tf_phase_2_rsm_visit_2_photo_type',
@@ -668,11 +671,65 @@ acf_add_local_field_group( [
 'instructions'=> 'Reference only. This field auto-populates as Average of 3 Stand Counts - TREATED minus Average of 3 Stand Counts - UNTREATED.',
 ],
 [
+'key'      => 'field_tf_phase_2_stand_count_1_treated',
+'label'    => 'Stand Count 1 TREATED',
+'name'     => 'phase_2_stand_count_1_treated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
+'key'      => 'field_tf_phase_2_stand_count_2_treated',
+'label'    => 'Stand Count 2 TREATED',
+'name'     => 'phase_2_stand_count_2_treated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
+'key'      => 'field_tf_phase_2_stand_count_3_treated',
+'label'    => 'Stand Count 3 TREATED',
+'name'     => 'phase_2_stand_count_3_treated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
+'key'      => 'field_tf_phase_2_stand_count_1_untreated',
+'label'    => 'Stand Count 1 UNTREATED',
+'name'     => 'phase_2_stand_count_1_untreated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
+'key'      => 'field_tf_phase_2_stand_count_2_untreated',
+'label'    => 'Stand Count 2 UNTREATED',
+'name'     => 'phase_2_stand_count_2_untreated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
+'key'      => 'field_tf_phase_2_stand_count_3_untreated',
+'label'    => 'Stand Count 3 UNTREATED',
+'name'     => 'phase_2_stand_count_3_untreated',
+'type'     => 'number',
+'required' => 0,
+'min'      => 0,
+'step'     => '0.01',
+],
+[
 'key'      => 'field_tf_phase_2_average_stand_count_treated',
 'label'    => 'Average of 3 Stand Counts - TREATED',
 'name'     => 'phase_2_average_stand_count_treated',
 'type'     => 'number',
-'required'    => 1,
+'required'    => 0,
 'min'         => 0,
 'step'        => '0.01',
 ],
@@ -681,7 +738,7 @@ acf_add_local_field_group( [
 'label'        => 'Average of 3 Stand Counts - UNTREATED',
 'name'         => 'phase_2_average_stand_count_untreated',
 'type'         => 'number',
-'required'     => 1,
+'required'     => 0,
 'min'          => 0,
 'step'         => '0.01',
 ],
@@ -690,9 +747,99 @@ acf_add_local_field_group( [
 'label'        => 'Most Significant Visual Difference',
 'name'         => 'phase_2_most_significant_visual_difference',
 'type'         => 'textarea',
-'required'     => 1,
+'required'     => 0,
 'rows'         => 4,
 'instructions' => 'Describe the biggest visible difference between treated and untreated conditions.',
+],
+[
+'key'           => 'field_tf_phase_2_emergence_flag_test',
+'label'         => 'Emergence (Flag Test) (Y/N)',
+'name'          => 'phase_2_emergence_flag_test',
+'type'          => 'select',
+'choices'       => [
+'yes' => 'Yes',
+'no'  => 'No',
+],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'           => 'field_tf_phase_2_pictures_at_application',
+'label'         => 'Pictures at Application (Y/N)',
+'name'          => 'phase_2_pictures_at_application',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'           => 'field_tf_phase_2_pictures_at_planting',
+'label'         => 'Pictures at Planting (Y/N)',
+'name'          => 'phase_2_pictures_at_planting',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'           => 'field_tf_phase_2_pictures_in_season_harvest',
+'label'         => 'Pictures In Season (Y/N)',
+'name'          => 'phase_2_pictures_in_season_harvest',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[ 
+'key'           => 'field_tf_phase_2_pictures_at_harvest',
+'label'         => 'Pictures at Harvest (Y/N)',
+'name'          => 'phase_2_pictures_at_harvest',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'           => 'field_tf_phase_2_drone_images_available',
+'label'         => 'Drone Images Available (Y/N)',
+'name'          => 'phase_2_drone_images_available',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'           => 'field_tf_phase_2_grower_retailer_testimonials',
+'label'         => 'Grower / Retailer Testimonials (Y/N)',
+'name'          => 'phase_2_grower_retailer_testimonials',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[ 
+'key'           => 'field_tf_phase_2_time_lapse_available',
+'label'         => 'Time Lapse Available (Y/N)',
+'name'          => 'phase_2_time_lapse_available',
+'type'          => 'select',
+'choices'       => [ 'yes' => 'Yes', 'no' => 'No' ],
+'allow_null'    => 1,
+'return_format' => 'value',
+'required'      => 0,
+],
+[
+'key'   => 'field_tf_phase_2_grower_retailer_comments',
+'label' => 'Grower / Retailer Comments',
+'name'  => 'phase_2_grower_retailer_comments',
+'type'  => 'textarea',
+'rows'  => 3,
 ],
 ],
 'location'              => trufield_acf_location_rule(),
@@ -714,7 +861,7 @@ acf_add_local_field_group( [
 'label'    => 'Yield (bu/ac)',
 'name'     => 'phase_3_yield_bu_ac',
 'type'     => 'number',
-'required' => 1,
+'required' => 0,
 'min'      => 0,
 'step'     => '0.01',
 ],
@@ -723,7 +870,7 @@ acf_add_local_field_group( [
 'label'    => 'Moisture (%)',
 'name'     => 'phase_3_moisture_percent',
 'type'     => 'number',
-'required' => 1,
+'required' => 0,
 'min'      => 0,
 'max'      => 100,
 'step'     => '0.1',
@@ -733,7 +880,7 @@ acf_add_local_field_group( [
 'label'    => 'Test Weight (lbs/bu)',
 'name'     => 'phase_3_test_weight_lbs_bu',
 'type'     => 'number',
-'required' => 1,
+'required' => 0,
 'min'      => 0,
 'step'     => '0.01',
 ],
@@ -793,7 +940,7 @@ acf_add_local_field_group( [
 ],
 'allow_null'    => 1,
 'return_format' => 'value',
-'required'      => 1,
+'required'      => 0,
 ],
 [
 'key'      => 'field_tf_phase_3_event_location',
@@ -815,7 +962,7 @@ acf_add_local_field_group( [
 'label'        => 'Required Event Media',
 'name'         => 'phase_3_required_event_media',
 'type'         => 'textarea',
-'required'     => 1,
+'required'     => 0,
 'rows'         => 2,
 'instructions' => 'Enter event media URLs or descriptions, one per line. Required for phase completion.',
 ],
@@ -1174,6 +1321,18 @@ acf_add_local_field_group( [
 
 add_filter( 'acf/load_field', 'trufield_relax_required_acf_fields_for_admins', 20 );
 function trufield_relax_required_acf_fields_for_admins( array $field ): array {
+	if ( 'phase_1_product_being_tested' === (string) ( $field['name'] ?? '' ) ) {
+		$field['choices'] = trufield_get_product_tested_choices();
+
+		$post_id = trufield_get_current_admin_plant_field_id();
+		if ( $post_id > 0 ) {
+			$current_value = trim( (string) get_post_meta( $post_id, 'phase_1_product_being_tested', true ) );
+			if ( '' !== $current_value && ! isset( $field['choices'][ $current_value ] ) ) {
+				$field['choices'][ $current_value ] = $current_value;
+			}
+		}
+	}
+
 	if ( empty( $field['required'] ) || ! trufield_should_relax_admin_plant_field_validation() ) {
 		return $field;
 	}
@@ -1198,6 +1357,21 @@ function trufield_limit_rsm_bam_acf_user_query( array $args, array $field, $post
 	return $args;
 }
 
+add_filter( 'acf/fields/user/query/key=field_tf_assigned_sales_rep', 'trufield_limit_assigned_sales_rep_acf_user_query', 20, 3 );
+function trufield_limit_assigned_sales_rep_acf_user_query( array $args, array $field, $post_id ): array {
+	unset( $field, $post_id );
+
+	$args['include'] = array_keys( trufield_get_rsm_bam_user_options() );
+	$args['orderby'] = 'include';
+	$args['order']   = 'ASC';
+
+	if ( empty( $args['include'] ) ) {
+		$args['include'] = [ 0 ];
+	}
+
+	return $args;
+}
+
 add_filter( 'acf/load_value/key=field_tf_rsm_bam', 'trufield_filter_rsm_bam_acf_value', 20, 3 );
 add_filter( 'acf/update_value/key=field_tf_rsm_bam', 'trufield_filter_rsm_bam_acf_value', 20, 3 );
 function trufield_filter_rsm_bam_acf_value( $value, $post_id, array $field ) {
@@ -1206,6 +1380,31 @@ function trufield_filter_rsm_bam_acf_value( $value, $post_id, array $field ) {
 	$value = absint( (string) $value );
 
 	return trufield_is_allowed_rsm_bam_user_id( $value ) ? $value : '';
+}
+
+add_filter( 'acf/fields/user/query/key=field_tf_fsa', 'trufield_limit_fsa_acf_user_query', 20, 3 );
+function trufield_limit_fsa_acf_user_query( array $args, array $field, $post_id ): array {
+	unset( $field, $post_id );
+
+	$args['include'] = array_keys( trufield_get_assignment_user_options( 'fsa' ) );
+	$args['orderby'] = 'include';
+	$args['order']   = 'ASC';
+
+	if ( empty( $args['include'] ) ) {
+		$args['include'] = [ 0 ];
+	}
+
+	return $args;
+}
+
+add_filter( 'acf/load_value/key=field_tf_fsa', 'trufield_filter_fsa_acf_value', 20, 3 );
+add_filter( 'acf/update_value/key=field_tf_fsa', 'trufield_filter_fsa_acf_value', 20, 3 );
+function trufield_filter_fsa_acf_value( $value, $post_id, array $field ) {
+	unset( $post_id, $field );
+
+	$value = absint( (string) $value );
+
+	return trufield_is_allowed_fsa_user_id( $value ) ? $value : '';
 }
 
 add_filter( 'acf/validate_value', 'trufield_allow_admin_incomplete_plant_fields', 20, 4 );

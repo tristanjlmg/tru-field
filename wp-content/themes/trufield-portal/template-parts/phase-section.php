@@ -28,6 +28,7 @@ $labels       = trufield_field_labels();
 $schema       = trufield_phase_field_schema();
 $phase_label  = sprintf( __( 'Phase %d', 'trufield-portal' ), $phase );
 $location_override = 1 === $phase ? trufield_location_override_enabled( $post_id ) : false;
+$admin_only_phase_fields = trufield_admin_only_phase_fields( $phase );
 $admin_phase_one_fields = [
 	'rsm_bam' => [
 		'input'       => 'user_select',
@@ -49,15 +50,15 @@ $field_groups = [
 'retailer_address'           => [ 'input' => 'text', 'placeholder' => 'Enter Address' ],
 'retailer_city'              => [ 'input' => 'text', 'placeholder' => 'Enter City' ],
 'phase_1_state_region'       => [ 'input' => 'select', 'placeholder' => 'Select State' ],
-'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
-'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
-'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'phase_1_treated_size_acres' => [ 'input' => 'number', 'placeholder' => 'Enter Size', 'step' => '0.01', 'min' => '0' ],
 ],
 'optional' => [
+'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
+'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
+'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
 'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
 'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
-'phase_1_product_being_tested' => [ 'input' => 'text', 'placeholder' => 'Product name' ],
+'phase_1_product_being_tested' => [ 'input' => 'select', 'placeholder' => 'Select Product' ],
 'phase_1_application_type'   => [ 'input' => 'select' ],
 'phase_1_application_date'   => [ 'input' => 'date' ],
 'phase_1_application_rate'   => [ 'input' => 'text', 'placeholder' => 'Enter Amount' ],
@@ -81,51 +82,49 @@ $field_groups = [
 2 => [
 'required' => [
 'phase_2_rsm_visit_1_date'                 => [ 'input' => 'date' ],
-'phase_2_rsm_visit_1_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 1 photo for this trial.' ],
-'phase_2_rsm_visit_1_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_1_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 'phase_2_rsm_visit_1_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_2_date'                 => [ 'input' => 'date' ],
-'phase_2_rsm_visit_2_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 2 photo for this trial.' ],
-'phase_2_rsm_visit_2_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_2_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 'phase_2_rsm_visit_2_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_residue_degradation_observed'     => [ 'input' => 'select' ],
 'phase_2_emergence_stand_collected'        => [ 'input' => 'select' ],
-'phase_2_stand_count_data'                 => [ 'input' => 'text', 'placeholder' => 'Auto-calculated', 'readonly' => true, 'disabled' => true, 'help' => 'Reference only. This field auto-populates as treated minus untreated.', 'attributes' => [ 'data-tf-stand-count-delta' => 'true' ] ],
-'phase_2_average_stand_count_treated'      => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'help' => 'Enter the average of three stand counts for the treated area.', 'attributes' => [ 'data-tf-stand-count-treated' => 'true' ] ],
-'phase_2_average_stand_count_untreated'    => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'help' => 'Enter the average of three stand counts for the untreated area.', 'attributes' => [ 'data-tf-stand-count-untreated' => 'true' ] ],
-'phase_2_most_significant_visual_difference' => [ 'input' => 'textarea', 'rows' => 4, 'placeholder' => 'What was the most significant visual difference you saw?' ],
 ],
 'optional' => [
 'phase_2_rsm_visit_3_date'                 => [ 'input' => 'date' ],
-'phase_2_rsm_visit_3_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 3 photo for this trial.' ],
-'phase_2_rsm_visit_3_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_3_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 'phase_2_rsm_visit_3_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_3_comments'             => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Add notes for visit 3' ],
 'phase_2_rsm_visit_4_date'                 => [ 'input' => 'date' ],
-'phase_2_rsm_visit_4_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload the visit 4 photo for this trial.' ],
-'phase_2_rsm_visit_4_photos_taken_date'    => [ 'input' => 'date' ],
+'phase_2_rsm_visit_4_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 'phase_2_rsm_visit_4_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_4_comments'             => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Add notes for visit 4' ],
+'phase_2_stand_count_1_treated'            => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-treated' => 'true' ] ],
+'phase_2_stand_count_2_treated'            => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-treated' => 'true' ] ],
+'phase_2_stand_count_3_treated'            => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-treated' => 'true' ] ],
+'phase_2_stand_count_1_untreated'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-untreated' => 'true' ] ],
+'phase_2_stand_count_2_untreated'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-untreated' => 'true' ] ],
+'phase_2_stand_count_3_untreated'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01', 'attributes' => [ 'data-tf-stand-count-untreated' => 'true' ] ],
+'phase_2_stand_count_data'                 => [ 'input' => 'text', 'placeholder' => 'Auto-calculated', 'readonly' => true, 'disabled' => true, 'help' => 'Calculated as the treated average minus the untreated average.', 'attributes' => [ 'data-tf-stand-count-delta' => 'true' ] ],
+'phase_2_most_significant_visual_difference' => [ 'input' => 'textarea', 'rows' => 4, 'placeholder' => 'What is the most significant visual difference today?' ],
+'phase_2_emergence_flag_test'              => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_at_application'          => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_at_planting'             => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_in_season_harvest'       => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_at_harvest'              => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_drone_images_available'           => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_grower_retailer_testimonials'     => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_time_lapse_available'             => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_grower_retailer_comments'         => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Grower / Retailer Comments' ],
 ],
 ],
 3 => [
-'required' => [
-'phase_3_yield_bu_ac'          => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
-'phase_3_moisture_percent'     => [ 'input' => 'number', 'min' => '0', 'max' => '100', 'step' => '0.1' ],
-'phase_3_test_weight_lbs_bu'   => [ 'input' => 'number', 'min' => '0', 'step' => '0.01' ],
-'phase_3_event_date'           => [ 'input' => 'date', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
-'phase_3_event_type'           => [ 'input' => 'select' ],
-'phase_3_event_location'       => [ 'input' => 'text', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
-'phase_3_attendee_count'       => [ 'input' => 'number', 'min' => '0', 'step' => '1', 'help' => 'Required only if TruField In Person Workshop/Demo Day is Yes.' ],
-'phase_3_required_event_media' => [ 'input' => 'textarea', 'rows' => 2, 'help' => 'Enter event media URLs or descriptions, one per line.' ],
-],
+'required' => [],
 'optional' => [
-'phase_3_stalk_diameter'    => [ 'input' => 'number', 'step' => '0.01' ],
-'phase_3_root_vigor'        => [ 'input' => 'select' ],
-'phase_3_harvest_photos'    => [ 'input' => 'textarea', 'rows' => 2, 'placeholder' => 'Harvest photo URLs' ],
-'phase_3_comments'          => [ 'input' => 'textarea', 'rows' => 3 ],
-'phase_3_optional_video'    => [ 'input' => 'url', 'placeholder' => 'Video URL (optional)' ],
-'phase_3_testimonial'       => [ 'input' => 'textarea', 'rows' => 3 ],
+'phase_3_event_type'           => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_3_event_date'           => [ 'input' => 'date' ],
+'phase_3_event_location'       => [ 'input' => 'text', 'placeholder' => 'Enter location' ],
+'phase_3_attendee_count'       => [ 'input' => 'number', 'min' => '0', 'step' => '1' ],
 'phase_3_tillage_type'      => [ 'input' => 'text' ],
 'phase_3_soil_temp_f_at_application' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
 'phase_3_carrier_volume_gal' => [ 'input' => 'number', 'min' => '0', 'step' => '0.1' ],
@@ -191,15 +190,8 @@ if ( 1 === $phase ) {
 		2 => [
 			'key'            => 'field-trial',
 			'title'          => __( 'Field Trial Information', 'trufield-portal' ),
-			'description'    => __( 'Verify the field location and capture the field setup for this record.', 'trufield-portal' ),
-			'required_fields'=> [
-				'field_trial_contact',
-				'contact_phone',
-				'field_trial_contact_email',
-				'field_location_address',
-				'field_location_lat',
-				'field_location_lng',
-			],
+			'description'    => __( 'Capture the field trial contact details and coordinates for this record.', 'trufield-portal' ),
+			'required_fields'=> [],
 			'fields'         => [
 				'field_trial_contact',
 				'contact_phone',
@@ -222,24 +214,18 @@ if ( 1 === $phase ) {
 			'title'          => __( 'Trial Information', 'trufield-portal' ),
 			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
 			'required_fields'=> [
-				'phase_1_trial_type',
 				'phase_1_treated_size_acres',
-				'phase_1_application_rate',
-				'phase_1_protocol_version',
-				'phase_1_application_timing',
-				'phase_1_application_date',
-				'phase_1_retailer_training_discussion_date',
 			],
 			'fields'         => [
-				'phase_1_trial_type',
 				'phase_1_treated_size_acres',
+			],
+			'optional_fields'=> [
+				'phase_1_trial_type',
 				'phase_1_application_rate',
 				'phase_1_protocol_version',
 				'phase_1_application_timing',
 				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
-			],
-			'optional_fields'=> [
 				'phase_1_application_type',
 				'phase_1_growth_stage_at_application',
 				'phase_1_weather_conditions_at_application',
@@ -258,54 +244,67 @@ if ( 1 === $phase ) {
 			'description'    => __( 'Record up to four RSM visits, including visit dates, uploaded photos, and photo details for each documented stop.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_2_rsm_visit_1_date',
-				'phase_2_rsm_visit_1_upload_photos',
-				'phase_2_rsm_visit_1_photos_taken_date',
 				'phase_2_rsm_visit_1_photo_type',
+				'phase_2_rsm_visit_1_upload_photos',
 				'phase_2_rsm_visit_2_date',
-				'phase_2_rsm_visit_2_upload_photos',
-				'phase_2_rsm_visit_2_photos_taken_date',
 				'phase_2_rsm_visit_2_photo_type',
+				'phase_2_rsm_visit_2_upload_photos',
 			],
 			'fields'         => [
 				'phase_2_rsm_visit_1_date',
-				'phase_2_rsm_visit_1_upload_photos',
-				'phase_2_rsm_visit_1_photos_taken_date',
 				'phase_2_rsm_visit_1_photo_type',
+				'phase_2_rsm_visit_1_upload_photos',
 				'phase_2_rsm_visit_2_date',
-				'phase_2_rsm_visit_2_upload_photos',
-				'phase_2_rsm_visit_2_photos_taken_date',
 				'phase_2_rsm_visit_2_photo_type',
+				'phase_2_rsm_visit_2_upload_photos',
 			],
 			'optional_fields'=> [
 				'phase_2_rsm_visit_3_date',
-				'phase_2_rsm_visit_3_upload_photos',
-				'phase_2_rsm_visit_3_photos_taken_date',
 				'phase_2_rsm_visit_3_photo_type',
+				'phase_2_rsm_visit_3_upload_photos',
 				'phase_2_rsm_visit_3_comments',
 				'phase_2_rsm_visit_4_date',
-				'phase_2_rsm_visit_4_upload_photos',
-				'phase_2_rsm_visit_4_photos_taken_date',
 				'phase_2_rsm_visit_4_photo_type',
+				'phase_2_rsm_visit_4_upload_photos',
 				'phase_2_rsm_visit_4_comments',
 			],
 		],
 		2 => [
-			'key'            => 'observations',
-			'title'          => __( 'Field Observations', 'trufield-portal' ),
-			'description'    => __( 'Capture residue observations, enter the average of three stand counts for treated and untreated areas, and summarize the strongest visible difference in the field.', 'trufield-portal' ),
+			'key'            => 'stand-counts',
+			'title'          => __( 'Stand Counts & Delta Count', 'trufield-portal' ),
+			'description'    => __( 'Enter the three treated and three untreated stand counts. The delta field is calculated automatically from the averages.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_2_residue_degradation_observed',
 				'phase_2_emergence_stand_collected',
-				'phase_2_average_stand_count_treated',
-				'phase_2_average_stand_count_untreated',
-				'phase_2_most_significant_visual_difference',
 			],
 			'fields'         => [
 				'phase_2_residue_degradation_observed',
 				'phase_2_emergence_stand_collected',
-				'phase_2_average_stand_count_treated',
-				'phase_2_average_stand_count_untreated',
+				'phase_2_stand_count_1_treated',
+				'phase_2_stand_count_2_treated',
+				'phase_2_stand_count_3_treated',
+				'phase_2_stand_count_1_untreated',
+				'phase_2_stand_count_2_untreated',
+				'phase_2_stand_count_3_untreated',
 				'phase_2_stand_count_data',
+			],
+			'optional_fields'=> [],
+		],
+		3 => [
+			'key'            => 'visual-compliance',
+			'title'          => __( 'Visual Evidence & Photo Compliance', 'trufield-portal' ),
+			'description'    => __( 'Capture the screenshot scoring checks for visual evidence, photo compliance, and media proof.', 'trufield-portal' ),
+			'required_fields'=> [],
+			'fields'         => [
+				'phase_2_emergence_flag_test',
+				'phase_2_pictures_at_application',
+				'phase_2_pictures_at_planting',
+				'phase_2_pictures_in_season_harvest',
+				'phase_2_pictures_at_harvest',
+				'phase_2_drone_images_available',
+				'phase_2_grower_retailer_testimonials',
+				'phase_2_time_lapse_available',
+				'phase_2_grower_retailer_comments',
 				'phase_2_most_significant_visual_difference',
 			],
 			'optional_fields'=> [],
@@ -340,6 +339,10 @@ $required_markup = $required ? ' required aria-required="true"' : '';
 $input_type_markup = $input_type;
 $validation_markup = '';
 
+if ( $input_type === 'file' ) {
+	$help = trim( $help . ' ' . trufield_get_phase_upload_help_text( $field, $post_id ) );
+}
+
 if ( in_array( $field, [ 'retailer_contact_phone', 'contact_phone' ], true ) ) {
 	$input_type_markup = 'tel';
 	$validation_markup = ' inputmode="tel" autocomplete="tel" pattern="(?:\\+?1[ .-]?)?(?:\\([0-9]{3}\\)|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}" title="Enter a valid phone number"';
@@ -366,9 +369,13 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 <?php endif; ?>
 </label>
 <?php if ( $input_type === 'select' ) : ?>
+<?php $select_options = $schema[ $field ]['options'] ?? []; ?>
+<?php if ( '' !== trim( (string) $value ) && ! isset( $select_options[ (string) $value ] ) ) {
+	$select_options[ (string) $value ] = (string) $value;
+} ?>
 <select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-select"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <option value=""><?php echo esc_html( $placeholder ?: __( 'Select…', 'trufield-portal' ) ); ?></option>
-<?php foreach ( $schema[ $field ]['options'] ?? [] as $option_value => $option_label ) : ?>
+<?php foreach ( $select_options as $option_value => $option_label ) : ?>
 <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 <?php endforeach; ?>
 </select>
@@ -384,7 +391,13 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 <?php elseif ( $input_type === 'textarea' ) : ?>
 <textarea id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" class="tf-textarea" rows="<?php echo esc_attr( (string) $rows ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"<?php echo $required_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $readonly ? ' readonly' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $disabled ? ' disabled' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_textarea( (string) $value ); ?></textarea>
 <?php elseif ( $input_type === 'file' ) : ?>
+<?php $file_prompt = trufield_get_phase_upload_prompt_label( $field ); ?>
+<?php $photo_type_field = trufield_phase_photo_type_field_for_upload( $field ); ?>
+<?php $selected_photo_type = $photo_type_field ? trim( (string) get_post_meta( $post_id, $photo_type_field, true ) ) : ''; ?>
 <div class="tf-upload-field">
+<?php if ( $file_prompt ) : ?>
+<p class="tf-upload-field__prompt" data-tf-upload-prompt <?php echo '' !== $selected_photo_type ? '' : 'hidden'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( sprintf( __( 'Upload %1$s image. Max file size: %2$s.', 'trufield-portal' ), $file_prompt, trufield_get_max_upload_size_label() ) ); ?></p>
+<?php endif; ?>
 <?php if ( $value ) : ?>
 <div class="tf-upload-field__preview">
 <a href="<?php echo esc_url( (string) $value ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__image-link">
@@ -407,6 +420,7 @@ type="file"
 id="<?php echo esc_attr( $field ); ?>_upload"
 name="<?php echo esc_attr( $field ); ?>_upload"
 class="tf-input tf-input--file"
+<?php echo $photo_type_field ? ' data-tf-photo-upload-field="' . esc_attr( $photo_type_field ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $required && ! $value ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
@@ -502,66 +516,38 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	<?php
 };
 
-$render_phase_one_location = static function () use ( $labels, $post_id, $location_override ): void {
+$render_phase_one_location = static function () use ( $labels, $post_id ): void {
 	?>
-	<div class="tf-phase-location<?php echo $location_override ? ' is-manual' : ''; ?>" data-tf-location>
+	<div class="tf-phase-location tf-phase-location--coords-only">
 	<div class="tf-phase-location__coords">
 	<div class="tf-field-group">
 	<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?> <span class="tf-required">*</span></label>
 	<input
 	type="number"
 	id="field_location_lat"
+	name="field_location_lat"
 	class="tf-input"
 	value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lat', true ) ); ?>"
 	step="0.000001"
 	placeholder="<?php esc_attr_e( 'Latitude', 'trufield-portal' ); ?>"
-	<?php echo $location_override ? '' : ' disabled readonly tabindex="-1" aria-disabled="true"'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-	data-tf-location-lat
+	required
 	>
-	<input type="hidden" name="field_location_lat" value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lat', true ) ); ?>" data-tf-location-lat-hidden>
 	</div>
 	<div class="tf-field-group">
 	<label for="field_location_lng"><?php echo esc_html( $labels['field_location_lng'] ?? 'Field Longitude' ); ?> <span class="tf-required">*</span></label>
 	<input
 	type="number"
 	id="field_location_lng"
+	name="field_location_lng"
 	class="tf-input"
 	value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lng', true ) ); ?>"
 	step="0.000001"
 	placeholder="<?php esc_attr_e( 'Longitude', 'trufield-portal' ); ?>"
-	<?php echo $location_override ? '' : ' disabled readonly tabindex="-1" aria-disabled="true"'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-	data-tf-location-lng
-	>
-	<input type="hidden" name="field_location_lng" value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_lng', true ) ); ?>" data-tf-location-lng-hidden>
-	</div>
-	</div>
-	<div class="tf-field-group tf-phase-location__address-wrap">
-	<label class="tf-phase-location__label" for="field_location_address"><?php echo esc_html( $labels['field_location_address'] ?? 'Field Location Address' ); ?><?php if ( ! $location_override ) : ?> <span class="tf-required">*</span><?php endif; ?></label>
-	<div class="tf-phase-location__address-row">
-	<input
-	type="text"
-	id="field_location_address"
-	name="field_location_address"
-	class="tf-input"
-	value="<?php echo esc_attr( (string) get_post_meta( $post_id, 'field_location_address', true ) ); ?>"
-	placeholder="<?php esc_attr_e( 'Enter Address', 'trufield-portal' ); ?>"
-	autocomplete="street-address"
-	data-tf-location-address
+	required
 	>
 	</div>
-	<button type="submit" name="phase_action" value="verify_address" class="tf-btn tf-btn--secondary tf-phase-location__verify" formnovalidate data-tf-location-verify><?php esc_html_e( 'Verify Address', 'trufield-portal' ); ?></button>
-	<label class="tf-phase-location__toggle">
-	<input type="hidden" name="field_location_manual_override" value="0">
-	<input type="checkbox" name="field_location_manual_override" value="1" <?php checked( $location_override ); ?> data-tf-location-override>
-	<span><?php esc_html_e( 'If unavailable, enter coordinates manually and complete all address fields', 'trufield-portal' ); ?></span>
-	</label>
-	<small class="tf-phase-location__status" data-tf-location-status><?php esc_html_e( 'Coordinates are required before Phase 1 can be completed.', 'trufield-portal' ); ?></small>
 	</div>
-	<small class="tf-phase-location__lock-note" data-tf-location-lock-note><?php esc_html_e( 'Latitude and longitude stay locked until manual override is enabled.', 'trufield-portal' ); ?></small>
-	<div class="tf-phase-location__map-wrap">
-	<div class="tf-phase-location__map" data-tf-location-map aria-hidden="true"></div>
-	<div class="tf-phase-location__map-note" data-tf-location-map-note><?php esc_html_e( 'Map preview will appear after the address is verified.', 'trufield-portal' ); ?></div>
-	</div>
+	<small class="tf-phase-location__status"><?php esc_html_e( 'Sales reps can edit longitude and latitude directly.', 'trufield-portal' ); ?></small>
 	</div>
 	<?php
 };
@@ -597,11 +583,6 @@ $phase_file_fields = trufield_phase_file_fields( $phase );
 
 if ( ! $is_admin ) {
 	$readonly_fields = array_values( array_diff( $readonly_fields, trufield_admin_only_phase_fields( $phase ) ) );
-}
-
-if ( 1 === $phase ) {
-	$readonly_fields[] = 'field_location_lat';
-	$readonly_fields[] = 'field_location_lng';
 }
 
 $readonly_pairs  = [];
@@ -764,6 +745,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 
 <div class="tf-form-grid tf-form-grid--phase-step">
 <?php foreach ( $step_config['fields'] as $field ) : ?>
+<?php if ( ! $is_admin && in_array( $field, $admin_only_phase_fields, true ) ) {
+	continue;
+} ?>
 <?php if ( 'retailer_name' === $field ) : ?>
 <?php $render_retailer_name_field( true ); ?>
 <?php else : ?>
@@ -776,19 +760,14 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php $render_phase_one_location(); ?>
 <?php endif; ?>
 
-<?php if ( $is_admin && ! empty( $step_config['optional_fields'] ) ) : ?>
-<div class="tf-show-more tf-show-more--phase-step">
-<button type="button" class="tf-show-more__toggle" aria-expanded="false" data-show-label="<?php esc_attr_e( 'Show additional fields', 'trufield-portal' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide additional fields', 'trufield-portal' ); ?>">
-<span class="tf-show-more__toggle-text"><?php esc_html_e( 'Show additional fields', 'trufield-portal' ); ?></span>
-<span class="tf-show-more__icon">▼</span>
-</button>
-<div class="tf-show-more__content" hidden>
+<?php if ( ! empty( $step_config['optional_fields'] ) ) : ?>
 <div class="tf-form-grid tf-form-grid--phase-step">
 <?php foreach ( $step_config['optional_fields'] as $field ) : ?>
+<?php if ( ! $is_admin && in_array( $field, $admin_only_phase_fields, true ) ) {
+	continue;
+} ?>
 <?php $render_field( $field, $field_groups[ $phase ]['optional'][ $field ] ?? [], false ); ?>
 <?php endforeach; ?>
-</div>
-</div>
 </div>
 <?php endif; ?>
 
@@ -816,6 +795,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( 1 === $phase && 'field_location_address' === $field ) {
 	continue;
 } ?>
+<?php if ( ! $is_admin && in_array( $field, $admin_only_phase_fields, true ) ) {
+	continue;
+} ?>
 <?php
 	$is_field_required = true;
 	if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) ) {
@@ -830,19 +812,14 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endforeach; ?>
 </div>
 
-<?php if ( $is_admin ) : ?>
-<div class="tf-show-more">
-<button type="button" class="tf-show-more__toggle" aria-expanded="false" data-show-label="<?php esc_attr_e( 'Show optional fields', 'trufield-portal' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide optional fields', 'trufield-portal' ); ?>">
-<span class="tf-show-more__toggle-text"><?php esc_html_e( 'Show optional fields', 'trufield-portal' ); ?></span>
-<span class="tf-show-more__icon">▼</span>
-</button>
-<div class="tf-show-more__content" hidden>
+<?php if ( ! empty( $field_groups[ $phase ]['optional'] ) ) : ?>
 <div class="tf-form-grid">
 <?php foreach ( $field_groups[ $phase ]['optional'] as $field => $config ) : ?>
+<?php if ( ! $is_admin && in_array( $field, $admin_only_phase_fields, true ) ) {
+	continue;
+} ?>
 <?php $render_field( $field, $config, false ); ?>
 <?php endforeach; ?>
-</div>
-</div>
 </div>
 <?php endif; ?>
 

@@ -42,10 +42,18 @@ return $query->posts;
 }
 
 function trufield_get_sales_rep_users(): array {
+	$allowed_ids = function_exists( 'trufield_get_rsm_bam_user_ids' )
+		? trufield_get_rsm_bam_user_ids()
+		: [];
+
+	if ( empty( $allowed_ids ) ) {
+		return [];
+	}
+
 	return get_users(
 		[
-			'role'    => 'sales_rep',
-			'orderby' => 'display_name',
+			'include' => $allowed_ids,
+			'orderby' => 'include',
 			'order'   => 'ASC',
 			'fields'  => [ 'ID', 'display_name' ],
 		]

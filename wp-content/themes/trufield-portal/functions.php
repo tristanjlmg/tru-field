@@ -115,33 +115,9 @@ function trufield_enqueue_assets(): void {
 
 	// Pass data needed by JS.
 	wp_localize_script( 'trufield-portal', 'TruField', [
-		'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
-		'nonce'              => wp_create_nonce( 'trufield_grower_search' ),
-		'geocodeNonce'       => wp_create_nonce( 'trufield_geocode_address' ),
-		'googlePlacesEnabled' => '' !== trufield_get_google_maps_api_key(),
+		'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+		'nonce'   => wp_create_nonce( 'trufield_grower_search' ),
 	] );
-
-	if ( is_singular( 'plant_field' ) ) {
-		$api_key = trufield_get_google_maps_api_key();
-
-		if ( '' !== $api_key ) {
-			wp_enqueue_script(
-				'trufield-google-maps',
-				add_query_arg(
-					[
-						'key'       => $api_key,
-						'libraries' => 'places',
-					],
-					'https://maps.googleapis.com/maps/api/js'
-				),
-				[ 'trufield-portal' ],
-				null,
-				true
-			);
-
-			wp_script_add_data( 'trufield-google-maps', 'defer', true );
-		}
-	}
 }
 
 add_action( 'admin_enqueue_scripts', 'trufield_enqueue_admin_assets' );

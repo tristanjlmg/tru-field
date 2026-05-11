@@ -46,7 +46,7 @@ return [
 'edit_plant_fields'             => true,
 'edit_others_plant_fields'      => false,
 'edit_published_plant_fields'   => false,
-'publish_plant_fields'          => false,
+'publish_plant_fields'          => true,
 'delete_plant_fields'           => false,
 'delete_plant_field'            => false,
 'trufield_save_phase'           => true,

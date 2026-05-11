@@ -58,6 +58,9 @@ $is_public_auth = trufield_current_page_is_public_auth() && ! is_user_logged_in(
 					<?php esc_html_e( 'Leaderboard', 'trufield-portal' ); ?>
 				</a>
 				<?php if ( current_user_can( 'manage_options' ) ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=plant_field&page=trufield-retailers' ) ); ?>" class="tf-nav__link">
+						<?php esc_html_e( 'Retailers', 'trufield-portal' ); ?>
+					</a>
 					<a href="<?php echo esc_url( admin_url() ); ?>" class="tf-nav__link">
 						<?php esc_html_e( 'WP Admin', 'trufield-portal' ); ?>
 					</a>

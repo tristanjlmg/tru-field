@@ -93,36 +93,17 @@ $required = [
 'retailer_address',
 'retailer_city',
 'phase_1_state_region',
-'field_trial_contact',
-'contact_phone',
-'field_trial_contact_email',
 'phase_1_treated_size_acres',
 ],
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
-'phase_2_rsm_visit_1_photos_taken_date',
-'phase_2_rsm_visit_1_photo_type',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
-'phase_2_rsm_visit_2_photos_taken_date',
-'phase_2_rsm_visit_2_photo_type',
 'phase_2_residue_degradation_observed',
 'phase_2_emergence_stand_collected',
-'phase_2_average_stand_count_treated',
-'phase_2_average_stand_count_untreated',
-'phase_2_most_significant_visual_difference',
 ],
-3 => [
-'phase_3_yield_bu_ac',
-'phase_3_moisture_percent',
-'phase_3_test_weight_lbs_bu',
-'phase_3_event_date',
-'phase_3_event_type',
-'phase_3_event_location',
-'phase_3_attendee_count',
-'phase_3_required_event_media',
-],
+3 => [],
 ];
 
 return $required[ $phase ] ?? [];
@@ -167,7 +148,7 @@ return [
 'field_location_lng'                  => 'Field Trial Longitude',
 'field_location_manual_override'      => 'Address unavailable - manual coordinate override',
 'phase_1_state_region'                => 'State',
-'phase_1_product_being_tested'        => 'Product Being Tested',
+'phase_1_product_being_tested'        => 'Product Tested',
 'phase_1_application_type'            => 'Application Type',
 'phase_1_application_date'            => 'Application Date',
 'phase_1_application_rate'            => 'Applied Rate (Oz)',
@@ -188,43 +169,42 @@ return [
 'phase_1_row_spacing'                 => 'Row Spacing',
 'phase_1_planting_speed'              => 'Planting Speed',
 'phase_2_rsm_visit_1_date'            => 'RSM Visit Date 1',
-'phase_2_rsm_visit_1_upload_photos'   => 'RSM Visit Date 1 Upload Photos',
-'phase_2_rsm_visit_1_photos_taken_date' => 'RSM Visit Date 1 Photos Taken Date',
+'phase_2_rsm_visit_1_upload_photos'   => 'RSM Visit 1 Date Photos Taken Treated/Untreated',
 'phase_2_rsm_visit_1_photo_type'      => 'RSM Visit Date 1 Photo Type',
 'phase_2_rsm_visit_2_date'            => 'RSM Visit Date 2',
-'phase_2_rsm_visit_2_upload_photos'   => 'RSM Visit Date 2 Upload Photos',
-'phase_2_rsm_visit_2_photos_taken_date' => 'RSM Visit Date 2 Photos Taken Date',
+'phase_2_rsm_visit_2_upload_photos'   => 'RSM Visit 2 Date Photos Taken Treated/Untreated',
 'phase_2_rsm_visit_2_photo_type'      => 'RSM Visit Date 2 Photo Type',
-'phase_2_rsm_visit_3_date'            => 'RSM Visit Date 3',
-'phase_2_rsm_visit_3_upload_photos'   => 'RSM Visit Date 3 Upload Photos',
-'phase_2_rsm_visit_3_photos_taken_date' => 'RSM Visit Date 3 Photos Taken Date',
+'phase_2_rsm_visit_3_date'            => 'Optional Visit Date 3',
+'phase_2_rsm_visit_3_upload_photos'   => 'Optional Visit 3 Upload Photos Treated/Untreated',
 'phase_2_rsm_visit_3_photo_type'      => 'RSM Visit Date 3 Photo Type',
 'phase_2_rsm_visit_3_comments'        => 'RSM Visit Date 3 Comments',
-'phase_2_rsm_visit_4_date'            => 'RSM Visit Date 4',
-'phase_2_rsm_visit_4_upload_photos'   => 'RSM Visit Date 4 Upload Photos',
-'phase_2_rsm_visit_4_photos_taken_date' => 'RSM Visit Date 4 Photos Taken Date',
+'phase_2_rsm_visit_4_date'            => 'Optional Visit Date 4',
+'phase_2_rsm_visit_4_upload_photos'   => 'Optional Visit 4 Upload Photos Treated/Untreated',
 'phase_2_rsm_visit_4_photo_type'      => 'RSM Visit Date 4 Photo Type',
 'phase_2_rsm_visit_4_comments'        => 'RSM Visit Date 4 Comments',
 'phase_2_residue_degradation_observed'=> 'Residue Degradation Observed',
 'phase_2_emergence_stand_collected'   => 'Emergence, Stand Collected',
+'phase_2_stand_count_1_treated'       => 'Stand Count 1 TREATED',
+'phase_2_stand_count_2_treated'       => 'Stand Count 2 TREATED',
+'phase_2_stand_count_3_treated'       => 'Stand Count 3 TREATED',
+'phase_2_stand_count_1_untreated'     => 'Stand Count 1 UNTREATED',
+'phase_2_stand_count_2_untreated'     => 'Stand Count 2 UNTREATED',
+'phase_2_stand_count_3_untreated'     => 'Stand Count 3 UNTREATED',
 'phase_2_stand_count_data'            => 'Stand Count Deltas',
-'phase_2_average_stand_count_treated' => 'Average of 3 Stand Counts - TREATED',
-'phase_2_average_stand_count_untreated' => 'Average of 3 Stand Counts - UNTREATED',
 'phase_2_most_significant_visual_difference' => 'Most Significant Visual Difference',
-'phase_3_yield_bu_ac'                 => 'Yield (bu/ac)',
-'phase_3_moisture_percent'            => 'Moisture (%)',
-'phase_3_test_weight_lbs_bu'          => 'Test Weight (lbs/bu)',
-'phase_3_stalk_diameter'              => 'Stalk Diameter',
-'phase_3_root_vigor'                  => 'Root Vigor',
-'phase_3_harvest_photos'              => 'Harvest Photos',
-'phase_3_comments'                    => 'Comments',
+'phase_2_emergence_flag_test'         => 'Emergence (Flag Test) (Y/N)',
+'phase_2_pictures_at_application'     => 'Pictures at Application (Y/N)',
+'phase_2_pictures_at_planting'        => 'Pictures at Planting (Y/N)',
+'phase_2_pictures_in_season_harvest'  => 'Pictures In Season (Y/N)',
+'phase_2_pictures_at_harvest'         => 'Pictures at Harvest (Y/N)',
+'phase_2_drone_images_available'      => 'Drone Images Available (Y/N)',
+'phase_2_grower_retailer_testimonials'=> 'Grower / Retailer Testimonials (Y/N)',
+'phase_2_time_lapse_available'        => 'Time Lapse Available (Y/N)',
+'phase_2_grower_retailer_comments'    => 'Grower / Retailer Comments',
 'phase_3_event_date'                  => 'TruField In Person Workshop/Demo Day Date Held',
 'phase_3_event_type'                  => 'TruField In Person Workshop/Demo Day (Yes or No)',
 'phase_3_event_location'              => 'TruField In Person Workshop/Demo Day Location',
 'phase_3_attendee_count'              => 'TruField In Person Workshop/Demo Day Number of Attendees',
-'phase_3_required_event_media'        => 'Required Event Media',
-'phase_3_optional_video'              => 'Optional Video',
-'phase_3_testimonial'                 => 'Testimonial',
 'phase_3_tillage_type'                => 'Tillage Type',
 'phase_3_soil_temp_f_at_application'  => 'Soil Temp (F) at application',
 'phase_3_carrier_volume_gal'          => 'Carrier Volume (Gal)',
@@ -305,15 +285,59 @@ function trufield_normalize_retailer_branch_location( string $retailer_name, str
 	return $normalized;
 }
 
-function trufield_get_retailer_directory(): array {
-	static $directory = null;
+function trufield_retailer_directory_option_key(): string {
+	return 'trufield_retailer_directory';
+}
 
-	if ( is_array( $directory ) ) {
-		return $directory;
+function trufield_sanitize_retailer_directory_entries( $raw_entries ): array {
+	$entries = is_array( $raw_entries ) ? $raw_entries : [];
+	$states  = trufield_state_region_options();
+	$sanitized = [];
+
+	foreach ( $entries as $entry ) {
+		if ( ! is_array( $entry ) ) {
+			continue;
+		}
+
+		$name = trim( sanitize_text_field( (string) ( $entry['name'] ?? $entry['retailer_name'] ?? '' ) ) );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$branch_location = trim( sanitize_text_field( (string) ( $entry['retailer_branch_location'] ?? $entry['location'] ?? '' ) ) );
+		$contact_name  = trim( sanitize_text_field( (string) ( $entry['retailer_key_contact'] ?? '' ) ) );
+		$contact_phone = trufield_normalize_phone_value( (string) ( $entry['retailer_contact_phone'] ?? '' ) );
+		$address       = trim( sanitize_text_field( (string) ( $entry['retailer_address'] ?? $entry['address'] ?? '' ) ) );
+		$city          = trim( sanitize_text_field( (string) ( $entry['retailer_city'] ?? $entry['city'] ?? '' ) ) );
+		$state         = trim( sanitize_text_field( (string) ( $entry['phase_1_state_region'] ?? '' ) ) );
+		$rsm_bam       = trim( sanitize_text_field( (string) ( $entry['rsm_bam'] ?? '' ) ) );
+
+		if ( '' !== $state && ! isset( $states[ $state ] ) ) {
+			$state = '';
+		}
+
+		$sanitized[ $name ] = [
+			'name'                     => $name,
+			'retailer_branch_location' => $branch_location,
+			'retailer_key_contact'     => $contact_name,
+			'retailer_contact_phone'   => $contact_phone,
+			'retailer_address'         => $address,
+			'retailer_city'            => $city,
+			'phase_1_state_region'     => $state,
+			'rsm_bam'                  => $rsm_bam,
+			'assignment_ids'           => [],
+			'assignment_labels'        => [],
+		];
 	}
 
+	ksort( $sanitized, SORT_NATURAL | SORT_FLAG_CASE );
+
+	return $sanitized;
+}
+
+function trufield_build_retailer_directory_from_posts(): array {
 	$directory = [];
-	$post_ids   = get_posts(
+	$post_ids  = get_posts(
 		[
 			'post_type'              => 'plant_field',
 			'post_status'            => [ 'publish', 'pending', 'draft', 'private', 'future' ],
@@ -342,29 +366,20 @@ function trufield_get_retailer_directory(): array {
 
 		if ( ! isset( $directory[ $retailer_name ] ) ) {
 			$directory[ $retailer_name ] = [
-				'name'                    => $retailer_name,
-				'retailer_branch_location'=> '',
-				'retailer_key_contact'    => '',
-				'retailer_contact_phone'  => '',
-				'retailer_address'        => '',
-				'retailer_city'           => '',
-				'phase_1_state_region'    => '',
-				'rsm_bam'                 => '',
-				'assignment_ids'          => [],
-				'assignment_labels'       => [],
+				'name'                     => $retailer_name,
+				'retailer_branch_location' => '',
+				'retailer_key_contact'     => '',
+				'retailer_contact_phone'   => '',
+				'retailer_address'         => '',
+				'retailer_city'            => '',
+				'phase_1_state_region'     => '',
+				'rsm_bam'                  => '',
+				'assignment_ids'           => [],
+				'assignment_labels'        => [],
 			];
 		}
 
 		$entry =& $directory[ $retailer_name ];
-
-		$candidate_branch_location = trufield_normalize_retailer_branch_location(
-			$retailer_name,
-			trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_branch_location' ] )
-		);
-
-		if ( '' !== $candidate_branch_location && strlen( $candidate_branch_location ) > strlen( $entry['retailer_branch_location'] ) ) {
-			$entry['retailer_branch_location'] = $candidate_branch_location;
-		}
 
 		if ( '' === $entry['retailer_key_contact'] ) {
 			$entry['retailer_key_contact'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_key_contact', 'field_trial_contact' ] );
@@ -374,46 +389,86 @@ function trufield_get_retailer_directory(): array {
 			$entry['retailer_contact_phone'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_contact_phone', 'contact_phone' ] );
 		}
 
-		if ( '' === $entry['retailer_address'] ) {
-			$entry['retailer_address'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_address', 'field_location_address' ] );
-		}
-
-		if ( '' === $entry['retailer_city'] ) {
-			$entry['retailer_city'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_city', 'import_city' ] );
-		}
-
 		if ( '' === $entry['phase_1_state_region'] ) {
 			$entry['phase_1_state_region'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'phase_1_state_region', 'import_state' ] );
-		}
-
-		if ( '' === $entry['rsm_bam'] ) {
-			$rsm_bam_id = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'rsm_bam', true ), 'rsm_bam' );
-			if ( $rsm_bam_id <= 0 ) {
-				$rsm_bam_id = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'assigned_sales_rep', true ), 'rsm_bam' );
-			}
-
-			$entry['rsm_bam'] = $rsm_bam_id > 0 ? (string) $rsm_bam_id : '';
-		}
-
-		$assignment = trufield_get_retailer_assignment_context( $post_id );
-		if ( '' !== $assignment['id'] ) {
-			$entry['assignment_ids'][ $assignment['id'] ] = true;
-		}
-
-		if ( '' !== $assignment['label'] ) {
-			$entry['assignment_labels'][ $assignment['label'] ] = true;
 		}
 
 		unset( $entry );
 	}
 
-	foreach ( $directory as $retailer_name => $entry ) {
-		$entry['assignment_ids']    = array_values( array_keys( $entry['assignment_ids'] ) );
-		$entry['assignment_labels'] = array_values( array_keys( $entry['assignment_labels'] ) );
-		$directory[ $retailer_name ] = $entry;
+	ksort( $directory, SORT_NATURAL | SORT_FLAG_CASE );
+
+	return $directory;
+}
+
+function trufield_retailer_directory_workbook_path(): string {
+	return trailingslashit( ABSPATH ) . 'retailerlist for autofil.xlsx';
+}
+
+function trufield_build_retailer_directory_from_workbook(): array {
+	$workbook_path = trufield_retailer_directory_workbook_path();
+	if ( ! file_exists( $workbook_path ) ) {
+		return [];
 	}
 
-	ksort( $directory, SORT_NATURAL | SORT_FLAG_CASE );
+	$rows = trufield_parse_xlsx_rows( $workbook_path );
+	if ( is_wp_error( $rows ) || ! is_array( $rows ) ) {
+		return [];
+	}
+
+	$entries = [];
+	foreach ( $rows as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+
+		$name = trim( (string) ( $row['Retailer'] ?? $row['Retailer '] ?? '' ) );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		if ( ! isset( $entries[ $name ] ) ) {
+			$entries[ $name ] = [
+				'name'                     => $name,
+				'retailer_branch_location' => trim( (string) ( $row['Location'] ?? '' ) ),
+				'retailer_key_contact'     => trim( (string) ( $row['Key Contact'] ?? '' ) ),
+				'retailer_contact_phone'   => trim( (string) ( $row['Contact Number'] ?? '' ) ),
+				'retailer_address'         => trim( (string) ( $row['Address'] ?? '' ) ),
+				'retailer_city'            => trim( (string) ( $row['City'] ?? '' ) ),
+				'phase_1_state_region'     => trim( (string) ( $row['State'] ?? '' ) ),
+				'rsm_bam'                  => trim( (string) ( $row['RSM/BAM'] ?? '' ) ),
+			];
+			continue;
+		}
+
+		foreach ( [
+			'retailer_branch_location' => 'Location',
+			'retailer_key_contact'     => 'Key Contact',
+			'retailer_contact_phone'   => 'Contact Number',
+			'retailer_address'         => 'Address',
+			'retailer_city'            => 'City',
+			'phase_1_state_region'     => 'State',
+			'rsm_bam'                  => 'RSM/BAM',
+		] as $entry_key => $column_name ) {
+			if ( '' === trim( (string) ( $entries[ $name ][ $entry_key ] ?? '' ) ) ) {
+				$entries[ $name ][ $entry_key ] = trim( (string) ( $row[ $column_name ] ?? '' ) );
+			}
+		}
+	}
+
+	return trufield_sanitize_retailer_directory_entries( array_values( $entries ) );
+}
+
+function trufield_get_retailer_directory(): array {
+	static $directory = null;
+
+	if ( is_array( $directory ) ) {
+		return $directory;
+	}
+	$fallback_directory = trufield_build_retailer_directory_from_posts();
+	$workbook_directory = trufield_build_retailer_directory_from_workbook();
+	$managed_directory  = trufield_sanitize_retailer_directory_entries( get_option( trufield_retailer_directory_option_key(), [] ) );
+	$directory          = array_replace( $fallback_directory, $workbook_directory, $managed_directory );
 
 	return $directory;
 }
@@ -448,7 +503,6 @@ function trufield_assignment_user_roles_for_field( string $field ): array {
 function trufield_get_rsm_bam_display_names(): array {
 	return [
 		'Anthony Finke',
-		'Beau Matson',
 		'Chris Person',
 		'Chris Pevestorf',
 		'Ethan Noll',
@@ -461,7 +515,28 @@ function trufield_get_rsm_bam_display_names(): array {
 		'Quintin Leffel',
 		'Tim Robie',
 		'Zach Ekeler',
+		'Zach Minnihan',
+		'Beau Matson',
 	];
+}
+
+function trufield_get_fsa_display_names(): array {
+	return [
+		'Chad Becker',
+		'Keith Byerly',
+		'Kip Jacobs',
+		'Roland Leatherwood',
+		'Tryston Beyrer',
+		'Cam Blackford',
+	];
+}
+
+function trufield_get_fsa_user_ids(): array {
+	return array_map( 'intval', array_keys( trufield_get_assignment_user_options( 'fsa' ) ) );
+}
+
+function trufield_is_allowed_fsa_user_id( int $user_id ): bool {
+	return $user_id > 0 && in_array( $user_id, trufield_get_fsa_user_ids(), true );
 }
 
 function trufield_get_rsm_bam_user_options(): array {
@@ -521,6 +596,42 @@ function trufield_get_assignment_user_options( string $field ): array {
 
 	if ( 'rsm_bam' === $field ) {
 		$cache[ $field ] = trufield_get_rsm_bam_user_options();
+
+		return $cache[ $field ];
+	}
+
+	if ( 'fsa' === $field ) {
+		$allowed_names = trufield_get_fsa_display_names();
+		$users         = get_users(
+			[
+				'role__in' => trufield_assignment_user_roles_for_field( 'fsa' ),
+				'orderby'  => 'display_name',
+				'order'    => 'ASC',
+				'fields'   => [ 'ID', 'display_name' ],
+			]
+		);
+		$users_by_name = [];
+
+		foreach ( $users as $user ) {
+			$name = trim( (string) $user->display_name );
+			if ( '' === $name ) {
+				continue;
+			}
+
+			$users_by_name[ $name ] = (int) $user->ID;
+		}
+
+		$options = [];
+		foreach ( $allowed_names as $name ) {
+			$user_id = $users_by_name[ $name ] ?? 0;
+			if ( $user_id <= 0 ) {
+				continue;
+			}
+
+			$options[ $user_id ] = $name;
+		}
+
+		$cache[ $field ] = $options;
 
 		return $cache[ $field ];
 	}
@@ -609,7 +720,10 @@ return [
 'type'    => 'select',
 'options' => trufield_state_region_options(),
 ],
-'phase_1_product_being_tested' => [ 'type' => 'text' ],
+'phase_1_product_being_tested' => [
+'type'    => 'select',
+'options' => trufield_get_product_tested_choices(),
+],
 'phase_1_application_type' => [
 'type'    => 'select',
 'options' => [
@@ -668,7 +782,6 @@ return [
 'phase_1_planting_speed' => [ 'type' => 'number' ],
 'phase_2_rsm_visit_1_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_1_upload_photos' => [ 'type' => 'url' ],
-'phase_2_rsm_visit_1_photos_taken_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_1_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -684,7 +797,6 @@ return [
 ],
 'phase_2_rsm_visit_2_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_2_upload_photos' => [ 'type' => 'url' ],
-'phase_2_rsm_visit_2_photos_taken_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_2_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -700,7 +812,6 @@ return [
 ],
 'phase_2_rsm_visit_3_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_3_upload_photos' => [ 'type' => 'url' ],
-'phase_2_rsm_visit_3_photos_taken_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_3_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -717,7 +828,6 @@ return [
 'phase_2_rsm_visit_3_comments' => [ 'type' => 'textarea' ],
 'phase_2_rsm_visit_4_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_4_upload_photos' => [ 'type' => 'url' ],
-'phase_2_rsm_visit_4_photos_taken_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_4_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -747,24 +857,46 @@ return [
 ],
 ],
 'phase_2_stand_count_data' => [ 'type' => 'text' ],
-'phase_2_average_stand_count_treated' => [ 'type' => 'number' ],
-'phase_2_average_stand_count_untreated' => [ 'type' => 'number' ],
+'phase_2_stand_count_1_treated' => [ 'type' => 'number' ],
+'phase_2_stand_count_2_treated' => [ 'type' => 'number' ],
+'phase_2_stand_count_3_treated' => [ 'type' => 'number' ],
+'phase_2_stand_count_1_untreated' => [ 'type' => 'number' ],
+'phase_2_stand_count_2_untreated' => [ 'type' => 'number' ],
+'phase_2_stand_count_3_untreated' => [ 'type' => 'number' ],
 'phase_2_most_significant_visual_difference' => [ 'type' => 'textarea' ],
-'phase_3_yield_bu_ac' => [ 'type' => 'number' ],
-'phase_3_moisture_percent' => [ 'type' => 'number' ],
-'phase_3_test_weight_lbs_bu' => [ 'type' => 'number' ],
-'phase_3_stalk_diameter' => [ 'type' => 'number' ],
-'phase_3_root_vigor' => [
+'phase_2_emergence_flag_test' => [
 'type'    => 'select',
-'options' => [
-'excellent' => 'Excellent',
-'good'      => 'Good',
-'fair'      => 'Fair',
-'poor'      => 'Poor',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
+'phase_2_pictures_at_application' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
-'phase_3_harvest_photos' => [ 'type' => 'textarea' ],
-'phase_3_comments' => [ 'type' => 'textarea' ],
+'phase_2_pictures_at_planting' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_pictures_in_season_harvest' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_pictures_at_harvest' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_drone_images_available' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_grower_retailer_testimonials' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_time_lapse_available' => [
+'type'    => 'select',
+'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
+],
+'phase_2_grower_retailer_comments' => [ 'type' => 'textarea' ],
 'phase_3_event_date' => [ 'type' => 'date' ],
 'phase_3_event_type' => [
 'type'    => 'select',
@@ -775,9 +907,6 @@ return [
 ],
 'phase_3_event_location' => [ 'type' => 'text' ],
 'phase_3_attendee_count' => [ 'type' => 'integer' ],
-'phase_3_required_event_media' => [ 'type' => 'textarea' ],
-'phase_3_optional_video' => [ 'type' => 'url' ],
-'phase_3_testimonial' => [ 'type' => 'textarea' ],
 'phase_3_tillage_type' => [ 'type' => 'text' ],
 'phase_3_soil_temp_f_at_application' => [ 'type' => 'number' ],
 'phase_3_carrier_volume_gal' => [ 'type' => 'number' ],
@@ -845,25 +974,6 @@ $missing[] = $labels[ $field ] ?? $field;
 }
 }
 
-	if ( 1 === $phase ) {
-		$address  = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
-		$lat      = trim( (string) get_post_meta( $post_id, 'field_location_lat', true ) );
-		$lng      = trim( (string) get_post_meta( $post_id, 'field_location_lng', true ) );
-		$override = trufield_location_override_enabled( $post_id );
-
-		if ( ! $override && '' === $address ) {
-			$missing[] = $labels['field_location_address'] ?? 'Field Location Address';
-		}
-
-		if ( '' === $lat ) {
-			$missing[] = $labels['field_location_lat'] ?? 'Field Latitude';
-		}
-
-		if ( '' === $lng ) {
-			$missing[] = $labels['field_location_lng'] ?? 'Field Longitude';
-		}
-	}
-
 return $missing;
 }
 
@@ -876,32 +986,9 @@ function trufield_get_missing_validation_fields( int $post_id, int $phase ): arr
 			continue;
 		}
 
-		if ( 1 === $phase && in_array( $field, [ 'field_location_address', 'field_location_lat', 'field_location_lng' ], true ) ) {
-			continue;
-		}
-
 		$value = get_post_meta( $post_id, $field, true );
 		if ( trim( (string) $value ) === '' ) {
 			$missing[] = $labels[ $field ] ?? $field;
-		}
-	}
-
-	if ( 1 === $phase ) {
-		$address  = trim( (string) get_post_meta( $post_id, 'field_location_address', true ) );
-		$lat      = trim( (string) get_post_meta( $post_id, 'field_location_lat', true ) );
-		$lng      = trim( (string) get_post_meta( $post_id, 'field_location_lng', true ) );
-		$override = trufield_location_override_enabled( $post_id );
-
-		if ( ! $override && '' === $address ) {
-			$missing[] = $labels['field_location_address'] ?? 'Field Location Address';
-		}
-
-		if ( '' === $lat ) {
-			$missing[] = $labels['field_location_lat'] ?? 'Field Latitude';
-		}
-
-		if ( '' === $lng ) {
-			$missing[] = $labels['field_location_lng'] ?? 'Field Longitude';
 		}
 	}
 
@@ -1082,10 +1169,8 @@ $fields = [
 'field_trial_contact',
 'contact_phone',
 'field_name',
-'field_location_address',
 'field_location_lat',
 'field_location_lng',
-'field_location_manual_override',
 'phase_1_state_region',
 'phase_1_product_being_tested',
 'phase_1_application_type',
@@ -1112,43 +1197,65 @@ $fields = [
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
-'phase_2_rsm_visit_1_photos_taken_date',
 'phase_2_rsm_visit_1_photo_type',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
-'phase_2_rsm_visit_2_photos_taken_date',
 'phase_2_rsm_visit_2_photo_type',
 'phase_2_rsm_visit_3_date',
 'phase_2_rsm_visit_3_upload_photos',
-'phase_2_rsm_visit_3_photos_taken_date',
 'phase_2_rsm_visit_3_photo_type',
 'phase_2_rsm_visit_3_comments',
 'phase_2_rsm_visit_4_date',
 'phase_2_rsm_visit_4_upload_photos',
-'phase_2_rsm_visit_4_photos_taken_date',
 'phase_2_rsm_visit_4_photo_type',
 'phase_2_rsm_visit_4_comments',
 'phase_2_residue_degradation_observed',
 'phase_2_emergence_stand_collected',
-'phase_2_average_stand_count_treated',
-'phase_2_average_stand_count_untreated',
+'phase_2_stand_count_1_treated',
+'phase_2_stand_count_2_treated',
+'phase_2_stand_count_3_treated',
+'phase_2_stand_count_1_untreated',
+'phase_2_stand_count_2_untreated',
+'phase_2_stand_count_3_untreated',
 'phase_2_most_significant_visual_difference',
+'phase_2_emergence_flag_test',
+'phase_2_pictures_at_application',
+'phase_2_pictures_at_planting',
+'phase_2_pictures_in_season_harvest',
+'phase_2_pictures_at_harvest',
+'phase_2_drone_images_available',
+'phase_2_grower_retailer_testimonials',
+'phase_2_time_lapse_available',
+'phase_2_grower_retailer_comments',
 ],
 3 => [
-'phase_3_yield_bu_ac',
-'phase_3_moisture_percent',
-'phase_3_test_weight_lbs_bu',
-'phase_3_stalk_diameter',
-'phase_3_root_vigor',
-'phase_3_harvest_photos',
-'phase_3_comments',
 'phase_3_event_date',
 'phase_3_event_type',
 'phase_3_event_location',
 'phase_3_attendee_count',
-'phase_3_required_event_media',
-'phase_3_optional_video',
-'phase_3_testimonial',
+		'phase_3_tillage_type',
+		'phase_3_soil_temp_f_at_application',
+		'phase_3_carrier_volume_gal',
+		'phase_3_tank_mix_partners',
+		'phase_3_planting_date',
+		'phase_3_hybrid_variety',
+		'phase_3_planting_population',
+		'phase_3_row_spacing_in',
+		'phase_3_planting_speed_mph',
+		'phase_3_plant_heights_avg_untreated_v7_in',
+		'phase_3_plant_heights_avg_treated_v7_in',
+		'phase_3_stalk_diameter_untreated_v7_mm',
+		'phase_3_stalk_diameter_treated_v7_mm2',
+		'phase_3_yield_untreated_bu_ac',
+		'phase_3_yield_treated_bu_ac',
+		'phase_3_moisture_untreated_percent',
+		'phase_3_moisture_treated_percent',
+		'phase_3_test_weight_untreated_lbs_bu',
+		'phase_3_test_weight_treated_lbs_bu',
+		'phase_3_as_applied_gis_data',
+		'phase_3_planting_gis_data',
+		'phase_3_harvest_gis_data',
+		'phase_3_agronomy_comments',
 ],
 ];
 
@@ -1160,31 +1267,6 @@ function trufield_admin_only_phase_fields( int $phase ): array {
 		1 => [
 			'rsm_bam',
 			'fsa',
-		],
-		3 => [
-			'phase_3_tillage_type',
-			'phase_3_soil_temp_f_at_application',
-			'phase_3_carrier_volume_gal',
-			'phase_3_tank_mix_partners',
-			'phase_3_planting_date',
-			'phase_3_hybrid_variety',
-			'phase_3_planting_population',
-			'phase_3_row_spacing_in',
-			'phase_3_planting_speed_mph',
-			'phase_3_plant_heights_avg_untreated_v7_in',
-			'phase_3_plant_heights_avg_treated_v7_in',
-			'phase_3_stalk_diameter_untreated_v7_mm',
-			'phase_3_stalk_diameter_treated_v7_mm2',
-			'phase_3_yield_untreated_bu_ac',
-			'phase_3_yield_treated_bu_ac',
-			'phase_3_moisture_untreated_percent',
-			'phase_3_moisture_treated_percent',
-			'phase_3_test_weight_untreated_lbs_bu',
-			'phase_3_test_weight_treated_lbs_bu',
-			'phase_3_as_applied_gis_data',
-			'phase_3_planting_gis_data',
-			'phase_3_harvest_gis_data',
-			'phase_3_agronomy_comments',
 		],
 	];
 
@@ -1332,14 +1414,34 @@ function trufield_phase_photo_attachment_meta_key( string $field ): string {
 }
 
 function trufield_calculate_phase_2_stand_count_delta( $treated_value, $untreated_value ): string {
-	$treated = trim( (string) $treated_value );
-	$untreated = trim( (string) $untreated_value );
+	$treated_values = is_array( $treated_value ) ? $treated_value : [ $treated_value ];
+	$untreated_values = is_array( $untreated_value ) ? $untreated_value : [ $untreated_value ];
+	$treated_numbers = [];
+	$untreated_numbers = [];
 
-	if ( '' === $treated || '' === $untreated || ! is_numeric( $treated ) || ! is_numeric( $untreated ) ) {
+	foreach ( $treated_values as $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value || ! is_numeric( $value ) ) {
+			return '';
+		}
+		$treated_numbers[] = (float) $value;
+	}
+
+	foreach ( $untreated_values as $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value || ! is_numeric( $value ) ) {
+			return '';
+		}
+		$untreated_numbers[] = (float) $value;
+	}
+
+	if ( [] === $treated_numbers || [] === $untreated_numbers ) {
 		return '';
 	}
 
-	$delta = round( (float) $treated - (float) $untreated, 2 );
+	$treated_average = array_sum( $treated_numbers ) / count( $treated_numbers );
+	$untreated_average = array_sum( $untreated_numbers ) / count( $untreated_numbers );
+	$delta = round( $treated_average - $untreated_average, 2 );
 	$formatted = number_format( $delta, 2, '.', '' );
 	$formatted = rtrim( rtrim( $formatted, '0' ), '.' );
 
@@ -1347,8 +1449,16 @@ function trufield_calculate_phase_2_stand_count_delta( $treated_value, $untreate
 }
 
 function trufield_sync_phase_2_stand_count_delta( int $post_id ): void {
-	$treated = get_post_meta( $post_id, 'phase_2_average_stand_count_treated', true );
-	$untreated = get_post_meta( $post_id, 'phase_2_average_stand_count_untreated', true );
+	$treated = [
+		get_post_meta( $post_id, 'phase_2_stand_count_1_treated', true ),
+		get_post_meta( $post_id, 'phase_2_stand_count_2_treated', true ),
+		get_post_meta( $post_id, 'phase_2_stand_count_3_treated', true ),
+	];
+	$untreated = [
+		get_post_meta( $post_id, 'phase_2_stand_count_1_untreated', true ),
+		get_post_meta( $post_id, 'phase_2_stand_count_2_untreated', true ),
+		get_post_meta( $post_id, 'phase_2_stand_count_3_untreated', true ),
+	];
 	$delta = trufield_calculate_phase_2_stand_count_delta( $treated, $untreated );
 
 	if ( '' === $delta ) {
@@ -1377,7 +1487,7 @@ function trufield_phase_file_fields( int $phase ): array {
 function trufield_get_phase_step_count( int $phase ): int {
 	$steps = [
 		1 => 3,
-		2 => 2,
+		2 => 3,
 		3 => 1,
 	];
 
@@ -1387,6 +1497,62 @@ function trufield_get_phase_step_count( int $phase ): int {
 function trufield_delete_phase_photo_value( int $post_id, string $field ): void {
 	delete_post_meta( $post_id, $field );
 	delete_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ) );
+}
+
+function trufield_get_max_upload_size_bytes(): int {
+	return (int) wp_max_upload_size();
+}
+
+function trufield_get_max_upload_size_label(): string {
+	$bytes = trufield_get_max_upload_size_bytes();
+
+	return $bytes > 0 ? size_format( $bytes ) : __( 'server limit', 'trufield-portal' );
+}
+
+function trufield_phase_photo_type_field_for_upload( string $field ): string {
+	if ( str_ends_with( $field, '_upload_photos' ) ) {
+		return str_replace( '_upload_photos', '_photo_type', $field );
+	}
+
+	return '';
+}
+
+function trufield_get_phase_upload_prompt_label( string $field ): string {
+	$labels = [
+		'phase_2_rsm_visit_1_upload_photos' => __( 'the selected visit 1', 'trufield-portal' ),
+		'phase_2_rsm_visit_2_upload_photos' => __( 'the selected visit 2', 'trufield-portal' ),
+		'phase_2_rsm_visit_3_upload_photos' => __( 'the selected visit 3', 'trufield-portal' ),
+		'phase_2_rsm_visit_4_upload_photos' => __( 'the selected visit 4', 'trufield-portal' ),
+	];
+
+	return $labels[ $field ] ?? '';
+}
+
+function trufield_get_phase_upload_help_text( string $field, int $post_id = 0 ): string {
+	unset( $post_id );
+
+	if ( strpos( $field, 'phase_2_rsm_visit_' ) === 0 ) {
+		return sprintf( __( 'The uploaded file will be renamed to the trial UUID plus the selected type. Max file size: %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() );
+	}
+
+	return sprintf( __( 'Max file size: %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() );
+}
+
+function trufield_build_phase_photo_filename( int $post_id, string $field, string $original_name ): string {
+	$extension = strtolower( pathinfo( $original_name, PATHINFO_EXTENSION ) );
+	$trial_uuid = trim( (string) get_post_meta( $post_id, 'trial_uuid', true ) );
+	$trial_uuid = '' !== $trial_uuid ? $trial_uuid : trim( (string) get_the_title( $post_id ) );
+	$photo_type_field = trufield_phase_photo_type_field_for_upload( $field );
+	$photo_type_value = $photo_type_field ? (string) get_post_meta( $post_id, $photo_type_field, true ) : '';
+	$schema = trufield_phase_field_schema();
+	$photo_type_label = $schema[ $photo_type_field ]['options'][ $photo_type_value ] ?? $photo_type_value;
+	$base_name = sanitize_title( trim( $trial_uuid ) . ' ' . trim( (string) $photo_type_label ) );
+
+	if ( '' === $base_name ) {
+		$base_name = sanitize_title( trim( $trial_uuid ) );
+	}
+
+	return '' !== $extension ? $base_name . '.' . $extension : $base_name;
 }
 
 function trufield_handle_phase_photo_upload( int $post_id, string $field, string $file_input ) {
@@ -1402,6 +1568,13 @@ function trufield_handle_phase_photo_upload( int $post_id, string $field, string
 	if ( ! empty( $file['error'] ) ) {
 		return new WP_Error( 'trufield_upload_error', __( 'The photo upload could not be processed.', 'trufield-portal' ) );
 	}
+
+	$max_upload_size = trufield_get_max_upload_size_bytes();
+	if ( $max_upload_size > 0 && (int) ( $file['size'] ?? 0 ) > $max_upload_size ) {
+		return new WP_Error( 'trufield_upload_too_large', sprintf( __( 'The uploaded photo exceeds the maximum file size of %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() ) );
+	}
+
+	$_FILES[ $file_input ]['name'] = trufield_build_phase_photo_filename( $post_id, $field, (string) ( $file['name'] ?? '' ) );
 
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';

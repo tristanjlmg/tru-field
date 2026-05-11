@@ -16,6 +16,7 @@ $is_admin     = trufield_user_is_admin( (int) $current_user->ID );
 $can_create   = current_user_can( 'publish_plant_fields' );
 $rsm_bam_options = $can_create ? trufield_get_assignment_user_options( 'rsm_bam' ) : [];
 $fsa_options     = $can_create ? trufield_get_assignment_user_options( 'fsa' ) : [];
+$product_tested_choices = $can_create ? trufield_get_product_tested_choices() : [];
 $selected_sales_rep = $is_admin ? absint( wp_unslash( $_GET['sales_rep'] ?? 0 ) ) : 0;
 $sales_rep_options  = $is_admin ? trufield_get_sales_rep_users() : [];
 $valid_sales_rep_ids = $is_admin ? array_map( static fn( $user ): int => (int) $user->ID, $sales_rep_options ) : [];
@@ -212,17 +213,25 @@ $team_awarded_retailers = array_sum(
 				<?php if ( $can_create ) : ?>
 					<section id="create-trial-panel" class="tf-create-panel" aria-labelledby="create-trial-heading">
 						<div class="tf-create-panel__header">
-							<p class="tf-create-panel__eyebrow"><?php esc_html_e( 'Admin action', 'trufield-portal' ); ?></p>
+							<p class="tf-create-panel__eyebrow"><?php esc_html_e( 'New trial', 'trufield-portal' ); ?></p>
 							<h2 id="create-trial-heading" class="tf-create-panel__title"><?php esc_html_e( 'Create trial', 'trufield-portal' ); ?></h2>
-							<p class="tf-create-panel__copy"><?php esc_html_e( 'Start a new field record and assign it immediately so the trial is ready to work from the first save.', 'trufield-portal' ); ?></p>
+							<p class="tf-create-panel__copy"><?php esc_html_e( 'Create the record, pick the product being tested, and the portal will auto-generate the trial UUID in the background.', 'trufield-portal' ); ?></p>
 						</div>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-quick-create-form">
 							<?php wp_nonce_field( 'trufield_create_plant_field' ); ?>
 							<input type="hidden" name="action" value="trufield_create_plant_field">
 							<div class="tf-field-group tf-quick-create-form__field">
-								<label for="trial_name"><?php esc_html_e( 'Trial Name', 'trufield-portal' ); ?></label>
-								<input type="text" id="trial_name" name="trial_name" class="tf-input tf-quick-create-form__input" placeholder="<?php esc_attr_e( 'Trial name', 'trufield-portal' ); ?>" required>
+								<label for="quick_create_product_tested"><?php esc_html_e( 'Product Tested', 'trufield-portal' ); ?></label>
+								<select id="quick_create_product_tested" name="phase_1_product_being_tested" class="tf-select" required>
+									<option value=""><?php esc_html_e( 'Select Product', 'trufield-portal' ); ?></option>
+									<?php foreach ( $product_tested_choices as $option_value => $option_label ) : ?>
+										<option value="<?php echo esc_attr( (string) $option_value ); ?>"><?php echo esc_html( $option_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
 							</div>
+							<?php if ( $is_sales_rep ) : ?>
+								<input type="hidden" name="rsm_bam" value="<?php echo esc_attr( (string) $current_user->ID ); ?>">
+							<?php else : ?>
 							<div class="tf-field-group tf-quick-create-form__field">
 								<label for="quick_create_rsm_bam"><?php esc_html_e( 'RSM / BAM', 'trufield-portal' ); ?></label>
 								<select id="quick_create_rsm_bam" name="rsm_bam" class="tf-select" required>
@@ -232,6 +241,7 @@ $team_awarded_retailers = array_sum(
 									<?php endforeach; ?>
 								</select>
 							</div>
+							<?php endif; ?>
 							<div class="tf-field-group tf-quick-create-form__field">
 								<label for="quick_create_fsa"><?php esc_html_e( 'FSA', 'trufield-portal' ); ?></label>
 								<select id="quick_create_fsa" name="fsa" class="tf-select" required>
@@ -255,15 +265,24 @@ $team_awarded_retailers = array_sum(
 					<h2 class="tf-dashboard-trials__title"><?php echo esc_html( $is_sales_rep ? __( 'Current Trials', 'trufield-portal' ) : __( 'Current Trials', 'trufield-portal' ) ); ?></h2>
 					<p class="tf-dashboard-trials__copy"><?php echo esc_html( $is_sales_rep ? __( 'Open a trial card to continue the active phase workflow.', 'trufield-portal' ) : __( 'Search and open any active trial to review progress or continue updates.', 'trufield-portal' ) ); ?></p>
 				</div>
-				<span class="tf-dashboard-header__count" data-tf-trial-count data-total-count="<?php echo esc_attr( (string) $field_count ); ?>" data-singular-label="<?php esc_attr_e( 'record', 'trufield-portal' ); ?>" data-plural-label="<?php esc_attr_e( 'records', 'trufield-portal' ); ?>">
-					<?php
-					printf(
-						/* translators: %d = record count */
-						esc_html( _n( '%d record', '%d records', $field_count, 'trufield-portal' ) ),
-						$field_count
-					);
-					?>
-				</span>
+				<div class="tf-dashboard-trials__meta">
+					<div class="tf-trial-view-toggle" data-tf-trial-view-toggle>
+						<span class="tf-trial-view-toggle__label"><?php esc_html_e( 'View', 'trufield-portal' ); ?></span>
+						<div class="tf-trial-view-toggle__buttons" role="group" aria-label="<?php esc_attr_e( 'Trial view mode', 'trufield-portal' ); ?>">
+							<button type="button" class="tf-trial-view-toggle__button is-active" data-tf-trial-view="grid" aria-pressed="true"><?php esc_html_e( 'Tile View', 'trufield-portal' ); ?></button>
+							<button type="button" class="tf-trial-view-toggle__button" data-tf-trial-view="list" aria-pressed="false"><?php esc_html_e( 'List View', 'trufield-portal' ); ?></button>
+						</div>
+					</div>
+					<span class="tf-dashboard-header__count" data-tf-trial-count data-total-count="<?php echo esc_attr( (string) $field_count ); ?>" data-singular-label="<?php esc_attr_e( 'record', 'trufield-portal' ); ?>" data-plural-label="<?php esc_attr_e( 'records', 'trufield-portal' ); ?>">
+						<?php
+						printf(
+							/* translators: %d = record count */
+							esc_html( _n( '%d record', '%d records', $field_count, 'trufield-portal' ) ),
+							$field_count
+						);
+						?>
+					</span>
+				</div>
 			</div>
 
 			<?php if ( ! empty( $fields ) ) : ?>
@@ -310,7 +329,7 @@ $team_awarded_retailers = array_sum(
 					</p>
 				</div>
 			<?php else : ?>
-				<div class="tf-field-grid tf-field-grid--dashboard" data-tf-trial-grid>
+				<div class="tf-field-grid tf-field-grid--dashboard" data-tf-trial-grid data-tf-trial-view-mode="grid">
 					<?php foreach ( $fields as $plant_field ) :
 						get_template_part( 'template-parts/plant-field-card', null, [ 'post' => $plant_field ] );
 					endforeach; ?>

@@ -7,6 +7,106 @@ if ( ! defined( 'ABSPATH' ) ) {
 exit;
 }
 
+function trufield_product_tested_option_key(): string {
+	return 'trufield_product_tested_options';
+}
+
+function trufield_default_product_tested_options(): array {
+	return [ 'MOS218' ];
+}
+
+function trufield_sanitize_product_tested_options( $raw_value ): array {
+	$values = is_array( $raw_value ) ? $raw_value : preg_split( '/\r\n|\r|\n/', (string) $raw_value );
+	$values = is_array( $values ) ? $values : [];
+	$choices = [];
+
+	foreach ( $values as $value ) {
+		$label = trim( sanitize_text_field( (string) $value ) );
+		if ( '' === $label ) {
+			continue;
+		}
+
+		$choices[ $label ] = $label;
+	}
+
+	if ( empty( $choices ) ) {
+		foreach ( trufield_default_product_tested_options() as $default_choice ) {
+			$choices[ $default_choice ] = $default_choice;
+		}
+	}
+
+	return $choices;
+}
+
+function trufield_get_product_tested_choices(): array {
+	$stored = get_option( trufield_product_tested_option_key(), [] );
+
+	return trufield_sanitize_product_tested_options( $stored );
+}
+
+add_action( 'admin_post_trufield_save_product_tested_options', 'trufield_save_product_tested_options' );
+function trufield_save_product_tested_options(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_save_product_tested_options' );
+
+	$choices = trufield_sanitize_product_tested_options( wp_unslash( $_POST['product_tested_options'] ?? [] ) );
+	update_option( trufield_product_tested_option_key(), array_values( $choices ), false );
+
+	wp_safe_redirect(
+		add_query_arg(
+			'tf_products_updated',
+			'1',
+			admin_url( 'edit.php?post_type=plant_field&page=trufield-products' )
+		)
+	);
+	exit;
+}
+
+add_action( 'admin_post_trufield_save_retailer_directory', 'trufield_save_retailer_directory' );
+function trufield_save_retailer_directory(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_save_retailer_directory' );
+
+	$names          = wp_unslash( $_POST['retailer_name'] ?? [] );
+	$branch_locations = wp_unslash( $_POST['retailer_branch_location'] ?? [] );
+	$contact_names  = wp_unslash( $_POST['retailer_key_contact'] ?? [] );
+	$contact_phones = wp_unslash( $_POST['retailer_contact_phone'] ?? [] );
+	$addresses      = wp_unslash( $_POST['retailer_address'] ?? [] );
+	$cities         = wp_unslash( $_POST['retailer_city'] ?? [] );
+	$states         = wp_unslash( $_POST['phase_1_state_region'] ?? [] );
+	$row_count      = max( count( (array) $names ), count( (array) $branch_locations ), count( (array) $contact_names ), count( (array) $contact_phones ), count( (array) $addresses ), count( (array) $cities ), count( (array) $states ) );
+	$rows           = [];
+
+	for ( $index = 0; $index < $row_count; $index++ ) {
+		$rows[] = [
+			'name'                   => $names[ $index ] ?? '',
+			'retailer_branch_location' => $branch_locations[ $index ] ?? '',
+			'retailer_key_contact'   => $contact_names[ $index ] ?? '',
+			'retailer_contact_phone' => $contact_phones[ $index ] ?? '',
+			'retailer_address'       => $addresses[ $index ] ?? '',
+			'retailer_city'          => $cities[ $index ] ?? '',
+			'phase_1_state_region'   => $states[ $index ] ?? '',
+		];
+	}
+
+	update_option( trufield_retailer_directory_option_key(), array_values( trufield_sanitize_retailer_directory_entries( $rows ) ), false );
+
+	wp_safe_redirect(
+		add_query_arg(
+			'tf_retailers_updated',
+			'1',
+			admin_url( 'edit.php?post_type=plant_field&page=trufield-retailers' )
+		)
+	);
+	exit;
+}
+
 add_filter( 'manage_plant_field_posts_columns', 'trufield_admin_columns' );
 function trufield_admin_columns( array $columns ): array {
 unset( $columns['date'] );
@@ -147,6 +247,148 @@ __( 'Export CSV', 'trufield-portal' ),
 'trufield-export',
 'trufield_export_page_render'
 );
+
+	add_submenu_page(
+		'edit.php?post_type=plant_field',
+		__( 'Retailers', 'trufield-portal' ),
+		__( 'Retailers', 'trufield-portal' ),
+		'manage_options',
+		'trufield-retailers',
+		'trufield_retailer_directory_page_render'
+	);
+
+	add_submenu_page(
+		'edit.php?post_type=plant_field',
+		__( 'Products', 'trufield-portal' ),
+		__( 'Products', 'trufield-portal' ),
+		'manage_options',
+		'trufield-products',
+		'trufield_product_tested_page_render'
+	);
+}
+
+function trufield_retailer_directory_page_render(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	$rows   = array_values( trufield_get_retailer_directory() );
+	$states = trufield_state_region_options();
+
+	for ( $index = count( $rows ); $index < 8; $index++ ) {
+		$rows[] = [
+			'name'                   => '',
+			'retailer_key_contact'   => '',
+			'retailer_contact_phone' => '',
+			'phase_1_state_region'   => '',
+		];
+	}
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Retailer Directory', 'trufield-portal' ); ?></h1>
+		<?php if ( ! empty( $_GET['tf_retailers_updated'] ) ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer directory updated.', 'trufield-portal' ); ?></p></div>
+		<?php endif; ?>
+		<p><?php esc_html_e( 'Manage the retailer dropdown and the auto-fill values used in Phase 1. Only contact name, contact number, and state auto-fill in the portal. Branch location, address, and city remain manual entry fields for sales reps.', 'trufield-portal' ); ?></p>
+		<?php if ( file_exists( trufield_retailer_directory_workbook_path() ) ) : ?>
+			<p><em><?php echo esc_html( sprintf( __( 'Workbook source detected: %s. Workbook rows are shown here automatically, and manual edits on this page can override or extend them.', 'trufield-portal' ), basename( trufield_retailer_directory_workbook_path() ) ) ); ?></em></p>
+		<?php endif; ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'trufield_save_retailer_directory' ); ?>
+			<input type="hidden" name="action" value="trufield_save_retailer_directory">
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Retailer Name', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'Branch / Location', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'Contact Name', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'Contact Number', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'Address', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'City', 'trufield-portal' ); ?></th>
+						<th><?php esc_html_e( 'State', 'trufield-portal' ); ?></th>
+					</tr>
+				</thead>
+				<tbody id="tf-retailer-directory-rows">
+					<?php foreach ( $rows as $row ) : ?>
+						<tr>
+							<td><input type="text" name="retailer_name[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['name'] ?? '' ) ); ?>"></td>
+							<td><input type="text" name="retailer_branch_location[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['retailer_branch_location'] ?? '' ) ); ?>"></td>
+							<td><input type="text" name="retailer_key_contact[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['retailer_key_contact'] ?? '' ) ); ?>"></td>
+							<td><input type="text" name="retailer_contact_phone[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['retailer_contact_phone'] ?? '' ) ); ?>"></td>
+							<td><input type="text" name="retailer_address[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['retailer_address'] ?? '' ) ); ?>"></td>
+							<td><input type="text" name="retailer_city[]" class="regular-text" value="<?php echo esc_attr( (string) ( $row['retailer_city'] ?? '' ) ); ?>"></td>
+							<td>
+								<select name="phase_1_state_region[]">
+									<option value=""><?php esc_html_e( 'Select State', 'trufield-portal' ); ?></option>
+									<?php foreach ( $states as $state_value => $state_label ) : ?>
+										<option value="<?php echo esc_attr( $state_value ); ?>" <?php selected( (string) ( $row['phase_1_state_region'] ?? '' ), (string) $state_value ); ?>><?php echo esc_html( $state_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			<p><button type="button" class="button" id="tf-add-retailer-row"><?php esc_html_e( 'Add Retailer Row', 'trufield-portal' ); ?></button></p>
+			<?php submit_button( __( 'Save Retailers', 'trufield-portal' ) ); ?>
+		</form>
+	</div>
+	<script>
+	(function () {
+		var addRowButton = document.getElementById('tf-add-retailer-row');
+		var rowContainer = document.getElementById('tf-retailer-directory-rows');
+
+		if (!addRowButton || !rowContainer) {
+			return;
+		}
+
+		var stateOptions = <?php echo wp_json_encode( array_map( 'esc_html', $states ) ); ?>;
+
+		addRowButton.addEventListener('click', function () {
+			var row = document.createElement('tr');
+			var options = '<option value=""><?php echo esc_js( __( 'Select State', 'trufield-portal' ) ); ?></option>';
+
+			Object.keys(stateOptions).forEach(function (value) {
+				options += '<option value="' + value.replace(/"/g, '&quot;') + '">' + stateOptions[value] + '</option>';
+			});
+
+			row.innerHTML = '' +
+				'<td><input type="text" name="retailer_name[]" class="regular-text"></td>' +
+				'<td><input type="text" name="retailer_branch_location[]" class="regular-text"></td>' +
+				'<td><input type="text" name="retailer_key_contact[]" class="regular-text"></td>' +
+				'<td><input type="text" name="retailer_contact_phone[]" class="regular-text"></td>' +
+				'<td><input type="text" name="retailer_address[]" class="regular-text"></td>' +
+				'<td><input type="text" name="retailer_city[]" class="regular-text"></td>' +
+				'<td><select name="phase_1_state_region[]">' + options + '</select></td>';
+
+			rowContainer.appendChild(row);
+		});
+	})();
+	</script>
+	<?php
+}
+
+function trufield_product_tested_page_render(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	$choices = trufield_get_product_tested_choices();
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Product Tested Options', 'trufield-portal' ); ?></h1>
+		<?php if ( ! empty( $_GET['tf_products_updated'] ) ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Product options updated.', 'trufield-portal' ); ?></p></div>
+		<?php endif; ?>
+		<p><?php esc_html_e( 'Enter one product name per line. These values populate the Product Tested dropdown used when a trial is created and edited.', 'trufield-portal' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'trufield_save_product_tested_options' ); ?>
+			<input type="hidden" name="action" value="trufield_save_product_tested_options">
+			<textarea name="product_tested_options" rows="10" class="large-text code"><?php echo esc_textarea( implode( "\n", array_values( $choices ) ) ); ?></textarea>
+			<?php submit_button( __( 'Save Products', 'trufield-portal' ) ); ?>
+		</form>
+	</div>
+	<?php
 }
 
 function trufield_export_page_render(): void {

@@ -39,9 +39,10 @@ $rank_labels  = [
 <p class="tf-leaderboard-hero__copy">
 <?php
 	printf(
-		esc_html__( 'Each rep earns %1$s points for every %2$s valid Phase 1 entries. Rankings are based on total points across all phases.', 'trufield-portal' ),
+		esc_html__( 'Each rep earns %1$s points for every %2$s valid Phase 1 entries and %3$s points for each valid Phase 2 trial. Rankings are based on total points across all phases.', 'trufield-portal' ),
 		number_format_i18n( trufield_get_retailer_points_award() ),
-		number_format_i18n( trufield_get_retailer_points_threshold() )
+		number_format_i18n( trufield_get_retailer_points_threshold() ),
+		number_format_i18n( trufield_get_phase_points_award( 2 ) )
 	);
 	?>
 </p>

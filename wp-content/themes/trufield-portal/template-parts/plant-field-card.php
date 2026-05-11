@@ -16,6 +16,7 @@ $post_id       = $post->ID;
 $retailer      = get_post_meta( $post_id, 'retailer_name', true );
 $farm_name     = get_post_meta( $post_id, 'farm_name', true );
 $location      = get_post_meta( $post_id, 'field_location_address', true );
+$product_tested = get_post_meta( $post_id, 'phase_1_product_being_tested', true );
 $assigned_rep_id = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
 $assigned_rep    = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
 $is_sales_rep_user = in_array( 'sales_rep', (array) wp_get_current_user()->roles, true );
@@ -34,6 +35,7 @@ $search_text      = strtolower(
 			array_filter(
 				[
 					get_the_title( $post_id ),
+					(string) $product_tested,
 					(string) $retailer,
 					(string) $farm_name,
 					(string) $location,
@@ -124,7 +126,7 @@ if ( $phase_2_verified ) {
 <article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>" data-tf-trial-card data-tf-search="<?php echo esc_attr( $search_text ); ?>">
 <div class="tf-field-card__body">
 <header class="tf-field-card__header">
-<h2 class="tf-field-card__title"><?php echo esc_html( get_the_title( $post_id ) ); ?></h2>
+<h2 class="tf-field-card__title" title="<?php echo esc_attr( get_the_title( $post_id ) ); ?>"><?php echo esc_html( get_the_title( $post_id ) ); ?></h2>
 <span class="tf-status-badge tf-status-badge--<?php echo esc_attr( $record_status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $record_status ) ) ); ?></span>
 </header>
 
@@ -139,6 +141,12 @@ if ( $phase_2_verified ) {
 <div class="tf-field-card__detail-row">
 <dt><?php esc_html_e( 'Retailer', 'trufield-portal' ); ?></dt>
 <dd><?php echo esc_html( $retailer ); ?></dd>
+</div>
+<?php endif; ?>
+<?php if ( $product_tested ) : ?>
+<div class="tf-field-card__detail-row">
+<dt><?php esc_html_e( 'Product', 'trufield-portal' ); ?></dt>
+<dd><?php echo esc_html( $product_tested ); ?></dd>
 </div>
 <?php endif; ?>
 <?php if ( $farm_name ) : ?>

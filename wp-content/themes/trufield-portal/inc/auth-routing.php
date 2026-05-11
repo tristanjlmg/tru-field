@@ -80,13 +80,6 @@ return trufield_get_page_url_by_template( 'page-templates/reset-password.php', w
 }
 
 /**
- * Whether the current environment is local development.
- */
-function trufield_is_local_env(): bool {
-	return in_array( wp_get_environment_type(), [ 'local', 'development' ], true );
-}
-
-/**
  * Get the URL of the portal dashboard page.
  */
 function trufield_dashboard_url(): string {
@@ -336,30 +329,24 @@ add_action( 'admin_post_nopriv_trufield_forgot_password', 'trufield_handle_forgo
 add_action( 'admin_post_nopriv_trufield_forgot_username', 'trufield_handle_forgot_username' );
 
 /**
- * Handle local development forgot-password flow without sending email.
+ * Send the username reminder email.
  */
-function trufield_handle_forgot_password_dev( WP_User $user ): void {
-	$forgot_url = trufield_forgot_password_url();
-	$reset_key  = get_password_reset_key( $user );
-
-	if ( is_wp_error( $reset_key ) ) {
-		wp_safe_redirect( add_query_arg( 'fp_error', 'retrieve_failed', $forgot_url ) );
-		exit;
-	}
-
-	$reset_url = add_query_arg(
-		[
-			'key'   => $reset_key,
-			'login' => $user->user_login,
-		],
-		trufield_reset_password_url()
+function trufield_send_username_email( WP_User $user ): bool {
+	$site_name = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
+	$subject   = sprintf(
+		/* translators: %s: site name. */
+		__( 'Your %s username', 'trufield-portal' ),
+		$site_name
 	);
-	$token     = wp_generate_password( 32, false, false );
+	$message   = sprintf(
+		/* translators: 1: site name, 2: username, 3: login URL. */
+		__( 'Your username for %1$s is: %2$s\n\nYou can sign in here: %3$s\n\nIf you did not request this email, you can ignore it.', 'trufield-portal' ),
+		$site_name,
+		$user->user_login,
+		trufield_login_url()
+	);
 
-	set_transient( 'trufield_forgot_password_dev_' . $token, $reset_url, 5 * MINUTE_IN_SECONDS );
-
-	wp_safe_redirect( add_query_arg( 'fp_dev_token', $token, $forgot_url ) );
-	exit;
+	return wp_mail( $user->user_email, $subject, $message );
 }
 
 function trufield_handle_forgot_password(): void {
@@ -383,10 +370,6 @@ $user = get_user_by( 'login', $identifier );
 }
 
 	if ( $user instanceof WP_User ) {
-		if ( trufield_is_local_env() ) {
-			trufield_handle_forgot_password_dev( $user );
-		}
-
 		$result = retrieve_password( $user->user_login );
 		if ( is_wp_error( $result ) ) {
 			$error = in_array( 'retrieve_password_email_failure', $result->get_error_codes(), true )
@@ -421,20 +404,14 @@ function trufield_handle_forgot_username(): void {
 	}
 
 	$user = get_user_by( 'email', $email );
-	if ( ! ( $user instanceof WP_User ) ) {
-		wp_safe_redirect( add_query_arg( 'fu_error', 'not_found', $username_url ) );
-		exit;
+	if ( $user instanceof WP_User ) {
+		if ( ! trufield_send_username_email( $user ) ) {
+			wp_safe_redirect( add_query_arg( 'fu_error', 'email_failed', $username_url ) );
+			exit;
+		}
 	}
 
-	wp_safe_redirect(
-		add_query_arg(
-			[
-				'fu_found'    => '1',
-				'fu_username' => $user->user_login,
-			],
-			$username_url
-		)
-	);
+	wp_safe_redirect( add_query_arg( 'fu_sent', '1', $username_url ) );
 	exit;
 }
 

@@ -193,6 +193,10 @@ function trufield_handle_field_import(): void {
 }
 
 function trufield_parse_retailer_demo_xlsx( string $file_path ) {
+	return trufield_parse_xlsx_rows( $file_path, [ 'Retailer Demo List', 'RETAILER DEMO LIST' ] );
+}
+
+function trufield_parse_xlsx_rows( string $file_path, array $preferred_sheet_names = [] ) {
 	$spreadsheet_ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
 	if ( ! class_exists( 'ZipArchive' ) ) {
@@ -205,7 +209,7 @@ function trufield_parse_retailer_demo_xlsx( string $file_path ) {
 	}
 
 	$shared_strings = trufield_import_read_shared_strings( $zip );
-	$worksheet_path = trufield_import_find_worksheet_path( $zip, [ 'Retailer Demo List', 'RETAILER DEMO LIST' ] );
+	$worksheet_path = trufield_import_find_worksheet_path( $zip, $preferred_sheet_names );
 	if ( is_wp_error( $worksheet_path ) ) {
 		$zip->close();
 		return $worksheet_path;
@@ -443,12 +447,19 @@ function trufield_import_resolve_assignment_user( string $field, string $email, 
 		[
 			'role__in' => $roles,
 			'search'   => $name,
-			'fields'   => [ 'ID', 'display_name', 'user_email' ],
 			'number'   => 20,
 		]
 	);
 
 	foreach ( $users as $user ) {
+		if ( ! $user instanceof WP_User ) {
+			$user = get_userdata( (int) ( $user->ID ?? 0 ) );
+		}
+
+		if ( ! $user instanceof WP_User ) {
+			continue;
+		}
+
 		if ( 0 === strcasecmp( $name, (string) $user->display_name ) ) {
 			return $user;
 		}
@@ -581,29 +592,42 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 }
 
 function trufield_prepare_import_row( array $row, string $api_key ) {
-	$location            = sanitize_text_field( trufield_import_row_value( $row, [ 'field_name', 'Field Name', 'Location' ] ) );
+	$field_name          = sanitize_text_field( trufield_import_row_value( $row, [ 'field_name', 'Field Name', 'Field Name (Optional)', 'Location' ] ) );
+	$farm_name           = sanitize_text_field( trufield_import_row_value( $row, [ 'farm_name', 'Farm Name', 'Farm Name (Optional)' ] ) );
 	$retailer_location   = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_branch_location', 'Retailer Branch Location', 'Branch Location' ] ) );
 	$retailer            = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_name', 'Retailer Name', 'Retailer' ] ) );
 	$address             = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_address', 'Retailer Address', 'field_location_address', 'Field Location Address', 'Address' ] ) );
 	$city                = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_city', 'Retailer City', 'City' ] ) );
 	$state               = sanitize_text_field( trufield_import_row_value( $row, [ 'phase_1_state_region', 'Retailer State', 'State', 'State Region' ] ) );
 	$zip                 = sanitize_text_field( trufield_import_row_value( $row, [ 'Zip', 'ZIP', 'Postal Code' ] ) );
-	$key_contact         = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_key_contact', 'Retailer Contact', 'Key Contact' ] ) );
-	$contact_phone       = trufield_import_sanitize_phone( trufield_import_row_value( $row, [ 'retailer_contact_phone', 'Retailer Contact Phone #', 'Retailer Contact Number', 'Contact Number' ] ) );
-	$field_trial_contact = sanitize_text_field( trufield_import_row_value( $row, [ 'field_trial_contact', 'Field Trial Contact', 'retailer_key_contact', 'Retailer Contact', 'Key Contact' ] ) );
-	$field_trial_email   = sanitize_email( trufield_import_row_value( $row, [ 'field_trial_contact_email', 'Field Trial Contact Email' ] ) );
+	$key_contact         = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_key_contact', 'Retailer Contact', 'Retailer Contact Name', 'Key Contact' ] ) );
+	$contact_phone       = trufield_import_sanitize_phone( trufield_import_row_value( $row, [ 'retailer_contact_phone', 'Retailer Contact Phone #', 'Retailer Contact Number', 'RetailerContactPhone', 'Contact Number' ] ) );
+	$field_trial_contact = sanitize_text_field( trufield_import_row_value( $row, [ 'field_trial_contact', 'Field Trial Contact', 'Crop Specialist/Field Trial Contact (First Last)', 'Crop Specialist Field Trial Contact (First Last)', 'retailer_key_contact', 'Retailer Contact', 'Key Contact' ] ) );
+	$field_trial_phone   = trufield_import_sanitize_phone( trufield_import_row_value( $row, [ 'contact_phone', 'Field Trial Contact Phone', 'Crop Specialist/ Field Trial Contact Phone', 'Crop Specialist Field Trial Contact Phone' ] ) );
+	$field_trial_email   = sanitize_email( trufield_import_row_value( $row, [ 'field_trial_contact_email', 'Field Trial Contact Email', 'Crop Specialist/ Field Trial Email', 'Crop Specialist Field Trial Email' ] ) );
 	$field_address       = sanitize_text_field( trufield_import_row_value( $row, [ 'field_location_address', 'Field Location Address', 'retailer_address', 'Retailer Address', 'Address' ] ) );
+	$lat_lng_value       = trufield_import_row_value( $row, [ 'Lat/Long of Trial', 'Lat Long of Trial' ] );
 	$rep_email           = sanitize_email( trufield_import_row_value( $row, [ 'RSM/BAM ID', 'Email', 'Assigned Sales Rep Email' ] ) );
 	$rsm_bam             = sanitize_text_field( trufield_import_row_value( $row, [ 'RSM/BAM', 'RSM BAM', 'rsm_bam' ] ) );
 	$sales_rep_user      = trufield_import_resolve_sales_rep_user( $rep_email, $rsm_bam );
-	$warnings      = [];
-
-	if ( $location === '' ) {
-		return new WP_Error( 'trufield_import_location_missing', __( 'Location is required.', 'trufield-portal' ) );
-	}
+	$warnings            = [];
+	$post_title          = $field_name;
+	$parsed_lat_lng      = trufield_import_parse_lat_lng( $lat_lng_value );
 
 	if ( $retailer === '' ) {
 		return new WP_Error( 'trufield_import_retailer_missing', __( 'Retailer is required.', 'trufield-portal' ) );
+	}
+
+	if ( '' === $post_title ) {
+		$post_title = $farm_name;
+	}
+
+	if ( '' === $post_title ) {
+		$post_title = trim( $retailer . ( $retailer_location !== '' ? ' - ' . $retailer_location : '' ) );
+	}
+
+	if ( '' === $post_title ) {
+		return new WP_Error( 'trufield_import_location_missing', __( 'A record title could not be derived from the workbook row.', 'trufield-portal' ) );
 	}
 
 	$retailer_location = trufield_normalize_retailer_branch_location( $retailer, $retailer_location );
@@ -613,7 +637,8 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'validation_status'           => 'pending',
 		'current_phase'               => 1,
 		'phase_1_status'              => 'in_progress',
-		'field_name'                  => $location,
+		'field_name'                  => $field_name,
+		'farm_name'                   => $farm_name,
 		'retailer_name'               => $retailer,
 		'retailer_branch_location'    => $retailer_location,
 		'retailer_key_contact'        => $key_contact,
@@ -622,7 +647,7 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'retailer_city'               => $city,
 		'field_location_address'      => $field_address,
 		'field_trial_contact'         => $field_trial_contact,
-		'contact_phone'               => $contact_phone,
+		'contact_phone'               => $field_trial_phone,
 		'field_trial_contact_email'   => $field_trial_email,
 		'rsm_bam'                     => $sales_rep_user instanceof WP_User ? $sales_rep_user->ID : $rsm_bam,
 		'import_source_email'         => $rep_email,
@@ -631,13 +656,23 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'import_zip'                  => $zip,
 		'phase_1_state_region'        => $state,
 		'import_number_of_pallets'    => trufield_import_sanitize_integer( trufield_import_row_value( $row, [ 'Number of Pallets' ] ) ),
-		'phase_1_treated_size_acres'  => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Acres of Product' ] ) ),
+		'phase_1_treated_size_acres'  => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Acres of Product', 'Treated Size (ac)' ] ) ),
+		'phase_1_application_rate'    => sanitize_text_field( trufield_import_row_value( $row, [ 'Applied Rate (oz/ac)', 'Applied Rate', 'phase_1_application_rate' ] ) ),
+		'phase_1_trial_type'          => sanitize_text_field( trufield_import_row_value( $row, [ 'Trial Type', 'phase_1_trial_type' ] ) ),
+		'phase_1_protocol_version'    => sanitize_text_field( trufield_import_row_value( $row, [ 'Protocol Version', 'phase_1_protocol_version' ] ) ),
+		'phase_1_application_timing'  => sanitize_text_field( trufield_import_row_value( $row, [ 'Application Timing', 'phase_1_application_timing' ] ) ),
+		'phase_1_application_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Application Date', 'phase_1_application_date' ] ) ),
+		'phase_1_retailer_training_discussion_date' => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Retailer Product Training/Discussion Date', 'Product Training Date', 'phase_1_retailer_training_discussion_date' ] ) ),
 		'import_offered'              => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Offered Y/N' ] ) ),
 		'import_ready_to_ship'        => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Ready to Ship Y/N' ] ) ),
 		'import_shipped'              => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Shipped Y/N' ] ) ),
 		'import_bol'                  => sanitize_text_field( trufield_import_row_value( $row, [ 'BOL' ] ) ),
 		'import_notes'                => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Notes', 'Column1' ] ) ),
 	];
+
+	if ( '' === $meta['contact_phone'] ) {
+		$meta['contact_phone'] = $contact_phone;
+	}
 
 	if ( $sales_rep_user instanceof WP_User ) {
 		$meta['assigned_sales_rep'] = $sales_rep_user->ID;
@@ -661,7 +696,10 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		$warnings[] = __( 'Contact Number could not be normalized and was stored as blank.', 'trufield-portal' );
 	}
 
-	if ( $field_address !== '' && $api_key !== '' ) {
+	if ( is_array( $parsed_lat_lng ) ) {
+		$meta['field_location_lat'] = $parsed_lat_lng['lat'];
+		$meta['field_location_lng'] = $parsed_lat_lng['lng'];
+	} elseif ( $field_address !== '' && $api_key !== '' ) {
 		$geocode = trufield_import_geocode_address( $field_address, $city, $state, $zip, $api_key );
 		if ( is_array( $geocode ) && isset( $geocode['lat'], $geocode['lng'] ) ) {
 			$meta['field_location_lat'] = (float) $geocode['lat'];
@@ -674,9 +712,25 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 	}
 
 	return [
-		'post_title' => $location,
+		'post_title' => $post_title,
 		'meta'       => $meta,
 		'warnings'   => $warnings,
+	];
+}
+
+function trufield_import_parse_lat_lng( string $value ): ?array {
+	$value = trim( $value );
+	if ( '' === $value ) {
+		return null;
+	}
+
+	if ( ! preg_match( '/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/', $value, $matches ) ) {
+		return null;
+	}
+
+	return [
+		'lat' => (float) $matches[1],
+		'lng' => (float) $matches[2],
 	];
 }
 
@@ -735,6 +789,30 @@ function trufield_import_sanitize_number( string $value ) {
 	}
 
 	return (float) $value;
+}
+
+function trufield_import_sanitize_date( string $value ): string {
+	$value = trim( $value );
+	if ( '' === $value ) {
+		return '';
+	}
+
+	if ( is_numeric( $value ) ) {
+		$serial = (float) $value;
+		if ( $serial > 0 ) {
+			$timestamp = (int) round( ( $serial - 25569 ) * DAY_IN_SECONDS );
+			if ( $timestamp > 0 ) {
+				return gmdate( 'Y-m-d', $timestamp );
+			}
+		}
+	}
+
+	$timestamp = strtotime( $value );
+	if ( false === $timestamp ) {
+		return '';
+	}
+
+	return gmdate( 'Y-m-d', $timestamp );
 }
 
 function trufield_import_sanitize_yes_no( string $value ): string {
