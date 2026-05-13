@@ -200,38 +200,22 @@ if ( 1 === $phase ) {
 			'optional_fields'=> [
 				'farm_name',
 				'field_name',
-				'phase_1_trial_design',
-				'phase_1_product_being_tested',
-				'phase_1_hybrid_variety',
-				'phase_1_planting_date',
-				'phase_1_planting_population',
-				'phase_1_row_spacing',
-				'phase_1_planting_speed',
 			],
 		],
 		3 => [
 			'key'            => 'trial',
 			'title'          => __( 'Trial Information', 'trufield-portal' ),
 			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
-			'required_fields'=> [
-				'phase_1_treated_size_acres',
-			],
-			'fields'         => [
-				'phase_1_treated_size_acres',
-			],
+			'required_fields'=> [],
+			'fields'         => [],
 			'optional_fields'=> [
+				'phase_1_treated_size_acres',
 				'phase_1_trial_type',
 				'phase_1_application_rate',
 				'phase_1_protocol_version',
 				'phase_1_application_timing',
 				'phase_1_application_date',
 				'phase_1_retailer_training_discussion_date',
-				'phase_1_application_type',
-				'phase_1_growth_stage_at_application',
-				'phase_1_weather_conditions_at_application',
-				'phase_1_soil_conditions_at_application',
-				'phase_1_carrier_volume_gal',
-				'phase_1_field_overview_photo',
 			],
 		],
 	];
@@ -257,6 +241,8 @@ if ( 1 === $phase ) {
 				'phase_2_rsm_visit_2_date',
 				'phase_2_rsm_visit_2_photo_type',
 				'phase_2_rsm_visit_2_upload_photos',
+				'phase_2_residue_degradation_observed',
+				'phase_2_emergence_stand_collected',
 			],
 			'optional_fields'=> [
 				'phase_2_rsm_visit_3_date',
@@ -274,12 +260,14 @@ if ( 1 === $phase ) {
 			'title'          => __( 'Stand Counts & Delta Count', 'trufield-portal' ),
 			'description'    => __( 'Enter the three treated and three untreated stand counts. The delta field is calculated automatically from the averages.', 'trufield-portal' ),
 			'required_fields'=> [
-				'phase_2_residue_degradation_observed',
-				'phase_2_emergence_stand_collected',
+				'phase_2_stand_count_1_treated',
+				'phase_2_stand_count_2_treated',
+				'phase_2_stand_count_3_treated',
+				'phase_2_stand_count_1_untreated',
+				'phase_2_stand_count_2_untreated',
+				'phase_2_stand_count_3_untreated',
 			],
 			'fields'         => [
-				'phase_2_residue_degradation_observed',
-				'phase_2_emergence_stand_collected',
 				'phase_2_stand_count_1_treated',
 				'phase_2_stand_count_2_treated',
 				'phase_2_stand_count_3_treated',
@@ -294,7 +282,10 @@ if ( 1 === $phase ) {
 			'key'            => 'visual-compliance',
 			'title'          => __( 'Visual Evidence & Photo Compliance', 'trufield-portal' ),
 			'description'    => __( 'Capture the screenshot scoring checks for visual evidence, photo compliance, and media proof.', 'trufield-portal' ),
-			'required_fields'=> [],
+			'required_fields'=> [
+				'phase_2_grower_retailer_testimonials',
+				'phase_2_grower_retailer_comments',
+			],
 			'fields'         => [
 				'phase_2_emergence_flag_test',
 				'phase_2_pictures_at_application',
@@ -521,7 +512,7 @@ $render_phase_one_location = static function () use ( $labels, $post_id ): void 
 	<div class="tf-phase-location tf-phase-location--coords-only">
 	<div class="tf-phase-location__coords">
 	<div class="tf-field-group">
-	<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?> <span class="tf-required">*</span></label>
+	<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?></label>
 	<input
 	type="number"
 	id="field_location_lat"
@@ -534,7 +525,7 @@ $render_phase_one_location = static function () use ( $labels, $post_id ): void 
 	>
 	</div>
 	<div class="tf-field-group">
-	<label for="field_location_lng"><?php echo esc_html( $labels['field_location_lng'] ?? 'Field Longitude' ); ?> <span class="tf-required">*</span></label>
+	<label for="field_location_lng"><?php echo esc_html( $labels['field_location_lng'] ?? 'Field Longitude' ); ?></label>
 	<input
 	type="number"
 	id="field_location_lng"
@@ -691,11 +682,12 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 </div>
 <?php else : ?>
-<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-phase-form" id="<?php echo esc_attr( 'tf-phase-form-' . $phase ); ?>" enctype="multipart/form-data">
+<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tf-phase-form" id="<?php echo esc_attr( 'tf-phase-form-' . $phase ); ?>" enctype="multipart/form-data"<?php echo ! empty( $phase_substeps ) ? ' novalidate' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 <?php wp_nonce_field( "trufield_save_phase_{$post_id}_{$phase}" ); ?>
 <input type="hidden" name="action" value="trufield_save_phase">
 <input type="hidden" name="plant_field_id" value="<?php echo esc_attr( (string) $post_id ); ?>">
 <input type="hidden" name="phase" value="<?php echo esc_attr( (string) $phase ); ?>">
+<input type="hidden" name="phase_action_intent" value="save" data-tf-phase-action-input>
 <?php if ( ! empty( $phase_substeps ) ) : ?>
 <input type="hidden" name="phase_step" value="<?php echo esc_attr( (string) $phase_initial_step ); ?>" data-tf-phase-step-input>
 <?php endif; ?>

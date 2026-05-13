@@ -226,6 +226,7 @@
     document.querySelectorAll('[data-tf-phase-substeps]').forEach(function (wrapper) {
       var form = wrapper.closest('form');
       var phase = Number(wrapper.getAttribute('data-phase') || '1');
+      var phaseActionInput = form && form.querySelector('[data-tf-phase-action-input]');
       var hiddenInput = form && form.querySelector('[data-tf-phase-step-input]');
       var tabs = Array.prototype.slice.call(wrapper.querySelectorAll('[data-tf-phase-step-tab]'));
       var panels = Array.prototype.slice.call(wrapper.querySelectorAll('[data-tf-phase-step-panel]'));
@@ -552,6 +553,10 @@
     submitButtons.forEach(function (button) {
       button.addEventListener('click', function (event) {
         var actionValue = String(button.value || button.getAttribute('value') || '');
+        if (phaseActionInput) {
+          phaseActionInput.value = actionValue || 'save';
+        }
+
         if (actionValue === 'verify_address' || button.hasAttribute('formnovalidate')) {
           return;
         }
@@ -564,6 +569,38 @@
       });
 
       syncStepState(Math.max(1, Math.min(panels.length, currentStep)));
+    });
+  }
+
+  function initPhaseFormActions() {
+    document.querySelectorAll('form.tf-phase-form').forEach(function (form) {
+      if (form.getAttribute('data-tf-phase-actions-bound') === 'true') {
+        return;
+      }
+
+      var actionInput = form.querySelector('[data-tf-phase-action-input]');
+      if (!actionInput) {
+        return;
+      }
+
+      form.setAttribute('data-tf-phase-actions-bound', 'true');
+
+      form.querySelectorAll('button[name="phase_action"]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          actionInput.value = String(button.value || button.getAttribute('value') || 'save') || 'save';
+        });
+      });
+
+      form.addEventListener('submit', function (event) {
+        var submitter = event.submitter;
+
+        if (submitter && submitter.name === 'phase_action') {
+          actionInput.value = String(submitter.value || submitter.getAttribute('value') || 'save') || 'save';
+          return;
+        }
+
+        actionInput.value = actionInput.value || 'save';
+      });
     });
   }
 
@@ -1337,6 +1374,7 @@
     initDateInputs();
     initPhotoUploadPrompts();
     initRetailerPickers();
+    initPhaseFormActions();
     initPhaseSubsteps();
     initStandCountDelta();
     initTrialSearch();

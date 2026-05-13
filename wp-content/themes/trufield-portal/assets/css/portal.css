@@ -24,7 +24,8 @@
 }
 
 /* ── Reset / base ────────────────────────────────────────────────────────── */
-body { font-family: var(--tf-font); background: var(--tf-grey-100); color: var(--tf-grey-900); line-height: 1.6; }
+html { background: var(--tf-white); }
+body { margin: 0; font-family: var(--tf-font); background: var(--tf-grey-100); color: var(--tf-grey-900); line-height: 1.6; }
 *, *::before, *::after { box-sizing: border-box; }
 a { color: var(--tf-green); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -128,7 +129,7 @@ body.admin-bar .tf-header {
 
 @media (max-width: 782px) {
   body.admin-bar .tf-header {
-    top: 46px;
+    top: 0;
   }
 }
 
@@ -192,6 +193,11 @@ body.admin-bar .tf-header {
 
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .tf-field-group { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; }
+.tf-field-group,
+.tf-field-group > * {
+  min-width: 0;
+  max-width: 100%;
+}
 .tf-field-group label { font-weight: 600; font-size: .875rem; color: var(--tf-grey-700); }
 .tf-field-group label small { font-weight: 400; color: var(--tf-grey-400); margin-left: .25rem; }
 .tf-input, .tf-textarea, .tf-select {
@@ -201,6 +207,11 @@ body.admin-bar .tf-header {
   -webkit-text-fill-color: #000;
   transition: border-color .15s, box-shadow .15s;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 .tf-input::placeholder, .tf-textarea::placeholder { color: #8a9099; opacity: 1; }
 .tf-select {
@@ -239,6 +250,7 @@ body.admin-bar .tf-header {
 }
 .tf-textarea { resize: vertical; }
 .tf-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 1.5rem; }
+.tf-form-grid > * { min-width: 0; }
 .tf-field-group--inline { flex-direction: row; align-items: center; }
 
 /* ── Tables ──────────────────────────────────────────────────────────────── */
@@ -1291,6 +1303,35 @@ body.admin-bar .tf-header {
   }
   .tf-phase-substeps__actions .tf-btn {
     width: 100%;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__body {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__header,
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__details,
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__summary,
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__footer {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__details {
+    display: grid;
+    gap: .4rem;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__detail-row {
+    display: grid;
+    grid-template-columns: minmax(72px, auto) 1fr;
+    justify-content: flex-start;
+    font-size: .84rem;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__summary {
+    min-height: 0;
+  }
+  .tf-field-grid[data-tf-trial-view-mode="list"] .tf-field-card__footer {
+    display: flex;
   }
 }
 

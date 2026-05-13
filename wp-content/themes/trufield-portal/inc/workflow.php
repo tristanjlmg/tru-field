@@ -93,15 +93,20 @@ $required = [
 'retailer_address',
 'retailer_city',
 'phase_1_state_region',
-'phase_1_treated_size_acres',
 ],
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
-'phase_2_residue_degradation_observed',
-'phase_2_emergence_stand_collected',
+'phase_2_stand_count_1_treated',
+'phase_2_stand_count_2_treated',
+'phase_2_stand_count_3_treated',
+'phase_2_stand_count_1_untreated',
+'phase_2_stand_count_2_untreated',
+'phase_2_stand_count_3_untreated',
+'phase_2_grower_retailer_testimonials',
+'phase_2_grower_retailer_comments',
 ],
 3 => [],
 ];
@@ -1259,7 +1264,9 @@ $fields = [
 ],
 ];
 
-return $fields[ $phase ] ?? [];
+$editable = $fields[ $phase ] ?? [];
+
+return array_values( array_diff( $editable, trufield_admin_only_phase_fields( $phase ) ) );
 }
 
 function trufield_admin_only_phase_fields( int $phase ): array {
@@ -1267,6 +1274,31 @@ function trufield_admin_only_phase_fields( int $phase ): array {
 		1 => [
 			'rsm_bam',
 			'fsa',
+		],
+		3 => [
+			'phase_3_tillage_type',
+			'phase_3_soil_temp_f_at_application',
+			'phase_3_carrier_volume_gal',
+			'phase_3_tank_mix_partners',
+			'phase_3_planting_date',
+			'phase_3_hybrid_variety',
+			'phase_3_planting_population',
+			'phase_3_row_spacing_in',
+			'phase_3_planting_speed_mph',
+			'phase_3_plant_heights_avg_untreated_v7_in',
+			'phase_3_plant_heights_avg_treated_v7_in',
+			'phase_3_stalk_diameter_untreated_v7_mm',
+			'phase_3_stalk_diameter_treated_v7_mm2',
+			'phase_3_yield_untreated_bu_ac',
+			'phase_3_yield_treated_bu_ac',
+			'phase_3_moisture_untreated_percent',
+			'phase_3_moisture_treated_percent',
+			'phase_3_test_weight_untreated_lbs_bu',
+			'phase_3_test_weight_treated_lbs_bu',
+			'phase_3_as_applied_gis_data',
+			'phase_3_planting_gis_data',
+			'phase_3_harvest_gis_data',
+			'phase_3_agronomy_comments',
 		],
 	];
 
@@ -1651,7 +1683,10 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	$phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
 	$redirect_clean = remove_query_arg( 'phase_step', $redirect_base );
 	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $phase_step, $redirect_clean ) : $redirect_clean;
-	$action        = sanitize_key( $_POST['phase_action'] ?? 'save' );
+	$action        = sanitize_key( $_POST['phase_action_intent'] ?? ( $_POST['phase_action'] ?? 'save' ) );
+	if ( ! in_array( $action, [ 'save', 'complete', 'verify_address' ], true ) ) {
+		$action = 'save';
+	}
 
 	if ( 1 === $phase && array_key_exists( 'retailer_name', $_POST ) ) {
 		$retailer_selection = trim( sanitize_text_field( wp_unslash( $_POST['retailer_name'] ) ) );
@@ -1748,9 +1783,7 @@ if ( $action === 'verify_address' ) {
 		update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 	}
 	update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
-	$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
-
-	wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : 'address_verified', $redirect ) );
+	wp_safe_redirect( add_query_arg( 'tf_success', 'address_verified', $redirect ) );
 	exit;
 }
 
@@ -1776,9 +1809,7 @@ update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 }
 update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
 
-$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
-
-wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : 'saved', $redirect ) );
+wp_safe_redirect( add_query_arg( 'tf_success', 'saved', $redirect ) );
 exit;
 }
 

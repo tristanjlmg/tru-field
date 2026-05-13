@@ -21,13 +21,10 @@ $assigned_rep_id = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
 $assigned_rep    = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
 $is_sales_rep_user = in_array( 'sales_rep', (array) wp_get_current_user()->roles, true );
 $record_status = get_post_meta( $post_id, 'record_status', true ) ?: 'active';
-$phase_1_status   = trufield_get_phase_status( $post_id, 1 );
-$phase_1_verified = (bool) get_post_meta( $post_id, 'phase_1_verified', true );
-$phase_1_missing  = trufield_get_missing_required_fields( $post_id, 1 );
-$phase_1_ready    = empty( $phase_1_missing );
-$phase_2_status   = trufield_get_phase_status( $post_id, 2 );
-$phase_2_verified = (bool) get_post_meta( $post_id, 'phase_2_verified', true );
-$phase_2_missing  = trufield_get_missing_required_fields( $post_id, 2 );
+$active_phases   = array_values( array_intersect( [ 1, 2, 3 ], TRUFIELD_ACTIVE_PHASES ) );
+$phase_statuses  = [];
+$phase_verified  = [];
+$phase_missing   = [];
 $search_text      = strtolower(
 	trim(
 		implode(
@@ -45,6 +42,12 @@ $search_text      = strtolower(
 		)
 	)
 );
+
+foreach ( [ 1, 2, 3 ] as $phase ) {
+	$phase_statuses[ $phase ] = trufield_get_phase_status( $post_id, $phase );
+	$phase_verified[ $phase ] = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
+	$phase_missing[ $phase ]  = trufield_get_missing_required_fields( $post_id, $phase );
+}
 
 $pips = [];
 foreach ( [ 1, 2, 3 ] as $phase ) {
@@ -67,60 +70,67 @@ foreach ( [ 1, 2, 3 ] as $phase ) {
 		continue;
 	}
 
-	if ( $phase_1_verified ) {
-		if ( 1 === $phase ) {
-			$pips[] = [ 'class' => 'verified', 'icon' => '✓', 'label' => 'P1', 'title' => __( 'Phase 1 verified', 'trufield-portal' ) ];
-		} elseif ( $phase_2_verified ) {
-			$pips[] = [ 'class' => 'verified', 'icon' => '✓', 'label' => 'P2', 'title' => __( 'Phase 2 verified', 'trufield-portal' ) ];
-		} elseif ( $phase_2_status === 'completed' ) {
-			$pips[] = [ 'class' => 'completed', 'icon' => '●', 'label' => 'P2', 'title' => __( 'Phase 2 submitted', 'trufield-portal' ) ];
-		} elseif ( $phase_2_status === 'in_progress' ) {
-			$pips[] = [ 'class' => 'in_progress', 'icon' => '◑', 'label' => 'P2', 'title' => __( 'Phase 2 in progress', 'trufield-portal' ) ];
-		} else {
-			$pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'P2', 'title' => __( 'Phase 2 not started', 'trufield-portal' ) ];
-		}
-	} elseif ( $phase_1_status === 'completed' ) {
-		$pips[] = [ 'class' => 'completed', 'icon' => '●', 'label' => 'P1', 'title' => __( 'Phase 1 submitted', 'trufield-portal' ) ];
-	} elseif ( $phase_1_status === 'in_progress' ) {
-		$pips[] = [ 'class' => 'in_progress', 'icon' => '◑', 'label' => 'P1', 'title' => __( 'Phase 1 in progress', 'trufield-portal' ) ];
+	if ( $phase_verified[ $phase ] ) {
+		$pips[] = [ 'class' => 'verified', 'icon' => '✓', 'label' => 'P' . $phase, 'title' => sprintf( __( 'Phase %d verified', 'trufield-portal' ), $phase ) ];
+	} elseif ( $phase_statuses[ $phase ] === 'completed' ) {
+		$pips[] = [ 'class' => 'completed', 'icon' => '●', 'label' => 'P' . $phase, 'title' => sprintf( __( 'Phase %d submitted', 'trufield-portal' ), $phase ) ];
+	} elseif ( $phase_statuses[ $phase ] === 'in_progress' ) {
+		$pips[] = [ 'class' => 'in_progress', 'icon' => '◑', 'label' => 'P' . $phase, 'title' => sprintf( __( 'Phase %d in progress', 'trufield-portal' ), $phase ) ];
 	} else {
-		$pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'P1', 'title' => __( 'Phase 1 not started', 'trufield-portal' ) ];
+		$pips[] = [ 'class' => 'pending', 'icon' => '○', 'label' => 'P' . $phase, 'title' => sprintf( __( 'Phase %d not started', 'trufield-portal' ), $phase ) ];
 	}
 }
 
-if ( $phase_2_verified ) {
-	$phase_summary = __( 'Phase 2 verified.', 'trufield-portal' );
-} elseif ( $phase_2_status === 'completed' ) {
-	$phase_summary = __( 'Phase 2 is complete and waiting on admin verification.', 'trufield-portal' );
-} elseif ( trufield_prerequisite_met( $post_id, 2 ) && $phase_2_status === 'in_progress' ) {
+$current_phase = 1;
+foreach ( array_reverse( $active_phases ) as $phase ) {
+	if ( trufield_prerequisite_met( $post_id, $phase ) ) {
+		$current_phase = $phase;
+		break;
+	}
+}
+
+$current_phase_status   = $phase_statuses[ $current_phase ] ?? 'pending';
+$current_phase_verified = $phase_verified[ $current_phase ] ?? false;
+$current_phase_missing  = $phase_missing[ $current_phase ] ?? [];
+
+if ( $current_phase_verified ) {
+	$phase_summary = sprintf( __( 'Phase %d verified.', 'trufield-portal' ), $current_phase );
+} elseif ( $current_phase_status === 'completed' ) {
+	$phase_summary = sprintf( __( 'Phase %d is complete and waiting on admin verification.', 'trufield-portal' ), $current_phase );
+} elseif ( $current_phase_status === 'in_progress' && empty( $current_phase_missing ) ) {
+	$phase_summary = sprintf( __( 'Phase %d is ready to verify on the next save.', 'trufield-portal' ), $current_phase );
+} elseif ( $current_phase_status === 'in_progress' ) {
 	$phase_summary = sprintf(
+		/* translators: 1: phase number, 2: number of missing required fields. */
 		_n(
-			'Phase 2 draft in progress — %d required detail remaining.',
-			'Phase 2 draft in progress — %d required details remaining.',
-			count( $phase_2_missing ),
+			'Phase %1$d draft in progress — %2$d required detail remaining.',
+			'Phase %1$d draft in progress — %2$d required details remaining.',
+			count( $current_phase_missing ),
 			'trufield-portal'
 		),
-		count( $phase_2_missing )
+		$current_phase,
+		count( $current_phase_missing )
 	);
-} elseif ( $phase_1_verified ) {
-	$phase_summary = __( 'Phase 1 verified. Open this trial to start Phase 2.', 'trufield-portal' );
-} elseif ( $phase_1_status === 'completed' ) {
-	$phase_summary = __( 'Phase 1 is complete and locked.', 'trufield-portal' );
-} elseif ( $phase_1_status === 'in_progress' && $phase_1_ready ) {
-	$phase_summary = __( 'Phase 1 is ready to verify on the next save.', 'trufield-portal' );
-} elseif ( $phase_1_status === 'in_progress' ) {
-	$phase_summary = sprintf(
-		/* translators: %d = number of missing required fields. */
-		_n(
-			'Phase 1 draft in progress — %d required detail remaining.',
-			'Phase 1 draft in progress — %d required details remaining.',
-			count( $phase_1_missing ),
-			'trufield-portal'
-		),
-		count( $phase_1_missing )
-	);
+	if ( $current_phase === 3 ) {
+		$phase_summary = sprintf(
+			/* translators: 1: phase number, 2: number of missing required fields. */
+			_n(
+				'Phase %1$d in progress — %2$d required detail remaining.',
+				'Phase %1$d in progress — %2$d required details remaining.',
+				count( $current_phase_missing ),
+				'trufield-portal'
+			),
+			$current_phase,
+			count( $current_phase_missing )
+		);
+	}
+
+	$next_phase = $current_phase + 1;
+	if ( in_array( $next_phase, $active_phases, true ) && ( $phase_verified[ $current_phase ] ?? false ) ) {
+		$phase_summary = sprintf( __( 'Phase %1$d verified. Open this trial to start Phase %2$d.', 'trufield-portal' ), $current_phase, $next_phase );
+	}
 } else {
-	$phase_summary = __( 'Open this record to start the Phase 1 form.', 'trufield-portal' );
+	$phase_summary = sprintf( __( 'Open this record to start the Phase %d form.', 'trufield-portal' ), $current_phase );
 }
 ?>
 <article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>" data-tf-trial-card data-tf-search="<?php echo esc_attr( $search_text ); ?>">
