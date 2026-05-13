@@ -109,10 +109,14 @@ $field_groups = [
 'phase_2_most_significant_visual_difference' => [ 'input' => 'textarea', 'rows' => 4, 'placeholder' => 'What is the most significant visual difference today?' ],
 'phase_2_emergence_flag_test'              => [ 'input' => 'select', 'placeholder' => 'Select' ],
 'phase_2_pictures_at_application'          => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_at_application_upload'   => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload an image from your device. JPG, PNG, GIF, and WebP are supported.', 'attributes' => [ 'data-tf-photo-upload-match' => 'yes', 'data-tf-photo-upload-hide-field' => 'true' ] ],
 'phase_2_pictures_at_planting'             => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_at_planting_upload'      => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload an image from your device. JPG, PNG, GIF, and WebP are supported.', 'attributes' => [ 'data-tf-photo-upload-match' => 'yes', 'data-tf-photo-upload-hide-field' => 'true' ] ],
 'phase_2_pictures_in_season_harvest'       => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_pictures_in_season_harvest_upload'=> [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload an image from your device. JPG, PNG, GIF, and WebP are supported.', 'attributes' => [ 'data-tf-photo-upload-match' => 'yes', 'data-tf-photo-upload-hide-field' => 'true' ] ],
 'phase_2_pictures_at_harvest'              => [ 'input' => 'select', 'placeholder' => 'Select' ],
 'phase_2_drone_images_available'           => [ 'input' => 'select', 'placeholder' => 'Select' ],
+'phase_2_drone_images_available_upload'    => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Upload an image from your device. JPG, PNG, GIF, and WebP are supported.', 'attributes' => [ 'data-tf-photo-upload-match' => 'yes', 'data-tf-photo-upload-hide-field' => 'true' ] ],
 'phase_2_grower_retailer_testimonials'     => [ 'input' => 'select', 'placeholder' => 'Select' ],
 'phase_2_time_lapse_available'             => [ 'input' => 'select', 'placeholder' => 'Select' ],
 'phase_2_grower_retailer_comments'         => [ 'input' => 'textarea', 'rows' => 3, 'placeholder' => 'Grower / Retailer Comments' ],
@@ -289,10 +293,14 @@ if ( 1 === $phase ) {
 			'fields'         => [
 				'phase_2_emergence_flag_test',
 				'phase_2_pictures_at_application',
+				'phase_2_pictures_at_application_upload',
 				'phase_2_pictures_at_planting',
+				'phase_2_pictures_at_planting_upload',
 				'phase_2_pictures_in_season_harvest',
+				'phase_2_pictures_in_season_harvest_upload',
 				'phase_2_pictures_at_harvest',
 				'phase_2_drone_images_available',
+				'phase_2_drone_images_available_upload',
 				'phase_2_grower_retailer_testimonials',
 				'phase_2_time_lapse_available',
 				'phase_2_grower_retailer_comments',
@@ -414,6 +422,7 @@ class="tf-input tf-input--file"
 <?php echo $photo_type_field ? ' data-tf-photo-upload-field="' . esc_attr( $photo_type_field ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $required && ! $value ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
 </div>
 <?php elseif ( $input_type === 'date' ) : ?>

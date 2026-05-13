@@ -91,14 +91,27 @@
       var controllingField = uploadInput.getAttribute('data-tf-photo-upload-field');
       var typeSelect = controllingField ? document.getElementById(controllingField) : null;
       var uploadField = uploadInput.closest('.tf-upload-field');
+      var fieldGroup = uploadInput.closest('.tf-field-group');
       var prompt = uploadField ? uploadField.querySelector('[data-tf-upload-prompt]') : null;
+      var matchValue = String(uploadInput.getAttribute('data-tf-photo-upload-match') || '').trim().toLowerCase();
+      var shouldHideField = uploadInput.getAttribute('data-tf-photo-upload-hide-field') === 'true';
+      var hasExistingUpload = !!(uploadField && uploadField.querySelector('.tf-upload-field__preview'));
 
-      if (!typeSelect || !prompt) {
+      if (!typeSelect) {
         return;
       }
 
       function syncPrompt() {
-        prompt.hidden = String(typeSelect.value || '').trim() === '';
+        var currentValue = String(typeSelect.value || '').trim().toLowerCase();
+        var shouldShow = matchValue ? currentValue === matchValue : currentValue !== '';
+
+        if (prompt) {
+          prompt.hidden = !shouldShow;
+        }
+
+        if (shouldHideField && fieldGroup) {
+          fieldGroup.hidden = !(shouldShow || hasExistingUpload);
+        }
       }
 
       typeSelect.addEventListener('change', syncPrompt);

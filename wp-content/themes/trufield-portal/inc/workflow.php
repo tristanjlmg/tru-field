@@ -199,10 +199,14 @@ return [
 'phase_2_most_significant_visual_difference' => 'Most Significant Visual Difference',
 'phase_2_emergence_flag_test'         => 'Emergence (Flag Test) (Y/N)',
 'phase_2_pictures_at_application'     => 'Pictures at Application (Y/N)',
+'phase_2_pictures_at_application_upload' => 'Pictures at Application Upload',
 'phase_2_pictures_at_planting'        => 'Pictures at Planting (Y/N)',
+'phase_2_pictures_at_planting_upload' => 'Pictures at Planting Upload',
 'phase_2_pictures_in_season_harvest'  => 'Pictures In Season (Y/N)',
+'phase_2_pictures_in_season_harvest_upload' => 'Pictures In Season/Harvest Upload',
 'phase_2_pictures_at_harvest'         => 'Pictures at Harvest (Y/N)',
 'phase_2_drone_images_available'      => 'Drone Images Available (Y/N)',
+'phase_2_drone_images_available_upload' => 'Drone Images Upload',
 'phase_2_grower_retailer_testimonials'=> 'Grower / Retailer Testimonials (Y/N)',
 'phase_2_time_lapse_available'        => 'Time Lapse Available (Y/N)',
 'phase_2_grower_retailer_comments'    => 'Grower / Retailer Comments',
@@ -877,14 +881,17 @@ return [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
+'phase_2_pictures_at_application_upload' => [ 'type' => 'url' ],
 'phase_2_pictures_at_planting' => [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
+'phase_2_pictures_at_planting_upload' => [ 'type' => 'url' ],
 'phase_2_pictures_in_season_harvest' => [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
+'phase_2_pictures_in_season_harvest_upload' => [ 'type' => 'url' ],
 'phase_2_pictures_at_harvest' => [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
@@ -893,6 +900,7 @@ return [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
 ],
+'phase_2_drone_images_available_upload' => [ 'type' => 'url' ],
 'phase_2_grower_retailer_testimonials' => [
 'type'    => 'select',
 'options' => [ 'yes' => 'Yes', 'no' => 'No' ],
@@ -1509,6 +1517,10 @@ function trufield_phase_file_fields( int $phase ): array {
 			'phase_2_rsm_visit_2_upload_photos',
 			'phase_2_rsm_visit_3_upload_photos',
 			'phase_2_rsm_visit_4_upload_photos',
+			'phase_2_pictures_at_application_upload',
+			'phase_2_pictures_at_planting_upload',
+			'phase_2_pictures_in_season_harvest_upload',
+			'phase_2_drone_images_available_upload',
 		],
 		3 => [],
 	];
@@ -1546,7 +1558,14 @@ function trufield_phase_photo_type_field_for_upload( string $field ): string {
 		return str_replace( '_upload_photos', '_photo_type', $field );
 	}
 
-	return '';
+	$mapping = [
+		'phase_2_pictures_at_application_upload' => 'phase_2_pictures_at_application',
+		'phase_2_pictures_at_planting_upload' => 'phase_2_pictures_at_planting',
+		'phase_2_pictures_in_season_harvest_upload' => 'phase_2_pictures_in_season_harvest',
+		'phase_2_drone_images_available_upload' => 'phase_2_drone_images_available',
+	];
+
+	return $mapping[ $field ] ?? '';
 }
 
 function trufield_get_phase_upload_prompt_label( string $field ): string {
@@ -1555,6 +1574,10 @@ function trufield_get_phase_upload_prompt_label( string $field ): string {
 		'phase_2_rsm_visit_2_upload_photos' => __( 'the selected visit 2', 'trufield-portal' ),
 		'phase_2_rsm_visit_3_upload_photos' => __( 'the selected visit 3', 'trufield-portal' ),
 		'phase_2_rsm_visit_4_upload_photos' => __( 'the selected visit 4', 'trufield-portal' ),
+		'phase_2_pictures_at_application_upload' => __( 'the application image', 'trufield-portal' ),
+		'phase_2_pictures_at_planting_upload' => __( 'the planting image', 'trufield-portal' ),
+		'phase_2_pictures_in_season_harvest_upload' => __( 'the in season/harvest image', 'trufield-portal' ),
+		'phase_2_drone_images_available_upload' => __( 'the drone image', 'trufield-portal' ),
 	];
 
 	return $labels[ $field ] ?? '';
