@@ -15,26 +15,42 @@ return;
 $post_id       = $post->ID;
 $retailer      = get_post_meta( $post_id, 'retailer_name', true );
 $farm_name     = get_post_meta( $post_id, 'farm_name', true );
+$field_name    = get_post_meta( $post_id, 'field_name', true );
+$crop_specialist_contact = get_post_meta( $post_id, 'field_trial_contact', true );
 $location      = get_post_meta( $post_id, 'field_location_address', true );
 $product_tested = get_post_meta( $post_id, 'phase_1_product_being_tested', true );
 $assigned_rep_id = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
 $assigned_rep    = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
 $is_sales_rep_user = in_array( 'sales_rep', (array) wp_get_current_user()->roles, true );
 $record_status = get_post_meta( $post_id, 'record_status', true ) ?: 'active';
+$trial_identifier = get_the_title( $post_id );
+$card_title = '';
 $active_phases   = array_values( array_intersect( [ 1, 2, 3 ], TRUFIELD_ACTIVE_PHASES ) );
 $phase_statuses  = [];
 $phase_verified  = [];
 $phase_missing   = [];
+
+foreach ( [ $field_name, $farm_name, $retailer, $product_tested, $trial_identifier ] as $card_title_candidate ) {
+	$card_title_candidate = trim( (string) $card_title_candidate );
+	if ( '' !== $card_title_candidate ) {
+		$card_title = $card_title_candidate;
+		break;
+	}
+}
+
 $search_text      = strtolower(
 	trim(
 		implode(
 			' ',
 			array_filter(
 				[
-					get_the_title( $post_id ),
+					$trial_identifier,
 					(string) $product_tested,
 					(string) $retailer,
 					(string) $farm_name,
+					(string) $field_name,
+					(string) $crop_specialist_contact,
+					$assigned_rep ? (string) $assigned_rep->display_name : '',
 					(string) $location,
 				],
 				static fn( $value ): bool => trim( (string) $value ) !== ''
@@ -136,39 +152,39 @@ if ( $current_phase_verified ) {
 <article class="tf-field-card tf-field-card--<?php echo esc_attr( $record_status ); ?>" data-tf-trial-card data-tf-search="<?php echo esc_attr( $search_text ); ?>">
 <div class="tf-field-card__body">
 <header class="tf-field-card__header">
-<h2 class="tf-field-card__title" title="<?php echo esc_attr( get_the_title( $post_id ) ); ?>"><?php echo esc_html( get_the_title( $post_id ) ); ?></h2>
+<h2 class="tf-field-card__title" title="<?php echo esc_attr( $trial_identifier ); ?>"><?php echo esc_html( $card_title ); ?></h2>
 <span class="tf-status-badge tf-status-badge--<?php echo esc_attr( $record_status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $record_status ) ) ); ?></span>
 </header>
 
 <dl class="tf-field-card__details">
-<?php if ( ! $is_sales_rep_user && $assigned_rep ) : ?>
-<div class="tf-field-card__detail-row">
-<dt><?php esc_html_e( 'Rep', 'trufield-portal' ); ?></dt>
-<dd><?php echo esc_html( $assigned_rep->display_name ); ?></dd>
-</div>
-<?php endif; ?>
 <?php if ( $retailer ) : ?>
 <div class="tf-field-card__detail-row">
 <dt><?php esc_html_e( 'Retailer', 'trufield-portal' ); ?></dt>
 <dd><?php echo esc_html( $retailer ); ?></dd>
 </div>
 <?php endif; ?>
-<?php if ( $product_tested ) : ?>
-<div class="tf-field-card__detail-row">
-<dt><?php esc_html_e( 'Product', 'trufield-portal' ); ?></dt>
-<dd><?php echo esc_html( $product_tested ); ?></dd>
-</div>
-<?php endif; ?>
 <?php if ( $farm_name ) : ?>
 <div class="tf-field-card__detail-row">
-<dt><?php esc_html_e( 'Farm', 'trufield-portal' ); ?></dt>
+<dt><?php esc_html_e( 'Farm Name', 'trufield-portal' ); ?></dt>
 <dd><?php echo esc_html( $farm_name ); ?></dd>
 </div>
 <?php endif; ?>
-<?php if ( $location ) : ?>
+<?php if ( $field_name ) : ?>
 <div class="tf-field-card__detail-row">
-<dt><?php esc_html_e( 'Location', 'trufield-portal' ); ?></dt>
-<dd><?php echo esc_html( $location ); ?></dd>
+<dt><?php esc_html_e( 'Field Name', 'trufield-portal' ); ?></dt>
+<dd><?php echo esc_html( $field_name ); ?></dd>
+</div>
+<?php endif; ?>
+<?php if ( $crop_specialist_contact ) : ?>
+<div class="tf-field-card__detail-row">
+<dt><?php esc_html_e( 'Crop Specialist Contact', 'trufield-portal' ); ?></dt>
+<dd><?php echo esc_html( $crop_specialist_contact ); ?></dd>
+</div>
+<?php endif; ?>
+<?php if ( $product_tested ) : ?>
+<div class="tf-field-card__detail-row">
+<dt><?php esc_html_e( 'Product Name', 'trufield-portal' ); ?></dt>
+<dd><?php echo esc_html( $product_tested ); ?></dd>
 </div>
 <?php endif; ?>
 <div class="tf-field-card__detail-row tf-field-card__detail-row--workflow">

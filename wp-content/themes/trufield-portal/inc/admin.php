@@ -289,7 +289,7 @@ function trufield_retailer_directory_page_render(): void {
 		<?php if ( ! empty( $_GET['tf_retailers_updated'] ) ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer directory updated.', 'trufield-portal' ); ?></p></div>
 		<?php endif; ?>
-		<p><?php esc_html_e( 'Manage the retailer dropdown and the auto-fill values used in Phase 1. Only contact name, contact number, and state auto-fill in the portal. Branch location, address, and city remain manual entry fields for sales reps.', 'trufield-portal' ); ?></p>
+		<p><?php esc_html_e( 'Manage the retailer dropdown and the auto-fill values used in Phase 1. Selecting a retailer now auto-fills the contact name, contact number, address, city, and state. Branch/location remains the manual entry field for sales reps.', 'trufield-portal' ); ?></p>
 		<?php if ( file_exists( trufield_retailer_directory_workbook_path() ) ) : ?>
 			<p><em><?php echo esc_html( sprintf( __( 'Workbook source detected: %s. Workbook rows are shown here automatically, and manual edits on this page can override or extend them.', 'trufield-portal' ), basename( trufield_retailer_directory_workbook_path() ) ) ); ?></em></p>
 		<?php endif; ?>

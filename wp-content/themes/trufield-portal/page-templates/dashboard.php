@@ -118,11 +118,13 @@ $team_awarded_retailers = array_sum(
 				$phase = (int) $m[1];
 				printf(
 					/* translators: %d = phase number */
-					esc_html__( trufield_phase_auto_verifies( $phase ) ? 'Phase %d saved. It will count once the required fields are complete.' : 'Phase %d submitted for admin verification.', 'trufield-portal' ),
+					esc_html__( 1 === $phase ? 'Phase %d saved. It will count once the required fields are complete.' : ( 2 === $phase ? 'Phase %d saved. It will award points once every Phase 2 scoring field is complete.' : 'Phase %d submitted for admin verification.' ), 'trufield-portal' ),
 					$phase
 				);
 			} elseif ( 'phase_1_autoverified' === $success ) {
 				esc_html_e( 'Phase 1 counted as a valid grower entry once the required Phase 1 fields were completed.', 'trufield-portal' );
+			} elseif ( 'phase_2_autoverified' === $success ) {
+				esc_html_e( 'Phase 2 awarded 10 points once all required scoring fields were completed.', 'trufield-portal' );
 			} else {
 				esc_html_e( 'Phase 1 progress saved.', 'trufield-portal' );
 			}
@@ -152,11 +154,11 @@ $team_awarded_retailers = array_sum(
 					<p class="tf-dashboard-overview__copy">
 						<?php
 						if ( $is_sales_rep && $current_score ) {
-							echo esc_html( sprintf( __( 'You are ranked #%1$d with %2$s points and %3$s verified entries.', 'trufield-portal' ), (int) $current_rank, number_format_i18n( (int) $current_score['points'] ), number_format_i18n( (int) $current_score['valid_entries'] ) ) );
+							echo esc_html( sprintf( __( 'You are ranked #%1$d with %2$s points and %3$s valid grower entries.', 'trufield-portal' ), (int) $current_rank, number_format_i18n( (int) $current_score['points'] ), number_format_i18n( (int) $current_score['valid_entries'] ) ) );
 						} elseif ( $is_sales_rep ) {
 							esc_html_e( 'Your ranking will appear here as soon as your assigned trials start earning verified points.', 'trufield-portal' );
 						} else {
-							echo esc_html( sprintf( __( 'The portal is tracking %1$s live trials across %2$s active reps, with %3$s total points awarded. Points are awarded for every %4$s valid Phase 1 entries per rep.', 'trufield-portal' ), number_format_i18n( $field_count ), number_format_i18n( $active_rep_count ), number_format_i18n( $team_points ), number_format_i18n( trufield_get_retailer_points_threshold() ) ) );
+							echo esc_html( sprintf( __( 'The portal is tracking %1$s live trials across %2$s active reps, with %3$s total points awarded. Phase 1 points are awarded only when a rep completes %4$s valid entries for the same retailer.', 'trufield-portal' ), number_format_i18n( $field_count ), number_format_i18n( $active_rep_count ), number_format_i18n( $team_points ), number_format_i18n( trufield_get_retailer_points_threshold() ) ) );
 						}
 						?>
 					</p>
@@ -176,7 +178,7 @@ $team_awarded_retailers = array_sum(
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( (int) ( $current_score['valid_entries'] ?? 0 ) ) ); ?></strong>
 							</div>
 							<div class="tf-dashboard-stat">
-								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Point Awards', 'trufield-portal' ); ?></span>
+								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Retailer Awards', 'trufield-portal' ); ?></span>
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( (int) ( $current_score['awarded_retailers'] ?? 0 ) ) ); ?></strong>
 							</div>
 						<?php else : ?>
@@ -193,7 +195,7 @@ $team_awarded_retailers = array_sum(
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $team_valid_entries ) ); ?></strong>
 							</div>
 							<div class="tf-dashboard-stat">
-								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Point Awards', 'trufield-portal' ); ?></span>
+								<span class="tf-dashboard-stat__label"><?php esc_html_e( 'Retailer Awards', 'trufield-portal' ); ?></span>
 								<strong class="tf-dashboard-stat__value"><?php echo esc_html( number_format_i18n( $team_awarded_retailers ) ); ?></strong>
 							</div>
 						<?php endif; ?>
@@ -285,36 +287,34 @@ $team_awarded_retailers = array_sum(
 				</div>
 			</div>
 
-			<?php if ( ! empty( $fields ) ) : ?>
-				<div class="tf-trial-filters">
-					<?php if ( $is_admin ) : ?>
-						<form method="get" action="<?php echo esc_url( ( get_permalink() ?: trufield_dashboard_url() ) . '#tf-current-trials' ); ?>" class="tf-trial-filter-form">
-							<label class="tf-trial-filter-form__label" for="tf-sales-rep-filter"><?php esc_html_e( 'Filter by sales rep', 'trufield-portal' ); ?></label>
-							<div class="tf-trial-filter-form__controls">
-								<select id="tf-sales-rep-filter" name="sales_rep" class="tf-select tf-trial-filter-form__select" onchange="this.form.submit()">
-									<option value="0"><?php esc_html_e( 'All sales reps', 'trufield-portal' ); ?></option>
-									<?php foreach ( $sales_rep_options as $sales_rep_user ) : ?>
-										<option value="<?php echo esc_attr( (string) $sales_rep_user->ID ); ?>" <?php selected( $selected_sales_rep, (int) $sales_rep_user->ID ); ?>><?php echo esc_html( $sales_rep_user->display_name ); ?></option>
-									<?php endforeach; ?>
-								</select>
-								<noscript><button type="submit" class="tf-btn tf-btn--ghost tf-btn--sm"><?php esc_html_e( 'Apply', 'trufield-portal' ); ?></button></noscript>
-							</div>
-						</form>
-					<?php endif; ?>
-					<div class="tf-trial-search" data-tf-trial-search>
-						<label class="tf-trial-search__label" for="tf-trial-search-input"><?php esc_html_e( 'Search trials', 'trufield-portal' ); ?></label>
-						<input
-							type="search"
-							id="tf-trial-search-input"
-							class="tf-input tf-trial-search__input"
-							placeholder="<?php esc_attr_e( 'Search by trial, retailer, farm, or address', 'trufield-portal' ); ?>"
-							data-tf-trial-search-input
-							autocomplete="off"
-						>
-						<p class="tf-trial-search__hint" data-tf-trial-search-hint><?php esc_html_e( 'Start typing to filter the visible field cards instantly.', 'trufield-portal' ); ?></p>
-					</div>
+			<div class="tf-trial-filters">
+				<?php if ( $is_admin ) : ?>
+					<form method="get" action="<?php echo esc_url( ( get_permalink() ?: trufield_dashboard_url() ) . '#tf-current-trials' ); ?>" class="tf-trial-filter-form">
+						<label class="tf-trial-filter-form__label" for="tf-sales-rep-filter"><?php esc_html_e( 'Filter by sales rep', 'trufield-portal' ); ?></label>
+						<div class="tf-trial-filter-form__controls">
+							<select id="tf-sales-rep-filter" name="sales_rep" class="tf-select tf-trial-filter-form__select" onchange="this.form.submit()">
+								<option value="0"><?php esc_html_e( 'All sales reps', 'trufield-portal' ); ?></option>
+								<?php foreach ( $sales_rep_options as $sales_rep_user ) : ?>
+									<option value="<?php echo esc_attr( (string) $sales_rep_user->ID ); ?>" <?php selected( $selected_sales_rep, (int) $sales_rep_user->ID ); ?>><?php echo esc_html( $sales_rep_user->display_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<noscript><button type="submit" class="tf-btn tf-btn--ghost tf-btn--sm"><?php esc_html_e( 'Apply', 'trufield-portal' ); ?></button></noscript>
+						</div>
+					</form>
+				<?php endif; ?>
+				<div class="tf-trial-search" data-tf-trial-search>
+					<label class="tf-trial-search__label" for="tf-trial-search-input"><?php esc_html_e( 'Search trials', 'trufield-portal' ); ?></label>
+					<input
+						type="search"
+						id="tf-trial-search-input"
+						class="tf-input tf-trial-search__input"
+						placeholder="<?php esc_attr_e( 'Search by trial, retailer, farm, field, crop specialist, product, or address', 'trufield-portal' ); ?>"
+						data-tf-trial-search-input
+						autocomplete="off"
+					>
+					<p class="tf-trial-search__hint" data-tf-trial-search-hint><?php esc_html_e( 'Start typing to filter the visible field cards instantly.', 'trufield-portal' ); ?></p>
 				</div>
-			<?php endif; ?>
+			</div>
 
 			<?php if ( empty( $fields ) ) : ?>
 				<div class="tf-empty-state tf-dashboard-empty-state">
@@ -322,6 +322,8 @@ $team_awarded_retailers = array_sum(
 						<?php
 						if ( $is_sales_rep ) {
 							esc_html_e( 'You do not have any assigned records yet. Check back later or contact the admin team if you expected a trial assignment.', 'trufield-portal' );
+						} elseif ( $selected_sales_rep > 0 ) {
+							esc_html_e( 'The selected sales rep does not have any assigned trials yet. Adjust the filter or create a new trial to get started.', 'trufield-portal' );
 						} else {
 							esc_html_e( 'No assigned plant field records are available yet. Records will appear here after the admin team sets them up and assigns them.', 'trufield-portal' );
 						}

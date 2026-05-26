@@ -136,7 +136,7 @@ acf_add_local_field_group( [
 ],
 [
 'key'      => 'field_tf_farm_name',
-'label'    => 'Grower Name / Farm Name',
+'label'    => 'Farm Name',
 'name'     => 'farm_name',
 'type'     => 'text',
 'required' => 0,
@@ -164,7 +164,7 @@ acf_add_local_field_group( [
 ],
 [
 'key'      => 'field_tf_field_name',
-'label'    => 'Field Name / Field ID',
+'label'    => 'Field Name',
 'name'     => 'field_name',
 'type'     => 'text',
 'required' => 0,
@@ -289,6 +289,7 @@ acf_add_local_field_group( [
 	'wheat_residue_preplant_soy' => 'Wheat Residue Pre-Plant Soy',
 	'soy_residue_spring'         => 'Soy Residue Spring',
 	'soybeans_double_crop'       => 'Soybeans Double Crop',
+	'other'                      => 'Other',
 ],
 'ui'          => 1,
 ],
@@ -481,7 +482,7 @@ acf_add_local_field_group( [
 ],
 'allow_null'    => 1,
 'return_format' => 'value',
-'required'      => 1,
+'required'      => 0,
 ],
 [
 'key'            => 'field_tf_phase_2_rsm_visit_2_date',
@@ -527,7 +528,7 @@ acf_add_local_field_group( [
 ],
 'allow_null'    => 1,
 'return_format' => 'value',
-'required'      => 1,
+'required'      => 0,
 ],
 [
 'key'            => 'field_tf_phase_2_rsm_visit_3_date',

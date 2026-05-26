@@ -72,7 +72,15 @@
 
   function initDateInputs() {
     document.querySelectorAll('[data-tf-date-input]').forEach(function (input) {
+      function isTouchViewport() {
+        return window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+      }
+
       function tryOpenPicker() {
+        if (isTouchViewport()) {
+          return;
+        }
+
         if (typeof input.showPicker === 'function') {
           try {
             input.showPicker();
@@ -130,6 +138,8 @@
       var autoFillFields = {
         retailer_key_contact: document.getElementById('retailer_key_contact'),
         retailer_contact_phone: document.getElementById('retailer_contact_phone'),
+        retailer_address: document.getElementById('retailer_address'),
+        retailer_city: document.getElementById('retailer_city'),
         phase_1_state_region: document.getElementById('phase_1_state_region')
       };
 

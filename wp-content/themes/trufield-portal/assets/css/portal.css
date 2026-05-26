@@ -240,6 +240,17 @@ body.admin-bar .tf-header {
   background-repeat: no-repeat;
   background-position: right .9rem center;
   background-size: 16px 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tf-input--date::-webkit-datetime-edit,
+.tf-input--date::-webkit-datetime-edit-fields-wrapper,
+.tf-input--date::-webkit-date-and-time-value {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
 }
 .tf-input--date::-webkit-calendar-picker-indicator {
   opacity: 0;
@@ -966,6 +977,8 @@ body.admin-bar .tf-header {
   border-radius: 18px;
   background: rgba(255,255,255,.96);
   box-shadow: 0 8px 24px rgba(15,23,42,.05);
+  min-width: 0;
+  overflow-x: clip;
 }
 .tf-phase-substeps__eyebrow {
   margin: 0 0 .2rem;
@@ -1469,6 +1482,19 @@ body.admin-bar .tf-header {
   .tf-phase-form .tf-select {
     min-height: 2.8rem;
     font-size: .95rem;
+  }
+  .tf-phase-form .tf-input--date {
+    padding-right: .8rem;
+    background-image: none;
+    font-size: 16px;
+    appearance: auto;
+    -webkit-appearance: auto;
+  }
+  .tf-phase-form .tf-input--date::-webkit-date-and-time-value {
+    text-align: left;
+  }
+  .tf-phase-form .tf-input--date::-webkit-calendar-picker-indicator {
+    opacity: 1;
   }
   .tf-phase-form .tf-input[data-tf-stand-count-delta] {
     padding: .5rem .7rem;

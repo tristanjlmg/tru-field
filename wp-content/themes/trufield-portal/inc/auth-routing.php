@@ -333,18 +333,29 @@ add_action( 'admin_post_nopriv_trufield_forgot_username', 'trufield_handle_forgo
  */
 function trufield_send_username_email( WP_User $user ): bool {
 	$site_name = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
-	$subject   = sprintf(
+	$subject_template =
 		/* translators: %s: site name. */
-		__( 'Your %s username', 'trufield-portal' ),
-		$site_name
-	);
-	$message   = sprintf(
+		__( 'Your %s username', 'trufield-portal' );
+	$subject          = 'Your ' . $site_name . ' username';
+
+	try {
+		$subject = sprintf( $subject_template, $site_name );
+	} catch ( ValueError $error ) {
+		error_log( 'trufield_send_username_email subject template format error: ' . $error->getMessage() );
+	}
+
+	$message_template =
 		/* translators: 1: site name, 2: username, 3: login URL. */
-		__( 'Your username for %1$s is: %2$s\n\nYou can sign in here: %3$s\n\nIf you did not request this email, you can ignore it.', 'trufield-portal' ),
-		$site_name,
-		$user->user_login,
-		trufield_login_url()
-	);
+		__( 'Your username for %1$s is: %2$s\n\nYou can sign in here: %3$s\n\nIf you did not request this email, you can ignore it.', 'trufield-portal' );
+	$message          = 'Your username for ' . $site_name . ' is: ' . $user->user_login . "\n\n"
+		. 'You can sign in here: ' . trufield_login_url() . "\n\n"
+		. 'If you did not request this email, you can ignore it.';
+
+	try {
+		$message = sprintf( $message_template, $site_name, $user->user_login, trufield_login_url() );
+	} catch ( ValueError $error ) {
+		error_log( 'trufield_send_username_email body template format error: ' . $error->getMessage() );
+	}
 
 	return wp_mail( $user->user_email, $subject, $message );
 }
@@ -372,14 +383,12 @@ $user = get_user_by( 'login', $identifier );
 	if ( $user instanceof WP_User ) {
 		$result = retrieve_password( $user->user_login );
 		if ( is_wp_error( $result ) ) {
-			$error = in_array( 'retrieve_password_email_failure', $result->get_error_codes(), true )
-? 'email_failed'
-: 'retrieve_failed';
-
-wp_safe_redirect( add_query_arg( 'fp_error', $error, $forgot_url ) );
-exit;
-}
-}
+			error_log(
+				'trufield_handle_forgot_password retrieve_password error: '
+				. implode( ',', $result->get_error_codes() )
+			);
+		}
+	}
 
 wp_safe_redirect( add_query_arg( 'fp_sent', '1', $forgot_url ) );
 exit;
@@ -406,8 +415,7 @@ function trufield_handle_forgot_username(): void {
 	$user = get_user_by( 'email', $email );
 	if ( $user instanceof WP_User ) {
 		if ( ! trufield_send_username_email( $user ) ) {
-			wp_safe_redirect( add_query_arg( 'fu_error', 'email_failed', $username_url ) );
-			exit;
+			error_log( 'trufield_handle_forgot_username email send failed for user_id=' . (string) $user->ID );
 		}
 	}
 

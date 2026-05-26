@@ -48,46 +48,35 @@ return (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 function trufield_get_phase_2_scoring_required_visit_fields(): array {
 	return [
 		'phase_2_rsm_visit_1_date',
+		'phase_2_rsm_visit_1_upload_photos',
 		'phase_2_rsm_visit_2_date',
+		'phase_2_rsm_visit_2_upload_photos',
 	];
 }
 
 function trufield_get_phase_2_scoring_completion_fields(): array {
 	return [
 		'phase_2_rsm_visit_1_date',
+		'phase_2_rsm_visit_1_upload_photos',
 		'phase_2_rsm_visit_2_date',
-		'phase_2_rsm_visit_3_date',
-		'phase_2_rsm_visit_4_date',
+		'phase_2_rsm_visit_2_upload_photos',
 		'phase_2_stand_count_1_treated',
 		'phase_2_stand_count_2_treated',
 		'phase_2_stand_count_3_treated',
 		'phase_2_stand_count_1_untreated',
 		'phase_2_stand_count_2_untreated',
 		'phase_2_stand_count_3_untreated',
-		'phase_2_stand_count_data',
-		'phase_2_most_significant_visual_difference',
-		'phase_2_pictures_at_application',
-		'phase_2_pictures_at_planting',
-		'phase_2_pictures_in_season_harvest',
-		'phase_2_pictures_at_harvest',
+		'phase_2_grower_retailer_testimonials',
+		'phase_2_grower_retailer_comments',
 	];
 }
 
 function trufield_get_phase_2_scoring_photo_compliance_fields(): array {
-	return [
-		'phase_2_pictures_at_application',
-		'phase_2_pictures_at_planting',
-		'phase_2_pictures_in_season_harvest',
-		'phase_2_pictures_at_harvest',
-	];
+	return [];
 }
 
 function trufield_get_phase_2_scoring_media_fields(): array {
-	return [
-		'phase_2_drone_images_available',
-		'phase_2_grower_retailer_testimonials',
-		'phase_2_time_lapse_available',
-	];
+	return [ 'phase_2_grower_retailer_testimonials' ];
 }
 
 function trufield_get_phase_2_scoring_field_value( int $post_id, string $field ): string {
@@ -129,8 +118,6 @@ function trufield_get_phase_2_scoring_status( int $post_id ): array {
 		'phase_2_stand_count_1_untreated',
 		'phase_2_stand_count_2_untreated',
 		'phase_2_stand_count_3_untreated',
-		'phase_2_stand_count_data',
-		'phase_2_most_significant_visual_difference',
 	] as $field ) {
 		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
 			$row_fields_ok = false;
@@ -138,34 +125,16 @@ function trufield_get_phase_2_scoring_status( int $post_id ): array {
 		}
 	}
 
-	$photo_compliance_ok = true;
-	foreach ( trufield_get_phase_2_scoring_photo_compliance_fields() as $field ) {
-		if ( ! trufield_phase_2_scoring_field_is_yes( $post_id, $field ) ) {
-			$photo_compliance_ok = false;
-			break;
-		}
-	}
+	$photo_compliance_ok = $required_visits_ok;
 
-	$media_proof_ok = true;
-	foreach ( trufield_get_phase_2_scoring_media_fields() as $field ) {
-		if ( ! trufield_phase_2_scoring_field_is_yes( $post_id, $field ) ) {
-			$media_proof_ok = false;
-			break;
-		}
-	}
+	$media_proof_ok = trufield_phase_2_scoring_field_is_yes( $post_id, 'phase_2_grower_retailer_testimonials' )
+		&& trufield_phase_2_scoring_field_present( $post_id, 'phase_2_grower_retailer_comments' );
 
-	$completion_ok = true;
-	foreach ( trufield_get_phase_2_scoring_completion_fields() as $field ) {
-		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
-			$completion_ok = false;
-			break;
-		}
-	}
+	$completion_ok = $required_visits_ok && $row_fields_ok && $media_proof_ok;
 
 	$valid_trial = trufield_prerequisite_met( $post_id, 2 )
 		&& $required_visits_ok
 		&& $row_fields_ok
-		&& $photo_compliance_ok
 		&& $media_proof_ok;
 
 	return [
@@ -216,7 +185,7 @@ if ( trufield_phase_is_verified( $post_id, $phase ) ) {
 	}
 
 $retailer_name = (string) get_post_meta( $post_id, 'retailer_name', true );
-$phase_1_valid = trufield_phase_is_verified( $post_id, 1 );
+$phase_1_valid = trufield_all_validation_fields_present( $post_id, 1 );
 
 return [
 'pending'          => 0,
@@ -247,7 +216,8 @@ $agg    = [
 'retailer_count'   => 0,
 'points'           => 0,
 ];
-	$retailer_keys = [];
+	$retailer_keys   = [];
+	$retailer_totals = [];
 
 foreach ( $fields as $post ) {
 $score = trufield_get_field_score( $post->ID );
@@ -267,6 +237,7 @@ $agg['completed_fields']++;
 			$retailer_key  = trufield_normalize_retailer_key( $retailer_name );
 			if ( $retailer_key !== '' ) {
 				$retailer_keys[ $retailer_key ] = true;
+				$retailer_totals[ $retailer_key ] = (int) ( $retailer_totals[ $retailer_key ] ?? 0 ) + 1;
 			}
 
 			$agg['valid_entries']++;
@@ -277,7 +248,11 @@ $agg['completed_fields']++;
 		}
 }
 
-	$award_blocks           = trufield_get_valid_entry_award_count( (int) $agg['valid_entries'] );
+	$award_blocks = 0;
+	foreach ( $retailer_totals as $valid_entries ) {
+		$award_blocks += trufield_get_valid_entry_award_count( (int) $valid_entries );
+	}
+
 	$award                  = trufield_get_retailer_points_award();
 	$agg['awarded_retailers'] = $award_blocks;
 	$agg['retailer_count']  = count( $retailer_keys );

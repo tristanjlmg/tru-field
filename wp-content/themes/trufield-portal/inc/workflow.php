@@ -114,11 +114,39 @@ $required = [
 return $required[ $phase ] ?? [];
 }
 
+function trufield_get_phase_1_eligibility_fields(): array {
+	return [
+		'retailer_name',
+		'retailer_key_contact',
+		'retailer_contact_phone',
+		'retailer_address',
+		'retailer_city',
+		'phase_1_state_region',
+		'retailer_branch_location',
+		'field_trial_contact',
+		'contact_phone',
+		'field_trial_contact_email',
+		'field_location_lat',
+		'field_location_lng',
+		'phase_1_treated_size_acres',
+		'phase_1_application_rate',
+		'phase_1_trial_type',
+		'phase_1_protocol_version',
+		'phase_1_application_timing',
+		'phase_1_application_date',
+		'phase_1_retailer_training_discussion_date',
+	];
+}
+
 function trufield_phase_validates_from_full_form( int $phase ): bool {
 	return false;
 }
 
 function trufield_get_validation_fields( int $phase ): array {
+	if ( 1 === $phase ) {
+		return trufield_get_phase_1_eligibility_fields();
+	}
+
 	if ( ! trufield_phase_validates_from_full_form( $phase ) ) {
 		return trufield_get_required_fields( $phase );
 	}
@@ -143,11 +171,11 @@ return [
 'retailer_contact_phone'              => 'Retailer Contact Number',
 'retailer_address'                    => 'Retailer Address',
 'retailer_city'                       => 'City',
-'farm_name'                           => 'Grower Name / Farm Name',
-'field_trial_contact'                 => 'Field Trial Contact',
-'contact_phone'                       => 'Field Trial Contact Phone Number',
+'farm_name'                           => 'Farm Name',
+'field_trial_contact'                 => 'Crop Specialist Contact (First Last)',
+'contact_phone'                       => 'Crop Specialist Contact Phone Number',
 'field_trial_contact_email'           => 'Field Trial Contact Email',
-'field_name'                          => 'Field Name / Field ID',
+'field_name'                          => 'Field Name',
 'field_location_address'              => 'Field Location Address',
 'field_location_lat'                  => 'Field Trial Latitude',
 'field_location_lng'                  => 'Field Trial Longitude',
@@ -396,6 +424,14 @@ function trufield_build_retailer_directory_from_posts(): array {
 
 		if ( '' === $entry['retailer_contact_phone'] ) {
 			$entry['retailer_contact_phone'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_contact_phone', 'contact_phone' ] );
+		}
+
+		if ( '' === $entry['retailer_address'] ) {
+			$entry['retailer_address'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_address', 'field_location_address' ] );
+		}
+
+		if ( '' === $entry['retailer_city'] ) {
+			$entry['retailer_city'] = trufield_pick_first_non_empty_meta_value( $post_id, [ 'retailer_city', 'import_city' ] );
 		}
 
 		if ( '' === $entry['phase_1_state_region'] ) {
@@ -774,6 +810,7 @@ return [
 'wheat_residue_preplant_soy'  => 'Wheat Residue Pre-Plant Soy',
 'soy_residue_spring'          => 'Soy Residue Spring',
 'soybeans_double_crop'        => 'Soybeans Double Crop',
+'other'                       => 'Other',
 ],
 ],
 'phase_1_application_timing' => [
@@ -1017,12 +1054,16 @@ function trufield_all_required_fields_present( int $post_id, int $phase ): bool 
 }
 
 function trufield_phase_auto_verifies( int $phase ): bool {
-	return 1 === $phase;
+	return in_array( $phase, [ 1, 2 ], true );
 }
 
 function trufield_sync_phase_verification_state( int $post_id, int $phase ): array {
 	$required_ok   = trufield_all_required_fields_present( $post_id, $phase );
 	$validation_ok = trufield_all_validation_fields_present( $post_id, $phase );
+	if ( 2 === $phase && function_exists( 'trufield_get_phase_2_trial_points' ) ) {
+		$validation_ok = trufield_get_phase_2_trial_points( $post_id ) > 0;
+	}
+
 	$auto_verify   = trufield_phase_auto_verifies( $phase );
 	$was_verified  = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 	$was_completed = trufield_get_phase_status( $post_id, $phase ) === 'completed';
@@ -1124,7 +1165,7 @@ if ( ! trufield_prerequisite_met( $post_id, $phase ) ) {
 return false;
 }
 
-return trufield_get_phase_status( $post_id, $phase ) !== 'completed';
+return ! (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 }
 
 function trufield_complete_phase( int $post_id, int $phase, int $user_id ) {
@@ -1141,11 +1182,6 @@ function trufield_complete_phase( int $post_id, int $phase, int $user_id ) {
 				$phase
 			) . implode( ', ', trufield_get_missing_required_fields( $post_id, $phase ) )
 		);
-	}
-
-	$current = trufield_get_phase_status( $post_id, $phase );
-	if ( $current === 'completed' && ! trufield_user_is_admin( $user_id ) ) {
-		return new WP_Error( 'trufield_already_completed', __( 'This phase has already been submitted.', 'trufield-portal' ) );
 	}
 
 update_post_meta( $post_id, "phase_{$phase}_status", 'completed' );
@@ -1538,6 +1574,79 @@ function trufield_get_phase_step_count( int $phase ): int {
 	return $steps[ $phase ] ?? 1;
 }
 
+function trufield_get_phase_step_field_map( int $phase ): array {
+	$map = [
+		1 => [
+			1 => [
+				'retailer_name',
+				'retailer_branch_location',
+				'retailer_key_contact',
+				'retailer_contact_phone',
+				'retailer_address',
+				'retailer_city',
+				'phase_1_state_region',
+			],
+			2 => [
+				'field_trial_contact',
+				'contact_phone',
+				'field_trial_contact_email',
+				'farm_name',
+				'field_name',
+				'field_location_lat',
+				'field_location_lng',
+			],
+			3 => [
+				'phase_1_treated_size_acres',
+				'phase_1_application_rate',
+				'phase_1_trial_type',
+				'phase_1_protocol_version',
+				'phase_1_application_timing',
+				'phase_1_application_date',
+				'phase_1_retailer_training_discussion_date',
+			],
+		],
+		2 => [
+			1 => [
+				'phase_2_rsm_visit_1_date',
+				'phase_2_rsm_visit_1_upload_photos',
+				'phase_2_rsm_visit_2_date',
+				'phase_2_rsm_visit_2_upload_photos',
+			],
+			2 => [
+				'phase_2_stand_count_1_treated',
+				'phase_2_stand_count_2_treated',
+				'phase_2_stand_count_3_treated',
+				'phase_2_stand_count_1_untreated',
+				'phase_2_stand_count_2_untreated',
+				'phase_2_stand_count_3_untreated',
+			],
+			3 => [
+				'phase_2_grower_retailer_testimonials',
+				'phase_2_grower_retailer_comments',
+			],
+		],
+	];
+
+	return $map[ $phase ] ?? [];
+}
+
+function trufield_get_phase_step_for_fields( int $phase, array $fields, int $fallback_step = 1 ): int {
+	$step_map = trufield_get_phase_step_field_map( $phase );
+	if ( [] === $step_map ) {
+		return max( 1, $fallback_step );
+	}
+
+	foreach ( $step_map as $step => $step_fields ) {
+		foreach ( $fields as $field ) {
+			if ( in_array( $field, $step_fields, true ) ) {
+				return (int) $step;
+			}
+		}
+	}
+
+	return max( 1, $fallback_step );
+}
+
 function trufield_delete_phase_photo_value( int $post_id, string $field ): void {
 	delete_post_meta( $post_id, $field );
 	delete_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ) );
@@ -1704,7 +1813,7 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	$redirect_base = wp_get_referer() ?: get_permalink( $post_id );
 	$phase_step    = max( 1, min( trufield_get_phase_step_count( $phase ), (int) ( $_POST['phase_step'] ?? 1 ) ) );
 	$phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
-	$redirect_clean = remove_query_arg( 'phase_step', $redirect_base );
+	$redirect_clean = remove_query_arg( [ 'phase_step', $phase_step_query_arg ], $redirect_base );
 	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $phase_step, $redirect_clean ) : $redirect_clean;
 	$action        = sanitize_key( $_POST['phase_action_intent'] ?? ( $_POST['phase_action'] ?? 'save' ) );
 	if ( ! in_array( $action, [ 'save', 'complete', 'verify_address' ], true ) ) {
@@ -1728,6 +1837,7 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	}
 
 	$field_errors = [];
+	$invalid_fields = [];
 	foreach ( $editable as $field ) {
 		if ( ! array_key_exists( $field, $_POST ) ) {
 			continue;
@@ -1736,11 +1846,14 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		$field_error = trufield_validate_phase_field_submission( $field, $_POST[ $field ] );
 		if ( '' !== $field_error ) {
 			$field_errors[] = $field_error;
+			$invalid_fields[] = $field;
 		}
 	}
 
 	if ( [] !== $field_errors ) {
-		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( implode( ' ', $field_errors ) ), $redirect ) );
+		$error_step = trufield_get_phase_step_for_fields( $phase, $invalid_fields, $phase_step );
+		$error_redirect = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $error_step, $redirect_clean ) : $redirect;
+		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( implode( ' ', $field_errors ) ), $error_redirect ) );
 		exit;
 	}
 
@@ -1813,7 +1926,10 @@ if ( $action === 'verify_address' ) {
 if ( $action === 'complete' ) {
 $result = trufield_complete_phase( $post_id, $phase, $user_id );
 if ( is_wp_error( $result ) ) {
-wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $result->get_error_message() ), $redirect ) );
+	$missing_fields = trufield_get_missing_required_fields( $post_id, $phase );
+	$error_step = trufield_get_phase_step_for_fields( $phase, $missing_fields, $phase_step );
+	$error_redirect = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $error_step, $redirect_clean ) : $redirect;
+	wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $result->get_error_message() ), $error_redirect ) );
 exit;
 }
 

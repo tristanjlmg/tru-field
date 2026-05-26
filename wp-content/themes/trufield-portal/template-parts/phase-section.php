@@ -56,8 +56,8 @@ $field_groups = [
 'field_trial_contact'        => [ 'input' => 'text', 'placeholder' => 'Enter Name' ],
 'contact_phone'              => [ 'input' => 'text', 'placeholder' => 'Enter Number' ],
 'field_trial_contact_email'  => [ 'input' => 'email', 'placeholder' => 'Enter Email' ],
-'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Grower or farm name' ],
-'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Field name or identifier' ],
+'farm_name'                  => [ 'input' => 'text', 'placeholder' => 'Enter farm name' ],
+'field_name'                 => [ 'input' => 'text', 'placeholder' => 'Enter field name' ],
 'phase_1_product_being_tested' => [ 'input' => 'select', 'placeholder' => 'Select Product' ],
 'phase_1_application_type'   => [ 'input' => 'select' ],
 'phase_1_application_date'   => [ 'input' => 'date' ],
@@ -83,14 +83,14 @@ $field_groups = [
 'required' => [
 'phase_2_rsm_visit_1_date'                 => [ 'input' => 'date' ],
 'phase_2_rsm_visit_1_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
-'phase_2_rsm_visit_1_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_2_date'                 => [ 'input' => 'date' ],
 'phase_2_rsm_visit_2_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
+],
+'optional' => [
+'phase_2_rsm_visit_1_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_rsm_visit_2_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_residue_degradation_observed'     => [ 'input' => 'select' ],
 'phase_2_emergence_stand_collected'        => [ 'input' => 'select' ],
-],
-'optional' => [
 'phase_2_rsm_visit_3_date'                 => [ 'input' => 'date' ],
 'phase_2_rsm_visit_3_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 'phase_2_rsm_visit_3_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
@@ -194,7 +194,7 @@ if ( 1 === $phase ) {
 		2 => [
 			'key'            => 'field-trial',
 			'title'          => __( 'Field Trial Information', 'trufield-portal' ),
-			'description'    => __( 'Capture the field trial contact details and coordinates for this record.', 'trufield-portal' ),
+			'description'    => __( 'Capture the crop specialist contact, farm name, field name, and coordinates for this record.', 'trufield-portal' ),
 			'required_fields'=> [],
 			'fields'         => [
 				'field_trial_contact',
@@ -209,7 +209,7 @@ if ( 1 === $phase ) {
 		3 => [
 			'key'            => 'trial',
 			'title'          => __( 'Trial Information', 'trufield-portal' ),
-			'description'    => __( 'Finish the application details and add any supporting notes or media.', 'trufield-portal' ),
+			'description'    => __( 'Finish the application details, including the protocol version, and add any supporting notes or media.', 'trufield-portal' ),
 			'required_fields'=> [],
 			'fields'         => [],
 			'optional_fields'=> [
@@ -232,10 +232,8 @@ if ( 1 === $phase ) {
 			'description'    => __( 'Record up to four RSM visits, including visit dates, uploaded photos, and photo details for each documented stop.', 'trufield-portal' ),
 			'required_fields'=> [
 				'phase_2_rsm_visit_1_date',
-				'phase_2_rsm_visit_1_photo_type',
 				'phase_2_rsm_visit_1_upload_photos',
 				'phase_2_rsm_visit_2_date',
-				'phase_2_rsm_visit_2_photo_type',
 				'phase_2_rsm_visit_2_upload_photos',
 			],
 			'fields'         => [
@@ -511,7 +509,7 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	data-tf-retailer-manual-input
 	>
 	</div>
-	<small><?php esc_html_e( 'Choose Other if the retailer is not listed and enter it manually.', 'trufield-portal' ); ?></small>
+	<small><?php esc_html_e( 'Select a retailer to auto-fill the contact, phone, address, city, and state. Choose Other if the retailer is not listed and enter it manually.', 'trufield-portal' ); ?></small>
 	</div>
 	<?php
 };
@@ -615,6 +613,13 @@ if ( 1 === $phase ) {
 	}
 }
 
+$submit_confirmation = '';
+if ( 3 === $phase ) {
+	$submit_confirmation = sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase );
+} elseif ( 2 === $phase ) {
+	$submit_confirmation = __( 'Submit Phase 2? It will lock after save and award points once every scoring field is complete.', 'trufield-portal' );
+}
+
 $reopen_url = $is_admin ? wp_nonce_url( admin_url( "admin-post.php?action=trufield_reopen_phase&post_id={$post_id}&phase={$phase}" ), "trufield_reopen_phase_{$post_id}_{$phase}" ) : '';
 $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phase ) : '';
 ?>
@@ -630,15 +635,15 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php elseif ( $is_verified ) : ?>
 <div class="tf-phase__verified-badge">✓ <?php esc_html_e( 'Verified', 'trufield-portal' ); ?></div>
 <?php elseif ( $status === 'completed' ) : ?>
-<div class="tf-phase__awaiting-badge"><?php echo esc_html( trufield_phase_auto_verifies( $phase ) ? __( 'Saved — Missing Final Fields', 'trufield-portal' ) : __( 'Submitted — Awaiting Verification', 'trufield-portal' ) ); ?></div>
+<div class="tf-phase__awaiting-badge"><?php echo esc_html( 1 === $phase ? __( 'Saved — Missing Final Fields', 'trufield-portal' ) : ( 2 === $phase ? __( 'Saved — Missing Scoring Fields', 'trufield-portal' ) : __( 'Submitted — Awaiting Verification', 'trufield-portal' ) ) ); ?></div>
 <?php endif; ?>
 
 <?php if ( $completed_at ) : ?>
 <p class="tf-phase__completed-at"><?php echo esc_html( sprintf( __( 'Completed: %s', 'trufield-portal' ), wp_date( 'm/d/Y g:i a', strtotime( $completed_at ) ) ) ); ?></p>
 <?php endif; ?>
 
-<?php if ( $status === 'completed' && ! $is_verified && ! $is_admin ) : ?>
-<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( trufield_phase_auto_verifies( $phase ) ? __( '%s still needs the remaining required Phase 1 fields completed before it counts as a valid grower entry.', 'trufield-portal' ) : __( '%s has been submitted and is read-only while the admin team verifies it.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<?php if ( $status === 'completed' && ! $is_verified && ! $is_admin && ! $can_edit ) : ?>
+<p class="tf-phase__blocked-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s still needs the remaining required Phase 1 fields completed before it counts as a valid grower entry.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s still needs the remaining Phase 2 scoring fields completed before it awards points.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s has been submitted and is read-only while the admin team verifies it.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( ! $prereq_met && ! $is_admin ) : ?>
 <p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Phase %d must be verified before this form becomes available.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
 <?php endif; ?>
@@ -655,12 +660,16 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 </div>
 
+<?php if ( $can_edit && $status === 'completed' && ! $is_verified ) : ?>
+<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the required Phase 1 fields are verified.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the Phase 2 scoring fields are verified.', 'trufield-portal' ) : __( 'This phase has been submitted, but it can still be revised and resubmitted until an admin verifies it.', 'trufield-portal' ) ) ); ?></p>
+<?php endif; ?>
+
 <?php if ( ! $can_edit ) : ?>
 <div class="tf-phase__readonly">
 <?php if ( $is_verified ) : ?>
-<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( trufield_phase_auto_verifies( $phase ) ? __( '%s counts as a valid grower entry. No further updates are needed right now.', 'trufield-portal' ) : __( '%s is verified. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<p class="tf-phase__readonly-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s counts as a valid grower entry. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s is complete and has awarded its Phase 2 points. No admin approval is needed.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s is verified. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( $status === 'completed' ) : ?>
-<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( trufield_phase_auto_verifies( $phase ) ? __( '%s is saved, but it will only count once the required Phase 1 fields are complete. You can review the saved details below.', 'trufield-portal' ) : __( '%s has been submitted and is waiting for admin verification. You can review the saved details below.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<p class="tf-phase__readonly-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s is saved, but it will only count once the required Phase 1 fields are complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s is saved, but it will only award points once every Phase 2 scoring field is complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s has been submitted and is waiting for admin verification. You can review the saved details below.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( ! $prereq_met ) : ?>
 <p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s is a separate form for a future workflow and will unlock after the previous phase is verified.', 'trufield-portal' ), $phase_label ) ); ?></p>
 <?php endif; ?>
@@ -780,7 +789,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( $step_index < count( $phase_substeps ) ) : ?>
 <button type="button" class="tf-btn tf-btn--primary" data-tf-phase-step-next><?php esc_html_e( 'Next', 'trufield-portal' ); ?></button>
 <?php else : ?>
-<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo $phase > 1 ? ' onclick="return confirm(\'' . esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : sprintf( __( 'Submit Phase %d', 'trufield-portal' ), $phase ) ); ?></button>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo '' !== $submit_confirmation ? ' onclick="return confirm(\'' . esc_js( $submit_confirmation ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( $status === 'completed' ? __( 'Resubmit', 'trufield-portal' ) : ( 1 === $phase ? __( 'Submit', 'trufield-portal' ) : sprintf( __( 'Submit Phase %d', 'trufield-portal' ), $phase ) ) ); ?></button>
 <?php endif; ?>
 </div>
 </section>
@@ -827,8 +836,8 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <div class="tf-phase-form__actions">
 <button type="submit" name="phase_action" value="save" class="tf-btn tf-btn--secondary" formnovalidate><?php esc_html_e( 'Save Progress', 'trufield-portal' ); ?></button>
 <?php if ( $phase !== 1 && $prereq_met && $required_ok ) : ?>
-<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary" onclick="return confirm('<?php echo esc_js( sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase ) ); ?>');">
-<?php echo esc_html( sprintf( __( 'Mark Phase %d Complete', 'trufield-portal' ), $phase ) ); ?>
+<button type="submit" name="phase_action" value="complete" class="tf-btn tf-btn--primary"<?php echo '' !== $submit_confirmation ? ' onclick="return confirm(\'' . esc_js( $submit_confirmation ) . '\');"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+<?php echo esc_html( $status === 'completed' ? __( 'Resubmit', 'trufield-portal' ) : sprintf( __( 'Mark Phase %d Complete', 'trufield-portal' ), $phase ) ); ?>
 </button>
 <?php endif; ?>
 </div>

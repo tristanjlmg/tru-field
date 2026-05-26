@@ -115,14 +115,6 @@ function trufield_handle_create_plant_field(): void {
 	update_post_meta( $post_id, 'trial_uuid', $title );
 	update_post_meta( $post_id, 'phase_1_product_being_tested', $product_tested );
 
-	wp_safe_redirect(
-		add_query_arg(
-			[
-				'tf_success' => 'trial_created',
-				'tf_post_id' => $post_id,
-			],
-			trufield_dashboard_url()
-		)
-	);
+	wp_safe_redirect( add_query_arg( 'phase_1_step', 1, get_permalink( $post_id ) ) );
 	exit;
 }
