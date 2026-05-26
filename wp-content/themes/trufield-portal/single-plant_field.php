@@ -193,12 +193,12 @@ if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 
 <div class="tf-record-header">
 <a href="<?php echo esc_url( trufield_dashboard_url() ); ?>" class="tf-back-link">&larr; <?php esc_html_e( 'Dashboard', 'trufield-portal' ); ?></a>
-<p class="tf-record-header__eyebrow"><?php esc_html_e( 'Active workflow', 'trufield-portal' ); ?></p>
+<p class="tf-record-header__eyebrow"><?php esc_html_e( 'Trial workflow', 'trufield-portal' ); ?></p>
 <div class="tf-record-header__title-row">
-<h1><?php echo esc_html( $phase_titles[ $current_phase ] ?? get_the_title() ); ?></h1>
+<h1><?php esc_html_e( 'All phase forms', 'trufield-portal' ); ?></h1>
 <span class="tf-status-badge tf-status-badge--<?php echo esc_attr( $record_status ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $record_status ) ) ); ?></span>
 </div>
-<p class="tf-record-header__support"><?php echo esc_html( 2 === $current_phase ? __( 'This trial is now in the Phase 2 workflow. Complete the two sections below and submit the phase when every required detail is ready.', 'trufield-portal' ) : ( 3 === $current_phase ? __( 'This trial is now in the Phase 3 workflow. Complete the active form below to test the harvest and engagement step.', 'trufield-portal' ) : __( 'This trial is currently in the Phase 1 workflow. Complete the active form below to move the trial forward.', 'trufield-portal' ) ) ); ?></p>
+<p class="tf-record-header__support"><?php echo esc_html( 2 === $current_phase ? __( 'Phase 2 is the current workflow, and the full set of phase forms is available below so assigned reps can update earlier or later steps as needed.', 'trufield-portal' ) : ( 3 === $current_phase ? __( 'Phase 3 is the current workflow, and the full set of phase forms is available below so assigned reps can update any phase as needed.', 'trufield-portal' ) : __( 'Phase 1 is the current workflow, and the full set of phase forms is available below so assigned reps can work across all three phases.', 'trufield-portal' ) ) ); ?></p>
 
 <div class="tf-record-meta">
 <?php if ( $assigned_rep ) : ?>
@@ -285,19 +285,24 @@ if ( ! in_array( $phase, $active_phases, true ) ) {
 <?php endforeach; ?>
 </div>
 
-<?php
-get_template_part(
-'template-parts/phase-section',
-null,
-[
-'post_id'        => $post_id,
-'phase'          => $current_phase,
-'phase_title'    => $phase_titles[ $current_phase ],
-'user_id'        => $user_id,
-'is_admin'       => $is_admin,
-'phase_verified' => $phase_verified,
-]
-);
-?>
+<?php foreach ( [ 1, 2, 3 ] as $phase ) : ?>
+	<?php if ( ! in_array( $phase, $active_phases, true ) ) : ?>
+		<?php continue; ?>
+	<?php endif; ?>
+	<?php
+	get_template_part(
+		'template-parts/phase-section',
+		null,
+		[
+			'post_id'        => $post_id,
+			'phase'          => $phase,
+			'phase_title'    => $phase_titles[ $phase ],
+			'user_id'        => $user_id,
+			'is_admin'       => $is_admin,
+			'phase_verified' => $phase_verified,
+		]
+	);
+	?>
+<?php endforeach; ?>
 </div>
 <?php get_footer(); ?>

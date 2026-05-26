@@ -1147,9 +1147,9 @@ return (bool) get_post_meta( $post_id, "phase_{$previous_phase}_verified", true 
 }
 
 function trufield_can_edit_phase( int $post_id, int $phase, int $user_id ): bool {
-if ( trufield_user_is_admin( $user_id ) ) {
-return true;
-}
+	if ( trufield_user_is_admin( $user_id ) ) {
+		return true;
+	}
 
 $user = get_userdata( $user_id );
 if ( $user && in_array( 'leadership', (array) $user->roles, true ) ) {
@@ -1161,11 +1161,11 @@ if ( $assigned !== $user_id ) {
 return false;
 }
 
-if ( ! trufield_prerequisite_met( $post_id, $phase ) ) {
-return false;
-}
+	if ( ! trufield_prerequisite_met( $post_id, $phase ) ) {
+		return false;
+	}
 
-return ! (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
+	return true;
 }
 
 function trufield_complete_phase( int $post_id, int $phase, int $user_id ) {
@@ -1318,31 +1318,6 @@ function trufield_admin_only_phase_fields( int $phase ): array {
 		1 => [
 			'rsm_bam',
 			'fsa',
-		],
-		3 => [
-			'phase_3_tillage_type',
-			'phase_3_soil_temp_f_at_application',
-			'phase_3_carrier_volume_gal',
-			'phase_3_tank_mix_partners',
-			'phase_3_planting_date',
-			'phase_3_hybrid_variety',
-			'phase_3_planting_population',
-			'phase_3_row_spacing_in',
-			'phase_3_planting_speed_mph',
-			'phase_3_plant_heights_avg_untreated_v7_in',
-			'phase_3_plant_heights_avg_treated_v7_in',
-			'phase_3_stalk_diameter_untreated_v7_mm',
-			'phase_3_stalk_diameter_treated_v7_mm2',
-			'phase_3_yield_untreated_bu_ac',
-			'phase_3_yield_treated_bu_ac',
-			'phase_3_moisture_untreated_percent',
-			'phase_3_moisture_treated_percent',
-			'phase_3_test_weight_untreated_lbs_bu',
-			'phase_3_test_weight_treated_lbs_bu',
-			'phase_3_as_applied_gis_data',
-			'phase_3_planting_gis_data',
-			'phase_3_harvest_gis_data',
-			'phase_3_agronomy_comments',
 		],
 	];
 
@@ -1806,6 +1781,9 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		wp_die( esc_html__( 'Please sign in to continue.', 'trufield-portal' ), 403 );
 	}
 
+	$phase_auto_verifies = trufield_phase_auto_verifies( $phase );
+	$was_verified        = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
+
 	if ( ! trufield_can_edit_phase( $post_id, $phase, $user_id ) ) {
 		wp_die( esc_html__( 'You do not have permission to update this phase.', 'trufield-portal' ), 403 );
 	}
@@ -1915,6 +1893,10 @@ if ( $action === 'verify_address' ) {
 	update_post_meta( $post_id, 'field_location_lng', (float) $result['lng'] );
 	delete_post_meta( $post_id, 'field_location_manual_override' );
 
+	if ( $was_verified && $phase_auto_verifies && ! trufield_user_is_admin( $user_id ) ) {
+		trufield_sync_phase_verification_state( $post_id, $phase );
+	}
+
 	if ( trufield_get_phase_status( $post_id, $phase ) === 'pending' ) {
 		update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 	}
@@ -1939,8 +1921,24 @@ exit;
 		exit;
 	}
 
+	if ( $was_verified && ! trufield_user_is_admin( $user_id ) ) {
+		delete_post_meta( $post_id, "phase_{$phase}_verified" );
+		delete_post_meta( $post_id, "phase_{$phase}_verified_at" );
+	}
+
 wp_safe_redirect( add_query_arg( 'tf_success', "phase_{$phase}_completed", $redirect ) );
 exit;
+}
+
+if ( $was_verified && ! trufield_user_is_admin( $user_id ) ) {
+	if ( $phase_auto_verifies ) {
+		trufield_sync_phase_verification_state( $post_id, $phase );
+	} else {
+		delete_post_meta( $post_id, "phase_{$phase}_verified" );
+		delete_post_meta( $post_id, "phase_{$phase}_verified_at" );
+		update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
+		delete_post_meta( $post_id, "phase_{$phase}_completed_at" );
+	}
 }
 
 if ( trufield_get_phase_status( $post_id, $phase ) === 'pending' ) {

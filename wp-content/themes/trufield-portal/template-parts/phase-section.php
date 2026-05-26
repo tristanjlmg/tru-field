@@ -615,9 +615,9 @@ if ( 1 === $phase ) {
 
 $submit_confirmation = '';
 if ( 3 === $phase ) {
-	$submit_confirmation = sprintf( __( 'Submit Phase %d for admin verification? It will stay read-only until an admin reopens it.', 'trufield-portal' ), $phase );
+	$submit_confirmation = sprintf( __( 'Submit Phase %d for admin verification? You can still make edits later, but any new changes will need to be verified again.', 'trufield-portal' ), $phase );
 } elseif ( 2 === $phase ) {
-	$submit_confirmation = __( 'Submit Phase 2? It will lock after save and award points once every scoring field is complete.', 'trufield-portal' );
+	$submit_confirmation = __( 'Submit Phase 2? You can still make edits later, and points remain awarded only while every scoring field stays complete.', 'trufield-portal' );
 }
 
 $reopen_url = $is_admin ? wp_nonce_url( admin_url( "admin-post.php?action=trufield_reopen_phase&post_id={$post_id}&phase={$phase}" ), "trufield_reopen_phase_{$post_id}_{$phase}" ) : '';
@@ -660,7 +660,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 </div>
 
-<?php if ( $can_edit && $status === 'completed' && ! $is_verified ) : ?>
+<?php if ( $can_edit && $is_verified ) : ?>
+<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase is verified, but you can still update it. If any required Phase 1 details are removed, it will stop counting until those fields are completed again.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase is verified, but you can still update it. Phase 2 points remain awarded only while the required scoring fields stay complete.', 'trufield-portal' ) : __( 'This phase is verified, but you can still update it. Any new changes will need to be resubmitted for admin verification.', 'trufield-portal' ) ) ); ?></p>
+<?php elseif ( $can_edit && $status === 'completed' && ! $is_verified ) : ?>
 <p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the required Phase 1 fields are verified.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the Phase 2 scoring fields are verified.', 'trufield-portal' ) : __( 'This phase has been submitted, but it can still be revised and resubmitted until an admin verifies it.', 'trufield-portal' ) ) ); ?></p>
 <?php endif; ?>
 
