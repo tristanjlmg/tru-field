@@ -29,8 +29,8 @@ function trufield_import_page_render(): void {
 	$maps_action_url = wp_nonce_url( admin_url( 'admin-post.php?action=trufield_save_google_maps_key' ), 'trufield_save_google_maps_key' );
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Import Plant Fields', 'trufield-portal' ); ?></h1>
-		<p><?php esc_html_e( 'Upload the retailer demo XLSX sheet to create Plant Field records in bulk. Imports are create-only and leave Phase 1 as an in-progress draft.', 'trufield-portal' ); ?></p>
+		<h1><?php esc_html_e( 'Import Trial Data', 'trufield-portal' ); ?></h1>
+		<p><?php esc_html_e( 'Upload the trial-data XLSX sheet to create Plant Field records in bulk. Imports are create-only and leave Phase 1 as an in-progress draft.', 'trufield-portal' ); ?></p>
 
 		<?php if ( 'saved' === $maps_notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Google Maps API key saved.', 'trufield-portal' ); ?></p></div>
@@ -108,16 +108,18 @@ function trufield_import_page_render(): void {
 						<th scope="row"><label for="trufield-import-file"><?php esc_html_e( 'Workbook', 'trufield-portal' ); ?></label></th>
 						<td>
 							<input type="file" id="trufield-import-file" name="trufield_import_file" accept=".xlsx" required>
-							<p class="description"><?php esc_html_e( 'Expected worksheet: Retailer Demo List (.xlsx only).', 'trufield-portal' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Expected worksheet: Retailer Demo List (.xlsx only). Use the separate Import Retailers page for retailer auto-fill workbook updates.', 'trufield-portal' ); ?></p>
 						</td>
 					</tr>
 				</tbody>
 			</table>
 
-			<?php submit_button( __( 'Import Records', 'trufield-portal' ) ); ?>
+			<?php submit_button( __( 'Import Trial Data', 'trufield-portal' ) ); ?>
 		</form>
 
-		<h2><?php esc_html_e( 'Import behavior', 'trufield-portal' ); ?></h2>
+		<p><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=plant_field&page=trufield-import-retailers' ) ); ?>" class="button button-secondary"><?php esc_html_e( 'Go To Retailer Import', 'trufield-portal' ); ?></a></p>
+
+		<h2><?php esc_html_e( 'Trial Import Behavior', 'trufield-portal' ); ?></h2>
 		<ul>
 			<li><?php esc_html_e( 'Creates new Plant Field records only. Re-importing the same workbook will create duplicates.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Matches the Email column to an existing WordPress user and assigns the record when a match is found.', 'trufield-portal' ); ?></li>
