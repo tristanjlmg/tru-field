@@ -258,6 +258,7 @@
       var requestedInitialStep = Number(wrapper.getAttribute('data-initial-step') || '0');
       var storedStep = storageKey && window.sessionStorage ? Number(window.sessionStorage.getItem(storageKey) || '0') : 0;
       var currentStep = requestedInitialStep > 0 ? requestedInitialStep : (storedStep > 0 ? storedStep : 1);
+      var allowForwardWithoutValidation = phase === 2;
 
       if (!form || !hiddenInput || !tabs.length || !panels.length) {
         return;
@@ -498,7 +499,7 @@
             return;
           }
 
-          if (targetStep > currentStep && activePanel && !validatePanel(activePanel, { shouldShowErrors: true })) {
+          if (targetStep > currentStep && !allowForwardWithoutValidation && activePanel && !validatePanel(activePanel, { shouldShowErrors: true })) {
             return;
           }
 
@@ -545,7 +546,7 @@
 
         if (nextButton) {
           nextButton.addEventListener('click', function () {
-            if (!validatePanel(panel, { shouldShowErrors: true })) {
+            if (!allowForwardWithoutValidation && !validatePanel(panel, { shouldShowErrors: true })) {
               return;
             }
 

@@ -118,7 +118,7 @@ $team_awarded_retailers = array_sum(
 				$phase = (int) $m[1];
 				printf(
 					/* translators: %d = phase number */
-					esc_html__( 1 === $phase ? 'Phase %d saved. It will count once the required fields are complete.' : ( 2 === $phase ? 'Phase %d saved. It will award points once every Phase 2 scoring field is complete.' : 'Phase %d submitted for admin verification.' ), 'trufield-portal' ),
+					esc_html__( 1 === $phase ? 'Phase %d saved. It will count once the required fields are complete.' : ( 2 === $phase ? 'Phase %d saved. It will award points once every Phase 2 scoring field is complete.' : 'Phase %d saved. You can continue updating it anytime.' ), 'trufield-portal' ),
 					$phase
 				);
 			} elseif ( 'phase_1_autoverified' === $success ) {
@@ -321,7 +321,7 @@ $team_awarded_retailers = array_sum(
 					<p>
 						<?php
 						if ( $is_sales_rep ) {
-							esc_html_e( 'You do not have any assigned records yet. Check back later or contact the admin team if you expected a trial assignment.', 'trufield-portal' );
+							esc_html_e( 'You do not have any assigned records yet. Check back later if you expected a trial assignment.', 'trufield-portal' );
 						} elseif ( $selected_sales_rep > 0 ) {
 							esc_html_e( 'The selected sales rep does not have any assigned trials yet. Adjust the filter or create a new trial to get started.', 'trufield-portal' );
 						} else {

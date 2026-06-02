@@ -615,7 +615,7 @@ if ( 1 === $phase ) {
 
 $submit_confirmation = '';
 if ( 3 === $phase ) {
-	$submit_confirmation = sprintf( __( 'Submit Phase %d for admin verification? You can still make edits later, but any new changes will need to be verified again.', 'trufield-portal' ), $phase );
+	$submit_confirmation = sprintf( __( 'Save Phase %d? You can still make edits later as the trial progresses.', 'trufield-portal' ), $phase );
 } elseif ( 2 === $phase ) {
 	$submit_confirmation = __( 'Submit Phase 2? You can still make edits later, and points remain awarded only while every scoring field stays complete.', 'trufield-portal' );
 }
@@ -635,7 +635,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php elseif ( $is_verified ) : ?>
 <div class="tf-phase__verified-badge">✓ <?php esc_html_e( 'Verified', 'trufield-portal' ); ?></div>
 <?php elseif ( $status === 'completed' ) : ?>
-<div class="tf-phase__awaiting-badge"><?php echo esc_html( 1 === $phase ? __( 'Saved — Missing Final Fields', 'trufield-portal' ) : ( 2 === $phase ? __( 'Saved — Missing Scoring Fields', 'trufield-portal' ) : __( 'Submitted — Awaiting Verification', 'trufield-portal' ) ) ); ?></div>
+<div class="tf-phase__awaiting-badge"><?php echo esc_html( 1 === $phase ? __( 'Saved — Missing Final Fields', 'trufield-portal' ) : ( 2 === $phase ? __( 'Saved — Missing Scoring Fields', 'trufield-portal' ) : __( 'Saved — Final Details Captured', 'trufield-portal' ) ) ); ?></div>
 <?php endif; ?>
 
 <?php if ( $completed_at ) : ?>
@@ -643,9 +643,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endif; ?>
 
 <?php if ( $status === 'completed' && ! $is_verified && ! $is_admin && ! $can_edit ) : ?>
-<p class="tf-phase__blocked-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s still needs the remaining required Phase 1 fields completed before it counts as a valid grower entry.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s still needs the remaining Phase 2 scoring fields completed before it awards points.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s has been submitted and is read-only while the admin team verifies it.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
+<p class="tf-phase__blocked-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s still needs the remaining required Phase 1 fields completed before it counts as a valid grower entry.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s still needs the remaining Phase 2 scoring fields completed before it awards points.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s is saved and view-only on this account.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( ! $prereq_met && ! $is_admin ) : ?>
-<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Phase %d must be verified before this form becomes available.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
+<p class="tf-phase__blocked-note"><?php echo esc_html( sprintf( __( 'Phase %d must be completed before this form becomes available.', 'trufield-portal' ), $phase - 1 ) ); ?></p>
 <?php endif; ?>
 
 <?php if ( $is_admin && $status === 'completed' ) : ?>
@@ -661,9 +661,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 </div>
 
 <?php if ( $can_edit && $is_verified ) : ?>
-<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase is verified, but you can still update it. If any required Phase 1 details are removed, it will stop counting until those fields are completed again.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase is verified, but you can still update it. Phase 2 points remain awarded only while the required scoring fields stay complete.', 'trufield-portal' ) : __( 'This phase is verified, but you can still update it. Any new changes will need to be resubmitted for admin verification.', 'trufield-portal' ) ) ); ?></p>
+<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase is verified, but you can still update it. If any required Phase 1 details are removed, it will stop counting until those fields are completed again.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase is verified, but you can still update it. Phase 2 points remain awarded only while the required scoring fields stay complete.', 'trufield-portal' ) : __( 'This phase is complete, but you can still update it as more harvest details come in.', 'trufield-portal' ) ) ); ?></p>
 <?php elseif ( $can_edit && $status === 'completed' && ! $is_verified ) : ?>
-<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the required Phase 1 fields are verified.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the Phase 2 scoring fields are verified.', 'trufield-portal' ) : __( 'This phase has been submitted, but it can still be revised and resubmitted until an admin verifies it.', 'trufield-portal' ) ) ); ?></p>
+<p class="tf-phase__editable-note"><?php echo esc_html( 1 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the required Phase 1 fields are verified.', 'trufield-portal' ) : ( 2 === $phase ? __( 'This phase has been submitted, but it can still be revised and resubmitted until the Phase 2 scoring fields are verified.', 'trufield-portal' ) : __( 'This phase has been saved, and you can continue revising it at any time.', 'trufield-portal' ) ) ); ?></p>
 <?php endif; ?>
 
 <?php if ( ! $can_edit ) : ?>
@@ -671,9 +671,9 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php if ( $is_verified ) : ?>
 <p class="tf-phase__readonly-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s counts as a valid grower entry. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s is complete and has awarded its Phase 2 points. No admin approval is needed.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s is verified. No further updates are needed right now.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( $status === 'completed' ) : ?>
-<p class="tf-phase__readonly-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s is saved, but it will only count once the required Phase 1 fields are complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s is saved, but it will only award points once every Phase 2 scoring field is complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s has been submitted and is waiting for admin verification. You can review the saved details below.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
+<p class="tf-phase__readonly-note"><?php echo esc_html( 1 === $phase ? sprintf( __( '%s is saved, but it will only count once the required Phase 1 fields are complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : ( 2 === $phase ? sprintf( __( '%s is saved, but it will only award points once every Phase 2 scoring field is complete. You can review the saved details below.', 'trufield-portal' ), $phase_label ) : sprintf( __( '%s is saved. You can review the captured details below.', 'trufield-portal' ), $phase_label ) ) ); ?></p>
 <?php elseif ( ! $prereq_met ) : ?>
-<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s is a separate form for a future workflow and will unlock after the previous phase is verified.', 'trufield-portal' ), $phase_label ) ); ?></p>
+<p class="tf-phase__readonly-note"><?php echo esc_html( sprintf( __( '%s is a separate form for a future workflow and will unlock after the previous phase is completed.', 'trufield-portal' ), $phase_label ) ); ?></p>
 <?php endif; ?>
 <?php if ( ! empty( $readonly_pairs ) ) : ?>
 <dl class="tf-dl">
@@ -696,7 +696,7 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 <?php endforeach; ?>
 </dl>
 <?php elseif ( ! $prereq_met ) : ?>
-<p class="tf-phase__empty"><?php esc_html_e( 'This separate form stays unavailable until the previous phase is verified and released.', 'trufield-portal' ); ?></p>
+<p class="tf-phase__empty"><?php esc_html_e( 'This separate form stays unavailable until the previous phase is completed.', 'trufield-portal' ); ?></p>
 <?php else : ?>
 <p class="tf-phase__empty"><?php echo esc_html( sprintf( __( '%s has not been started yet.', 'trufield-portal' ), $phase_label ) ); ?></p>
 <?php endif; ?>

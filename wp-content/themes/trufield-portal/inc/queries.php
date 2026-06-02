@@ -8,24 +8,18 @@ exit;
 }
 
 function trufield_get_assigned_fields( int $rep_user_id, array $extra_args = [] ): array {
-$defaults = [
-'post_type'      => 'plant_field',
-'posts_per_page' => -1,
-'post_status'    => 'publish',
-'meta_query'     => [
-[
-'key'     => 'assigned_sales_rep',
-'value'   => $rep_user_id,
-'compare' => '=',
-'type'    => 'NUMERIC',
-],
-],
-'orderby'        => 'title',
-'order'          => 'ASC',
-];
+	return array_values(
+		array_filter(
+			trufield_get_all_fields( $extra_args ),
+			static function ( WP_Post $post ) use ( $rep_user_id ): bool {
+				if ( function_exists( 'trufield_get_assigned_sales_rep_id' ) ) {
+					return trufield_get_assigned_sales_rep_id( $post->ID ) === $rep_user_id;
+				}
 
-$query = new WP_Query( wp_parse_args( $extra_args, $defaults ) );
-return $query->posts;
+				return (int) get_post_meta( $post->ID, 'assigned_sales_rep', true ) === $rep_user_id;
+			}
+		)
+	);
 }
 
 function trufield_get_all_fields( array $extra_args = [] ): array {

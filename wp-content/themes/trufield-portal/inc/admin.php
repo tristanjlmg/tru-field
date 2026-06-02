@@ -44,6 +44,10 @@ function trufield_get_product_tested_choices(): array {
 	return trufield_sanitize_product_tested_options( $stored );
 }
 
+function trufield_retailer_directory_admin_url( array $args = [] ): string {
+	return add_query_arg( $args, admin_url( 'edit.php?post_type=plant_field&page=trufield-retailers' ) );
+}
+
 add_action( 'admin_post_trufield_save_product_tested_options', 'trufield_save_product_tested_options' );
 function trufield_save_product_tested_options(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -98,10 +102,65 @@ function trufield_save_retailer_directory(): void {
 	update_option( trufield_retailer_directory_option_key(), array_values( trufield_sanitize_retailer_directory_entries( $rows ) ), false );
 
 	wp_safe_redirect(
-		add_query_arg(
-			'tf_retailers_updated',
-			'1',
-			admin_url( 'edit.php?post_type=plant_field&page=trufield-retailers' )
+		trufield_retailer_directory_admin_url(
+			[
+				'tf_retailers_notice' => 'saved',
+			]
+		)
+	);
+	exit;
+}
+
+add_action( 'admin_post_trufield_import_retailer_directory', 'trufield_import_retailer_directory' );
+function trufield_import_retailer_directory(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_import_retailer_directory' );
+
+	$rows = trufield_load_retailer_directory_from_workbook();
+	if ( is_wp_error( $rows ) ) {
+		$status = 'trufield_retailer_directory_workbook_missing' === $rows->get_error_code() ? 'missing_source' : 'import_failed';
+
+		wp_safe_redirect(
+			trufield_retailer_directory_admin_url(
+				[
+					'tf_retailers_notice' => $status,
+				]
+			)
+		);
+		exit;
+	}
+
+	$entries = trufield_build_retailer_directory_from_workbook();
+	update_option( trufield_retailer_directory_option_key(), array_values( $entries ), false );
+
+	wp_safe_redirect(
+		trufield_retailer_directory_admin_url(
+			[
+				'tf_retailers_notice' => 'imported',
+			]
+		)
+	);
+	exit;
+}
+
+add_action( 'admin_post_trufield_clear_retailer_directory', 'trufield_clear_retailer_directory' );
+function trufield_clear_retailer_directory(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_clear_retailer_directory' );
+
+	delete_option( trufield_retailer_directory_option_key() );
+
+	wp_safe_redirect(
+		trufield_retailer_directory_admin_url(
+			[
+				'tf_retailers_notice' => 'cleared',
+			]
 		)
 	);
 	exit;
@@ -272,8 +331,11 @@ function trufield_retailer_directory_page_render(): void {
 		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
 	}
 
-	$rows   = array_values( trufield_get_retailer_directory() );
-	$states = trufield_state_region_options();
+	$rows            = array_values( trufield_get_retailer_directory() );
+	$states          = trufield_state_region_options();
+	$notice          = sanitize_key( wp_unslash( $_GET['tf_retailers_notice'] ?? '' ) );
+	$workbook_path   = trufield_retailer_directory_workbook_path();
+	$workbook_exists = file_exists( $workbook_path );
 
 	for ( $index = count( $rows ); $index < 8; $index++ ) {
 		$rows[] = [
@@ -286,13 +348,35 @@ function trufield_retailer_directory_page_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Retailer Directory', 'trufield-portal' ); ?></h1>
-		<?php if ( ! empty( $_GET['tf_retailers_updated'] ) ) : ?>
+		<?php if ( 'saved' === $notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer directory updated.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'imported' === $notice ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer auto-fill list imported from the workbook.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'cleared' === $notice ) : ?>
+			<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Retailer auto-fill list cleared.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'missing_source' === $notice ) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Retailer workbook not found. Add the updated XLSX file to the site root and try again.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'import_failed' === $notice ) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Retailer workbook could not be imported.', 'trufield-portal' ); ?></p></div>
 		<?php endif; ?>
-		<p><?php esc_html_e( 'Manage the retailer dropdown and the auto-fill values used in Phase 1. Selecting a retailer now auto-fills the contact name, contact number, address, city, and state. Branch/location remains the manual entry field for sales reps.', 'trufield-portal' ); ?></p>
-		<?php if ( file_exists( trufield_retailer_directory_workbook_path() ) ) : ?>
-			<p><em><?php echo esc_html( sprintf( __( 'Workbook source detected: %s. Workbook rows are shown here automatically, and manual edits on this page can override or extend them.', 'trufield-portal' ), basename( trufield_retailer_directory_workbook_path() ) ) ); ?></em></p>
+		<p><?php esc_html_e( 'Manage the retailer dropdown and the auto-fill values used in Phase 1. Selecting a retailer auto-fills the contact name, contact number, address, city, and state. Branch/location remains the manual entry field for sales reps.', 'trufield-portal' ); ?></p>
+		<?php if ( $workbook_exists ) : ?>
+			<p><em><?php echo esc_html( sprintf( __( 'Workbook source detected: %s. Use Import Workbook to replace the current auto-fill list with the rows from that file.', 'trufield-portal' ), basename( $workbook_path ) ) ); ?></em></p>
+		<?php else : ?>
+			<p><em><?php esc_html_e( 'No retailer workbook is currently detected. You can still manage the auto-fill list manually below.', 'trufield-portal' ); ?></em></p>
 		<?php endif; ?>
+		<div style="margin:16px 0;">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block; margin-right:8px;">
+				<?php wp_nonce_field( 'trufield_import_retailer_directory' ); ?>
+				<input type="hidden" name="action" value="trufield_import_retailer_directory">
+				<?php submit_button( __( 'Import Workbook', 'trufield-portal' ), 'secondary', 'submit', false, [ 'disabled' => ! $workbook_exists ] ); ?>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;" onsubmit="return window.confirm('<?php echo esc_js( __( 'Clear the current retailer auto-fill list?', 'trufield-portal' ) ); ?>');">
+				<?php wp_nonce_field( 'trufield_clear_retailer_directory' ); ?>
+				<input type="hidden" name="action" value="trufield_clear_retailer_directory">
+				<?php submit_button( __( 'Clear All', 'trufield-portal' ), 'delete', 'submit', false ); ?>
+			</form>
+		</div>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<?php wp_nonce_field( 'trufield_save_retailer_directory' ); ?>
 			<input type="hidden" name="action" value="trufield_save_retailer_directory">

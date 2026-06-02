@@ -104,7 +104,7 @@ if ( user_can( $user_id, 'administrator' ) || user_can( $user_id, 'leadership' )
 return [ 'read' ];
 }
 
-$assigned = (int) get_post_meta( $post->ID, 'assigned_sales_rep', true );
+		$assigned = function_exists( 'trufield_get_assigned_sales_rep_id' ) ? trufield_get_assigned_sales_rep_id( $post->ID ) : (int) get_post_meta( $post->ID, 'assigned_sales_rep', true );
 return ( $assigned === $user_id ) ? [ 'read' ] : [ 'do_not_allow' ];
 }
 
@@ -113,7 +113,7 @@ if ( user_can( $user_id, 'administrator' ) ) {
 return [ 'edit_plant_fields' ];
 }
 
-$assigned = (int) get_post_meta( $post->ID, 'assigned_sales_rep', true );
+		$assigned = function_exists( 'trufield_get_assigned_sales_rep_id' ) ? trufield_get_assigned_sales_rep_id( $post->ID ) : (int) get_post_meta( $post->ID, 'assigned_sales_rep', true );
 return ( $assigned === $user_id ) ? [ 'edit_plant_fields' ] : [ 'do_not_allow' ];
 }
 

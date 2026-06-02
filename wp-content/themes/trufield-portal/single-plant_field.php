@@ -94,25 +94,25 @@ if ( 2 === $current_phase ) {
 			);
 	} else {
 		$phase_panel_title = __( 'Start Phase 2', 'trufield-portal' );
-		$phase_panel_copy  = __( 'Phase 1 is verified, so this trial is ready for the Phase 2 visit and observation workflow.', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Phase 1 is complete, so this trial is ready for the Phase 2 visit and observation workflow.', 'trufield-portal' );
 		$phase_panel_note  = $current_phase_can_edit
 			? __( 'Complete the two Phase 2 sections below and submit when all required details are ready.', 'trufield-portal' )
-			: __( 'If this record should be editable for your Phase 2 work, contact the admin team.', 'trufield-portal' );
+			: __( 'This trial is not currently assigned to you for Phase 2 work.', 'trufield-portal' );
 	}
 	} elseif ( 3 === $current_phase ) {
 	if ( $current_phase_verified ) {
 		$phase_panel_title = __( 'Phase 3 verified', 'trufield-portal' );
-		$phase_panel_copy  = __( 'The Phase 3 harvest and engagement details have been verified by the admin team.', 'trufield-portal' );
+		$phase_panel_copy  = __( 'The Phase 3 harvest and engagement details are complete for this trial.', 'trufield-portal' );
 		$phase_panel_note  = __( 'No additional Phase 3 updates are needed right now.', 'trufield-portal' );
 	} elseif ( $current_phase_status === 'completed' ) {
-		$phase_panel_title = __( 'Phase 3 submitted', 'trufield-portal' );
-		$phase_panel_copy  = __( 'Phase 3 has been submitted, but it can still be revised until the admin team verifies it.', 'trufield-portal' );
-		$phase_panel_note  = __( 'Make any final updates below, then resubmit when ready for verification.', 'trufield-portal' );
+		$phase_panel_title = __( 'Phase 3 saved', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Phase 3 has been saved and can still be revised as trial details change.', 'trufield-portal' );
+		$phase_panel_note  = __( 'Make any final updates below and save again whenever needed.', 'trufield-portal' );
 	} elseif ( $current_phase_status === 'in_progress' ) {
 		$phase_panel_title = __( 'Continue Phase 3', 'trufield-portal' );
 		$phase_panel_copy  = __( 'Finish the required Phase 3 harvest and engagement details below.', 'trufield-portal' );
 		$phase_panel_note  = empty( $current_phase_missing )
-			? __( 'Every required Phase 3 field is ready. Submit the form when you are ready for admin verification.', 'trufield-portal' )
+			? __( 'Every required Phase 3 field is ready. Save the form when you are ready.', 'trufield-portal' )
 			: sprintf(
 				_n(
 					'%d required Phase 3 field still needs attention before this phase can be submitted.',
@@ -124,10 +124,10 @@ if ( 2 === $current_phase ) {
 			);
 	} else {
 		$phase_panel_title = __( 'Start Phase 3', 'trufield-portal' );
-		$phase_panel_copy  = __( 'Phase 2 is verified, so this trial is ready for the Phase 3 harvest and engagement workflow.', 'trufield-portal' );
+		$phase_panel_copy  = __( 'Phase 2 is complete, so this trial is ready for the Phase 3 harvest and engagement workflow.', 'trufield-portal' );
 		$phase_panel_note  = $current_phase_can_edit
 			? __( 'Complete the Phase 3 form below and submit when all required details are ready.', 'trufield-portal' )
-			: __( 'If this record should be editable for your Phase 3 work, contact the admin team.', 'trufield-portal' );
+			: __( 'This trial is not currently assigned to you for Phase 3 work.', 'trufield-portal' );
 	}
 } else {
 	$phase_1_validation_missing = trufield_get_missing_validation_fields( $post_id, 1 );
@@ -162,7 +162,7 @@ if ( 2 === $current_phase ) {
 		$phase_panel_copy  = __( 'Fill out the required Phase 1 fields below for this record to count as 1 valid grower entry.', 'trufield-portal' );
 		$phase_panel_note  = $current_phase_can_edit
 			? __( 'Optional details can be added before submission.', 'trufield-portal' )
-			: __( 'If this record should be assigned to you for Phase 1 work, contact the admin team.', 'trufield-portal' );
+			: __( 'This trial is not currently assigned to you for Phase 1 work.', 'trufield-portal' );
 	}
 }
 ?>
@@ -173,7 +173,7 @@ if ( 2 === $current_phase ) {
 <?php
 if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 	$phase = (int) $matches[1];
-	echo esc_html( sprintf( 1 === $phase ? __( 'Phase %d saved. It will count once the required fields are complete.', 'trufield-portal' ) : ( 2 === $phase ? __( 'Phase %d saved. It will award points once every Phase 2 scoring field is complete.', 'trufield-portal' ) : __( 'Phase %d submitted for admin verification.', 'trufield-portal' ) ), $phase ) );
+	echo esc_html( sprintf( 1 === $phase ? __( 'Phase %d saved. It will count once the required fields are complete.', 'trufield-portal' ) : ( 2 === $phase ? __( 'Phase %d saved. It will award points once every Phase 2 scoring field is complete.', 'trufield-portal' ) : __( 'Phase %d saved. You can continue updating it anytime.', 'trufield-portal' ) ), $phase ) );
 } elseif ( 'phase_1_autoverified' === $success ) {
 	esc_html_e( 'Phase 1 counted as a valid grower entry once the required Phase 1 fields were completed.', 'trufield-portal' );
 } elseif ( 'phase_2_autoverified' === $success ) {
@@ -248,7 +248,7 @@ if ( ! in_array( $phase, $active_phases, true ) ) {
 } elseif ( ! trufield_prerequisite_met( $post_id, $phase ) ) {
 	$state = 'upcoming';
 	$icon  = '–';
-	$note  = __( 'Locked until previous phase is verified', 'trufield-portal' );
+	$note  = __( 'Locked until previous phase is complete', 'trufield-portal' );
 } else {
 	$verified = $phase_verified[ $phase ] ?? false;
 	$status   = $phase_statuses[ $phase ] ?? 'pending';

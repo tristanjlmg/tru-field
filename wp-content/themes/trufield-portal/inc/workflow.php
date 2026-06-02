@@ -447,17 +447,44 @@ function trufield_build_retailer_directory_from_posts(): array {
 }
 
 function trufield_retailer_directory_workbook_path(): string {
-	return trailingslashit( ABSPATH ) . 'retailerlist for autofil.xlsx';
+	$base_path = trailingslashit( ABSPATH );
+	$matches   = glob( $base_path . 'RETAILER LIST UPDATED*.xlsx' );
+
+	if ( is_array( $matches ) && [] !== $matches ) {
+		usort(
+			$matches,
+			static function ( string $left, string $right ): int {
+				return filemtime( $right ) <=> filemtime( $left );
+			}
+		);
+
+		return (string) $matches[0];
+	}
+
+	return $base_path . 'retailerlist for autofil.xlsx';
 }
 
-function trufield_build_retailer_directory_from_workbook(): array {
+function trufield_load_retailer_directory_from_workbook() {
 	$workbook_path = trufield_retailer_directory_workbook_path();
 	if ( ! file_exists( $workbook_path ) ) {
-		return [];
+		return new WP_Error( 'trufield_retailer_directory_workbook_missing', __( 'The retailer workbook could not be found.', 'trufield-portal' ) );
 	}
 
 	$rows = trufield_parse_xlsx_rows( $workbook_path );
-	if ( is_wp_error( $rows ) || ! is_array( $rows ) ) {
+	if ( is_wp_error( $rows ) ) {
+		return $rows;
+	}
+
+	if ( ! is_array( $rows ) ) {
+		return new WP_Error( 'trufield_retailer_directory_workbook_invalid', __( 'The retailer workbook could not be read.', 'trufield-portal' ) );
+	}
+
+	return $rows;
+}
+
+function trufield_build_retailer_directory_from_workbook(): array {
+	$rows = trufield_load_retailer_directory_from_workbook();
+	if ( is_wp_error( $rows ) ) {
 		return [];
 	}
 
@@ -510,10 +537,7 @@ function trufield_get_retailer_directory(): array {
 	if ( is_array( $directory ) ) {
 		return $directory;
 	}
-	$fallback_directory = trufield_build_retailer_directory_from_posts();
-	$workbook_directory = trufield_build_retailer_directory_from_workbook();
-	$managed_directory  = trufield_sanitize_retailer_directory_entries( get_option( trufield_retailer_directory_option_key(), [] ) );
-	$directory          = array_replace( $fallback_directory, $workbook_directory, $managed_directory );
+	$directory = trufield_sanitize_retailer_directory_entries( get_option( trufield_retailer_directory_option_key(), [] ) );
 
 	return $directory;
 }
@@ -548,6 +572,7 @@ function trufield_assignment_user_roles_for_field( string $field ): array {
 function trufield_get_rsm_bam_display_names(): array {
 	return [
 		'Anthony Finke',
+		'Beau Matson',
 		'Chris Person',
 		'Chris Pevestorf',
 		'Ethan Noll',
@@ -561,7 +586,6 @@ function trufield_get_rsm_bam_display_names(): array {
 		'Tim Robie',
 		'Zach Ekeler',
 		'Zach Minnihan',
-		'Beau Matson',
 	];
 }
 
@@ -745,6 +769,25 @@ function trufield_resolve_assignment_user_label( $value ): string {
 	}
 
 	return trim( sanitize_text_field( (string) $value ) );
+}
+
+function trufield_get_assigned_sales_rep_id( int $post_id ): int {
+	$assigned = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'assigned_sales_rep', true ), 'rsm_bam' );
+	if ( $assigned > 0 ) {
+		return $assigned;
+	}
+
+	$rsm_bam = trufield_resolve_assignment_user_id( get_post_meta( $post_id, 'rsm_bam', true ), 'rsm_bam' );
+	if ( $rsm_bam > 0 ) {
+		return $rsm_bam;
+	}
+
+	$post = get_post( $post_id );
+	if ( $post && trufield_is_allowed_rsm_bam_user_id( (int) $post->post_author ) ) {
+		return (int) $post->post_author;
+	}
+
+	return 0;
 }
 
 function trufield_phase_field_schema(): array {
@@ -1143,7 +1186,9 @@ return true;
 }
 
 $previous_phase = $phase - 1;
-return (bool) get_post_meta( $post_id, "phase_{$previous_phase}_verified", true );
+$previous_status = trufield_get_phase_status( $post_id, $previous_phase );
+
+return (bool) get_post_meta( $post_id, "phase_{$previous_phase}_verified", true ) || 'completed' === $previous_status;
 }
 
 function trufield_can_edit_phase( int $post_id, int $phase, int $user_id ): bool {
@@ -1156,7 +1201,7 @@ if ( $user && in_array( 'leadership', (array) $user->roles, true ) ) {
 return false;
 }
 
-$assigned = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
+	$assigned = trufield_get_assigned_sales_rep_id( $post_id );
 if ( $assigned !== $user_id ) {
 return false;
 }
