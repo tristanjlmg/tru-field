@@ -482,12 +482,7 @@ function trufield_load_retailer_directory_from_workbook() {
 	return $rows;
 }
 
-function trufield_build_retailer_directory_from_workbook(): array {
-	$rows = trufield_load_retailer_directory_from_workbook();
-	if ( is_wp_error( $rows ) ) {
-		return [];
-	}
-
+function trufield_build_retailer_directory_entries_from_rows( array $rows ): array {
 	$entries = [];
 	foreach ( $rows as $row ) {
 		if ( ! is_array( $row ) ) {
@@ -529,6 +524,15 @@ function trufield_build_retailer_directory_from_workbook(): array {
 	}
 
 	return trufield_sanitize_retailer_directory_entries( array_values( $entries ) );
+}
+
+function trufield_build_retailer_directory_from_workbook(): array {
+	$rows = trufield_load_retailer_directory_from_workbook();
+	if ( is_wp_error( $rows ) ) {
+		return [];
+	}
+
+	return trufield_build_retailer_directory_entries_from_rows( $rows );
 }
 
 function trufield_get_retailer_directory(): array {

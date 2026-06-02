@@ -150,6 +150,86 @@ function trufield_import_retailer_directory(): void {
 	exit;
 }
 
+add_action( 'admin_post_trufield_upload_retailer_directory', 'trufield_upload_retailer_directory' );
+function trufield_upload_retailer_directory(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_upload_retailer_directory' );
+
+	if ( empty( $_FILES['trufield_retailer_import_file'] ) || ! is_array( $_FILES['trufield_retailer_import_file'] ) ) {
+		wp_safe_redirect(
+			trufield_retailer_import_admin_url(
+				[
+					'tf_retailers_notice' => 'missing_upload',
+				]
+			)
+		);
+		exit;
+	}
+
+	$file = $_FILES['trufield_retailer_import_file'];
+	if ( (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) !== UPLOAD_ERR_OK ) {
+		wp_safe_redirect(
+			trufield_retailer_import_admin_url(
+				[
+					'tf_retailers_notice' => 'upload_failed',
+				]
+			)
+		);
+		exit;
+	}
+
+	$filename = (string) ( $file['name'] ?? '' );
+	if ( 'xlsx' !== strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) ) {
+		wp_safe_redirect(
+			trufield_retailer_import_admin_url(
+				[
+					'tf_retailers_notice' => 'invalid_file',
+				]
+			)
+		);
+		exit;
+	}
+
+	$tmp_name = (string) ( $file['tmp_name'] ?? '' );
+	if ( '' === $tmp_name || ! is_uploaded_file( $tmp_name ) ) {
+		wp_safe_redirect(
+			trufield_retailer_import_admin_url(
+				[
+					'tf_retailers_notice' => 'upload_failed',
+				]
+			)
+		);
+		exit;
+	}
+
+	$rows = trufield_parse_xlsx_rows( $tmp_name );
+	if ( is_wp_error( $rows ) || ! is_array( $rows ) ) {
+		wp_safe_redirect(
+			trufield_retailer_import_admin_url(
+				[
+					'tf_retailers_notice' => 'import_failed',
+				]
+			)
+		);
+		exit;
+	}
+
+	$entries = trufield_build_retailer_directory_entries_from_rows( $rows );
+	update_option( trufield_retailer_directory_option_key(), array_values( $entries ), false );
+
+	wp_safe_redirect(
+		trufield_retailer_import_admin_url(
+			[
+				'tf_retailers_notice' => 'uploaded',
+			]
+		)
+	);
+	exit;
+}
+
 add_action( 'admin_post_trufield_clear_retailer_directory', 'trufield_clear_retailer_directory' );
 function trufield_clear_retailer_directory(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -350,10 +430,18 @@ function trufield_retailer_import_page_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import Retailers', 'trufield-portal' ); ?></h1>
-		<?php if ( 'imported' === $notice ) : ?>
+		<?php if ( 'uploaded' === $notice ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer auto-fill list imported from the uploaded file.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'imported' === $notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retailer auto-fill list imported from the workbook.', 'trufield-portal' ); ?></p></div>
 		<?php elseif ( 'cleared' === $notice ) : ?>
 			<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Retailer auto-fill list cleared.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'missing_upload' === $notice ) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Choose an XLSX file to import.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'upload_failed' === $notice ) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'The retailer file upload did not complete successfully.', 'trufield-portal' ); ?></p></div>
+		<?php elseif ( 'invalid_file' === $notice ) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Only .xlsx retailer files are supported.', 'trufield-portal' ); ?></p></div>
 		<?php elseif ( 'missing_source' === $notice ) : ?>
 			<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Retailer workbook not found. Add the updated XLSX file to the site root and try again.', 'trufield-portal' ); ?></p></div>
 		<?php elseif ( 'import_failed' === $notice ) : ?>
@@ -361,6 +449,23 @@ function trufield_retailer_import_page_render(): void {
 		<?php endif; ?>
 
 		<p><?php esc_html_e( 'Import the retailer workbook used to populate the Phase 1 retailer auto-fill list. This import updates retailer name, contact, phone, address, city, and state values.', 'trufield-portal' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" style="margin:16px 0 24px; max-width:720px;">
+			<?php wp_nonce_field( 'trufield_upload_retailer_directory' ); ?>
+			<input type="hidden" name="action" value="trufield_upload_retailer_directory">
+			<table class="form-table" role="presentation">
+				<tbody>
+					<tr>
+						<th scope="row"><label for="trufield-retailer-import-file"><?php esc_html_e( 'Retailer Workbook', 'trufield-portal' ); ?></label></th>
+						<td>
+							<input type="file" id="trufield-retailer-import-file" name="trufield_retailer_import_file" accept=".xlsx" required>
+							<p class="description"><?php esc_html_e( 'Choose the retailer XLSX file from your computer to replace the current retailer auto-fill list.', 'trufield-portal' ); ?></p>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<?php submit_button( __( 'Upload And Import Retailers', 'trufield-portal' ), 'primary', 'submit', false ); ?>
+		</form>
+
 		<?php if ( $workbook_exists ) : ?>
 			<p><em><?php echo esc_html( sprintf( __( 'Workbook source detected: %s. Importing will replace the current retailer auto-fill list with the rows from that file.', 'trufield-portal' ), basename( $workbook_path ) ) ); ?></em></p>
 		<?php else : ?>
