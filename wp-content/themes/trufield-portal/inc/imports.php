@@ -30,7 +30,7 @@ function trufield_import_page_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import Trial Data', 'trufield-portal' ); ?></h1>
-		<p><?php esc_html_e( 'Upload the trial-data XLSX sheet to create Plant Field records in bulk. Imports are create-only and leave Phase 1 as an in-progress draft.', 'trufield-portal' ); ?></p>
+		<p><?php esc_html_e( 'Upload the trial-data XLSX sheet to create Plant Field records in bulk. Imports are create-only, and Phase 1 or Phase 2 will auto-complete when the imported row already satisfies that phase.', 'trufield-portal' ); ?></p>
 
 		<?php if ( 'saved' === $maps_notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Google Maps API key saved.', 'trufield-portal' ); ?></p></div>
@@ -108,7 +108,7 @@ function trufield_import_page_render(): void {
 						<th scope="row"><label for="trufield-import-file"><?php esc_html_e( 'Workbook', 'trufield-portal' ); ?></label></th>
 						<td>
 							<input type="file" id="trufield-import-file" name="trufield_import_file" accept=".xlsx" required>
-							<p class="description"><?php esc_html_e( 'Expected worksheet: Retailer Demo List (.xlsx only). Use the separate Import Retailers page for retailer auto-fill workbook updates.', 'trufield-portal' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Expected worksheet: Retailer Demo List or the latest Lamark trial-data workbook first sheet (.xlsx only). Use the separate Import Retailers page for retailer auto-fill workbook updates.', 'trufield-portal' ); ?></p>
 						</td>
 					</tr>
 				</tbody>
@@ -122,6 +122,7 @@ function trufield_import_page_render(): void {
 		<h2><?php esc_html_e( 'Trial Import Behavior', 'trufield-portal' ); ?></h2>
 		<ul>
 			<li><?php esc_html_e( 'Creates new Plant Field records only. Re-importing the same workbook will create duplicates.', 'trufield-portal' ); ?></li>
+			<li><?php esc_html_e( 'Auto-completes Phase 1 and Phase 2 when the imported row already includes the required data for that phase.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Matches the Email column to an existing WordPress user and assigns the record when a match is found.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Uses Address as the primary geocode input and falls back to the full mailing address when needed.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Stores shipping and logistics columns as import metadata on the record.', 'trufield-portal' ); ?></li>
@@ -474,6 +475,27 @@ function trufield_import_resolve_sales_rep_user( string $rep_email, string $rep_
 	return trufield_import_resolve_assignment_user( 'rsm_bam', $rep_email, $rep_name );
 }
 
+function trufield_import_normalize_state_region( string $value ): string {
+	$value = trim( preg_replace( '/\s+/', ' ', sanitize_text_field( $value ) ) );
+	if ( '' === $value ) {
+		return '';
+	}
+
+	$upper_value = strtoupper( $value );
+	$states      = function_exists( 'trufield_state_region_options' ) ? trufield_state_region_options() : [];
+	if ( isset( $states[ $upper_value ] ) ) {
+		return $upper_value;
+	}
+
+	foreach ( $states as $state_code => $state_label ) {
+		if ( strtolower( $state_label ) === strtolower( $value ) ) {
+			return (string) $state_code;
+		}
+	}
+
+	return $value;
+}
+
 function trufield_import_column_to_index( string $column_ref ): int {
 	$column_ref = strtoupper( $column_ref );
 	$length     = strlen( $column_ref );
@@ -571,9 +593,7 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 			update_post_meta( $post_id, $meta_key, $meta_value );
 		}
 
-		if ( function_exists( 'trufield_sync_phase_verification_state' ) ) {
-			trufield_sync_phase_verification_state( $post_id, 1 );
-		}
+		trufield_sync_imported_phase_states( $post_id );
 
 		$results['created']++;
 		$results['warnings'] += count( $prepared['warnings'] );
@@ -593,6 +613,16 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 	return $results;
 }
 
+function trufield_sync_imported_phase_states( int $post_id ): void {
+	if ( ! function_exists( 'trufield_sync_phase_verification_state' ) ) {
+		return;
+	}
+
+	foreach ( [ 1, 2 ] as $phase ) {
+		trufield_sync_phase_verification_state( $post_id, $phase );
+	}
+}
+
 function trufield_prepare_import_row( array $row, string $api_key ) {
 	$field_name          = sanitize_text_field( trufield_import_row_value( $row, [ 'field_name', 'Field Name', 'Field Name (Optional)', 'Location' ] ) );
 	$farm_name           = sanitize_text_field( trufield_import_row_value( $row, [ 'farm_name', 'Farm Name', 'Farm Name (Optional)' ] ) );
@@ -600,7 +630,7 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 	$retailer            = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_name', 'Retailer Name', 'Retailer' ] ) );
 	$address             = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_address', 'Retailer Address', 'field_location_address', 'Field Location Address', 'Address' ] ) );
 	$city                = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_city', 'Retailer City', 'City' ] ) );
-	$state               = sanitize_text_field( trufield_import_row_value( $row, [ 'phase_1_state_region', 'Retailer State', 'State', 'State Region' ] ) );
+	$state               = trufield_import_normalize_state_region( trufield_import_row_value( $row, [ 'phase_1_state_region', 'Retailer State', 'State', 'State Region' ] ) );
 	$zip                 = sanitize_text_field( trufield_import_row_value( $row, [ 'Zip', 'ZIP', 'Postal Code' ] ) );
 	$key_contact         = sanitize_text_field( trufield_import_row_value( $row, [ 'retailer_key_contact', 'Retailer Contact', 'Retailer Contact Name', 'Key Contact' ] ) );
 	$contact_phone       = trufield_import_sanitize_phone( trufield_import_row_value( $row, [ 'retailer_contact_phone', 'Retailer Contact Phone #', 'Retailer Contact Number', 'RetailerContactPhone', 'Contact Number' ] ) );
@@ -611,7 +641,9 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 	$lat_lng_value       = trufield_import_row_value( $row, [ 'Lat/Long of Trial', 'Lat Long of Trial' ] );
 	$rep_email           = sanitize_email( trufield_import_row_value( $row, [ 'RSM/BAM ID', 'Email', 'Assigned Sales Rep Email' ] ) );
 	$rsm_bam             = sanitize_text_field( trufield_import_row_value( $row, [ 'RSM/BAM', 'RSM BAM', 'rsm_bam' ] ) );
+	$fsa_name            = sanitize_text_field( trufield_import_row_value( $row, [ 'FSA', 'fsa' ] ) );
 	$sales_rep_user      = trufield_import_resolve_sales_rep_user( $rep_email, $rsm_bam );
+	$fsa_user            = trufield_import_resolve_assignment_user( 'fsa', '', $fsa_name );
 	$warnings            = [];
 	$post_title          = $field_name;
 	$parsed_lat_lng      = trufield_import_parse_lat_lng( $lat_lng_value );
@@ -664,7 +696,62 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'phase_1_protocol_version'    => sanitize_text_field( trufield_import_row_value( $row, [ 'Protocol Version', 'phase_1_protocol_version' ] ) ),
 		'phase_1_application_timing'  => sanitize_text_field( trufield_import_row_value( $row, [ 'Application Timing', 'phase_1_application_timing' ] ) ),
 		'phase_1_application_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Application Date', 'phase_1_application_date' ] ) ),
-		'phase_1_retailer_training_discussion_date' => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Retailer Product Training/Discussion Date', 'Product Training Date', 'phase_1_retailer_training_discussion_date' ] ) ),
+		'phase_1_retailer_training_discussion_date' => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Retailer Product Training/Discussion Date', 'Retailer Product Training/Discussion', 'Product Training Date', 'phase_1_retailer_training_discussion_date' ] ) ),
+		'phase_2_rsm_visit_1_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'RSM Visit Date 1', 'phase_2_rsm_visit_1_date' ] ) ),
+		'phase_2_rsm_visit_1_upload_photos' => esc_url_raw( trufield_import_row_value( $row, [ 'RSM Visit 1 Date Photos Taken Treated/Untreated', 'PHOTOS Visit 1', 'phase_2_rsm_visit_1_upload_photos' ] ) ),
+		'phase_2_rsm_visit_2_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'RSM Visit Date 2', 'phase_2_rsm_visit_2_date' ] ) ),
+		'phase_2_rsm_visit_2_upload_photos' => esc_url_raw( trufield_import_row_value( $row, [ 'RSM Visit 2 Date Photos Taken Treated/Untreated', 'PHOTOS Visit 2', 'phase_2_rsm_visit_2_upload_photos' ] ) ),
+		'phase_2_rsm_visit_3_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Optional Visit Date 3', 'phase_2_rsm_visit_3_date' ] ) ),
+		'phase_2_rsm_visit_3_upload_photos' => esc_url_raw( trufield_import_row_value( $row, [ 'Optional Visit 3 Date Photos Taken Treated/Untreated', 'phase_2_rsm_visit_3_upload_photos' ] ) ),
+		'phase_2_rsm_visit_3_comments' => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Visit 3 Notes', 'phase_2_rsm_visit_3_comments' ] ) ),
+		'phase_2_rsm_visit_4_date'    => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Optional Visit Date 4', 'phase_2_rsm_visit_4_date' ] ) ),
+		'phase_2_rsm_visit_4_upload_photos' => esc_url_raw( trufield_import_row_value( $row, [ 'Optional Visit 4 Date Photos Taken Treated/Untreated', 'phase_2_rsm_visit_4_upload_photos' ] ) ),
+		'phase_2_rsm_visit_4_comments' => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Visit 4 Notes', 'phase_2_rsm_visit_4_comments' ] ) ),
+		'phase_2_residue_degradation_observed' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Residue Degradation Observed? Y/N', 'phase_2_residue_degradation_observed' ] ) ),
+		'phase_2_emergence_stand_collected' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Emergence, Stand collected (Y/N)', 'phase_2_emergence_stand_collected' ] ) ),
+		'phase_2_stand_count_1_treated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 1 TREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_1_treated' ] ) ),
+		'phase_2_stand_count_2_treated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 2 TREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_2_treated' ] ) ),
+		'phase_2_stand_count_3_treated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 3 TREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_3_treated' ] ) ),
+		'phase_2_stand_count_1_untreated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 1 UNTREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_1_untreated' ] ) ),
+		'phase_2_stand_count_2_untreated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 2 UNTREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_2_untreated' ] ) ),
+		'phase_2_stand_count_3_untreated' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stand Count 3 UNTREATED (30" ROW = 17.5\' & 15" ROW  =34.9\')', 'phase_2_stand_count_3_untreated' ] ) ),
+		'phase_2_stand_count_data'    => sanitize_text_field( trufield_import_row_value( $row, [ 'Stand Count Deltas (plt/A)', 'phase_2_stand_count_data' ] ) ),
+		'phase_2_most_significant_visual_difference' => sanitize_textarea_field( trufield_import_row_value( $row, [ 'What is the most significant visual difference today (e.g., even emergence, residue breakdown)?', 'phase_2_most_significant_visual_difference' ] ) ),
+		'phase_2_emergence_flag_test' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Emergence (Flag Test) (Y/N)', 'phase_2_emergence_flag_test' ] ) ),
+		'phase_2_pictures_at_application' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Pictures at Application (Y/N)', 'phase_2_pictures_at_application' ] ) ),
+		'phase_2_pictures_at_planting' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Pictures at Planting (Y/N)', 'phase_2_pictures_at_planting' ] ) ),
+		'phase_2_pictures_in_season_harvest' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Pictures In season/ Harvest (Y/N)', 'phase_2_pictures_in_season_harvest' ] ) ),
+		'phase_2_pictures_at_harvest' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Pictures In season/ Harvest (Y/N)', 'phase_2_pictures_at_harvest' ] ) ),
+		'phase_2_drone_images_available' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Drone Images Available (Y/N)', 'phase_2_drone_images_available' ] ) ),
+		'phase_2_grower_retailer_testimonials' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Grower / Retailer Testimonials (Y/N)', 'phase_2_grower_retailer_testimonials' ] ) ),
+		'phase_2_grower_retailer_comments' => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Grower / Retailer Comments', 'phase_2_grower_retailer_comments' ] ) ),
+		'phase_3_event_type'          => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'TruField In Person Workshop/Demo Day (Yes or No)', 'phase_3_event_type' ] ) ),
+		'phase_3_event_date'          => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'TruField In Person Workshop/Demo Day Date Held', 'TruField In Person Workshop/Demo Day Date Held ', 'phase_3_event_date' ] ) ),
+		'phase_3_event_location'      => sanitize_text_field( trufield_import_row_value( $row, [ 'TruField In Person Workshop/Demo Day Location', 'phase_3_event_location' ] ) ),
+		'phase_3_attendee_count'      => trufield_import_sanitize_integer( trufield_import_row_value( $row, [ 'TruField In Person Workshop/Demo Day Number of Attendees', 'TruField In Person Workshop/Demo Day             Number of Attendees', 'phase_3_attendee_count' ] ) ),
+		'phase_3_tillage_type'        => sanitize_text_field( trufield_import_row_value( $row, [ 'Tillage Type', 'phase_3_tillage_type' ] ) ),
+		'phase_3_soil_temp_f_at_application' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Soil Temp (F) at application', 'phase_3_soil_temp_f_at_application' ] ) ),
+		'phase_3_carrier_volume_gal'  => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Carrier Volume (Gal)', 'phase_3_carrier_volume_gal' ] ) ),
+		'phase_3_tank_mix_partners'   => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Tank Mix Partners', 'phase_3_tank_mix_partners' ] ) ),
+		'phase_3_planting_date'       => trufield_import_sanitize_date( trufield_import_row_value( $row, [ 'Planting Date', 'phase_3_planting_date' ] ) ),
+		'phase_3_hybrid_variety'      => sanitize_text_field( trufield_import_row_value( $row, [ 'Hybrid/Variety', 'phase_3_hybrid_variety' ] ) ),
+		'phase_3_planting_population' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Planting Population', 'phase_3_planting_population' ] ) ),
+		'phase_3_row_spacing_in'      => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Row Spacing (in)', 'phase_3_row_spacing_in' ] ) ),
+		'phase_3_planting_speed_mph'  => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Planting Speed (mph)', 'phase_3_planting_speed_mph' ] ) ),
+		'phase_3_plant_heights_avg_untreated_v7_in' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Plant Heights Avg Untreated @ V7 (In)', 'phase_3_plant_heights_avg_untreated_v7_in' ] ) ),
+		'phase_3_plant_heights_avg_treated_v7_in' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Plant Heights Avg Treated @ V7 (In)', 'phase_3_plant_heights_avg_treated_v7_in' ] ) ),
+		'phase_3_stalk_diameter_untreated_v7_mm' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stalk Diameter Untreated @ V7 (mm)', 'phase_3_stalk_diameter_untreated_v7_mm' ] ) ),
+		'phase_3_stalk_diameter_treated_v7_mm2' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Stalk DiameterTreated @ V7 (mm)2', 'phase_3_stalk_diameter_treated_v7_mm2' ] ) ),
+		'phase_3_yield_untreated_bu_ac' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Yield Untreated (bu/ac)', 'phase_3_yield_untreated_bu_ac' ] ) ),
+		'phase_3_yield_treated_bu_ac' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Yield Treated (bu/ac)', 'phase_3_yield_treated_bu_ac' ] ) ),
+		'phase_3_moisture_untreated_percent' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Moisture Untreated (%)', 'phase_3_moisture_untreated_percent' ] ) ),
+		'phase_3_moisture_treated_percent' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Moisture Treated (%)', 'phase_3_moisture_treated_percent' ] ) ),
+		'phase_3_test_weight_untreated_lbs_bu' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Test Weight Untreated (lbs/bu)', 'phase_3_test_weight_untreated_lbs_bu' ] ) ),
+		'phase_3_test_weight_treated_lbs_bu' => trufield_import_sanitize_number( trufield_import_row_value( $row, [ 'Test Weight Treated (lbs/bu)', 'phase_3_test_weight_treated_lbs_bu' ] ) ),
+		'phase_3_as_applied_gis_data' => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'As Applied GIS Data (Y/N)', 'phase_3_as_applied_gis_data' ] ) ),
+		'phase_3_planting_gis_data'   => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Planting GIS Data (Y/N)', 'phase_3_planting_gis_data' ] ) ),
+		'phase_3_harvest_gis_data'    => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Harvest GIS Data (Y/N)', 'phase_3_harvest_gis_data' ] ) ),
+		'phase_3_agronomy_comments'   => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Agronomy Comments', 'phase_3_agronomy_comments' ] ) ),
 		'import_offered'              => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Offered Y/N' ] ) ),
 		'import_ready_to_ship'        => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Ready to Ship Y/N' ] ) ),
 		'import_shipped'              => trufield_import_sanitize_yes_no( trufield_import_row_value( $row, [ 'Shipped Y/N' ] ) ),
@@ -692,6 +779,16 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		);
 	} else {
 		$warnings[] = __( 'RSM/BAM details were blank, so the record was left unassigned.', 'trufield-portal' );
+	}
+
+	if ( $fsa_user instanceof WP_User ) {
+		$meta['fsa'] = $fsa_user->ID;
+	} elseif ( $fsa_name !== '' ) {
+		$warnings[] = sprintf(
+			/* translators: %s = FSA name. */
+			__( 'No FSA user matched %s, so the imported FSA was stored as blank.', 'trufield-portal' ),
+			$fsa_name
+		);
 	}
 
 	if ( $contact_phone === '' && trim( trufield_import_row_value( $row, [ 'retailer_contact_phone', 'Retailer Contact Phone #', 'Retailer Contact Number', 'Contact Number' ] ) ) !== '' ) {
