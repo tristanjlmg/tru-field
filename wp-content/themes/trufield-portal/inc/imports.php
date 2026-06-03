@@ -462,7 +462,7 @@ function trufield_import_resolve_assignment_user( string $field, string $email, 
 			continue;
 		}
 
-		if ( 0 === strcasecmp( $name, (string) $user->display_name ) ) {
+		if ( 0 === strcasecmp( $name, (string) $user->display_name ) || ( function_exists( 'trufield_assignment_person_name_matches' ) && trufield_assignment_person_name_matches( $name, $user ) ) ) {
 			return $user;
 		}
 	}

@@ -573,6 +573,80 @@ function trufield_assignment_user_roles_for_field( string $field ): array {
 	);
 }
 
+function trufield_normalize_assignment_user_lookup_value( string $value ): string {
+	$value = trim( sanitize_text_field( $value ) );
+
+	return '' === $value ? '' : sanitize_title( remove_accents( $value ) );
+}
+
+function trufield_assignment_user_person_name_tokens( string $value ): array {
+	$normalized = trufield_normalize_assignment_user_lookup_value( $value );
+
+	if ( '' === $normalized ) {
+		return [];
+	}
+
+	return array_values( array_filter( explode( '-', $normalized ) ) );
+}
+
+function trufield_assignment_person_name_matches( string $name, WP_User $user ): bool {
+	$target_tokens = trufield_assignment_user_person_name_tokens( $name );
+	if ( count( $target_tokens ) < 2 ) {
+		return false;
+	}
+
+	$target_first = reset( $target_tokens );
+	$target_last  = end( $target_tokens );
+	$candidates   = [
+		(string) $user->display_name,
+		trim( (string) get_user_meta( $user->ID, 'first_name', true ) . ' ' . (string) get_user_meta( $user->ID, 'last_name', true ) ),
+		trim( (string) get_user_meta( $user->ID, 'last_name', true ) . ' ' . (string) get_user_meta( $user->ID, 'first_name', true ) ),
+	];
+
+	foreach ( $candidates as $candidate ) {
+		$candidate_tokens = trufield_assignment_user_person_name_tokens( $candidate );
+		if ( count( $candidate_tokens ) < 2 ) {
+			continue;
+		}
+
+		$candidate_first = reset( $candidate_tokens );
+		$candidate_last  = end( $candidate_tokens );
+		if ( $candidate_last !== $target_last ) {
+			continue;
+		}
+
+		if ( $candidate_first === $target_first || str_starts_with( $candidate_first, $target_first ) || str_starts_with( $target_first, $candidate_first ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function trufield_assignment_user_lookup_values( WP_User $user ): array {
+	$values = [
+		(string) $user->display_name,
+		(string) $user->user_login,
+		(string) $user->user_nicename,
+	];
+	$first_name = trim( (string) get_user_meta( $user->ID, 'first_name', true ) );
+	$last_name  = trim( (string) get_user_meta( $user->ID, 'last_name', true ) );
+
+	if ( '' !== $first_name || '' !== $last_name ) {
+		$values[] = trim( $first_name . ' ' . $last_name );
+		$values[] = trim( $last_name . ' ' . $first_name );
+	}
+
+	$lookups = array_map( 'trufield_normalize_assignment_user_lookup_value', $values );
+	$lookups = array_values( array_filter( array_unique( $lookups ) ) );
+
+	return $lookups;
+}
+
+function trufield_assignment_user_has_role( WP_User $user, string $field ): bool {
+	return [] !== array_intersect( trufield_assignment_user_roles_for_field( $field ), (array) $user->roles );
+}
+
 function trufield_get_rsm_bam_display_names(): array {
 	return [
 		'Anthony Finke',
@@ -622,26 +696,59 @@ function trufield_get_rsm_bam_user_options(): array {
 	$allowed_names = trufield_get_rsm_bam_display_names();
 	$users         = get_users(
 		[
-			'role__in' => trufield_assignment_user_roles_for_field( 'rsm_bam' ),
-			'orderby'  => 'display_name',
-			'order'    => 'ASC',
-			'fields'   => [ 'ID', 'display_name' ],
+			'orderby' => 'display_name',
+			'order'   => 'ASC',
+			'fields'  => 'all',
 		]
 	);
 	$users_by_name = [];
 
 	foreach ( $users as $user ) {
-		$name = trim( (string) $user->display_name );
-		if ( '' === $name ) {
+		if ( ! $user instanceof WP_User ) {
+			$user = get_userdata( (int) ( $user->ID ?? 0 ) );
+		}
+
+		if ( ! $user instanceof WP_User ) {
 			continue;
 		}
 
-		$users_by_name[ $name ] = (int) $user->ID;
+		foreach ( trufield_assignment_user_lookup_values( $user ) as $lookup_name ) {
+			$existing_user = $users_by_name[ $lookup_name ] ?? null;
+
+			if ( ! $existing_user instanceof WP_User ) {
+				$users_by_name[ $lookup_name ] = $user;
+				continue;
+			}
+
+			if ( ! trufield_assignment_user_has_role( $existing_user, 'rsm_bam' ) && trufield_assignment_user_has_role( $user, 'rsm_bam' ) ) {
+				$users_by_name[ $lookup_name ] = $user;
+			}
+		}
 	}
 
 	$options = [];
 	foreach ( $allowed_names as $name ) {
-		$user_id = $users_by_name[ $name ] ?? 0;
+		$lookup_name = trufield_normalize_assignment_user_lookup_value( $name );
+		$user        = $users_by_name[ $lookup_name ] ?? null;
+
+		if ( ! $user instanceof WP_User ) {
+			foreach ( $users as $candidate_user ) {
+				if ( ! $candidate_user instanceof WP_User ) {
+					$candidate_user = get_userdata( (int) ( $candidate_user->ID ?? 0 ) );
+				}
+
+				if ( ! $candidate_user instanceof WP_User || ! trufield_assignment_user_has_role( $candidate_user, 'rsm_bam' ) ) {
+					continue;
+				}
+
+				if ( trufield_assignment_person_name_matches( $name, $candidate_user ) ) {
+					$user = $candidate_user;
+					break;
+				}
+			}
+		}
+
+		$user_id     = $user instanceof WP_User ? (int) $user->ID : 0;
 		if ( $user_id <= 0 ) {
 			continue;
 		}
@@ -1193,6 +1300,24 @@ $previous_phase = $phase - 1;
 $previous_status = trufield_get_phase_status( $post_id, $previous_phase );
 
 return (bool) get_post_meta( $post_id, "phase_{$previous_phase}_verified", true ) || 'completed' === $previous_status;
+}
+
+function trufield_get_followup_phase_for_redirect( int $post_id, int $phase, int $user_id ): int {
+	$next_phase = $phase + 1;
+
+	if ( ! in_array( $next_phase, TRUFIELD_ACTIVE_PHASES, true ) ) {
+		return 0;
+	}
+
+	if ( ! trufield_prerequisite_met( $post_id, $next_phase ) ) {
+		return 0;
+	}
+
+	if ( ! trufield_can_edit_phase( $post_id, $next_phase, $user_id ) ) {
+		return 0;
+	}
+
+	return $next_phase;
 }
 
 function trufield_can_edit_phase( int $post_id, int $phase, int $user_id ): bool {
@@ -1964,9 +2089,19 @@ if ( is_wp_error( $result ) ) {
 exit;
 }
 
+	$followup_phase = trufield_get_followup_phase_for_redirect( $post_id, $phase, $user_id );
+	$completion_redirect_base = remove_query_arg( [ 'phase_step', 'phase_1_step', 'phase_2_step', 'phase_3_step' ], $redirect_clean );
+	if ( $followup_phase > 0 && trufield_get_phase_step_count( $followup_phase ) > 1 ) {
+		$completion_redirect_base = add_query_arg( sprintf( 'phase_%d_step', $followup_phase ), 1, $completion_redirect_base );
+	}
+
 	if ( trufield_phase_auto_verifies( $phase ) ) {
 		$phase_state = trufield_sync_phase_verification_state( $post_id, $phase );
-		wp_safe_redirect( add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : "phase_{$phase}_completed", $redirect ) );
+		$completion_redirect = add_query_arg( 'tf_success', ! empty( $phase_state['just_verified'] ) ? "phase_{$phase}_autoverified" : "phase_{$phase}_completed", $completion_redirect_base );
+		if ( $followup_phase > 0 ) {
+			$completion_redirect .= '#tf-phase-' . $followup_phase;
+		}
+		wp_safe_redirect( $completion_redirect );
 		exit;
 	}
 
@@ -1975,7 +2110,11 @@ exit;
 		delete_post_meta( $post_id, "phase_{$phase}_verified_at" );
 	}
 
-wp_safe_redirect( add_query_arg( 'tf_success', "phase_{$phase}_completed", $redirect ) );
+	$completion_redirect = add_query_arg( 'tf_success', "phase_{$phase}_completed", $completion_redirect_base );
+	if ( $followup_phase > 0 ) {
+		$completion_redirect .= '#tf-phase-' . $followup_phase;
+	}
+	wp_safe_redirect( $completion_redirect );
 exit;
 }
 
