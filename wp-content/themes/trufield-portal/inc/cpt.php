@@ -42,10 +42,118 @@ function trufield_register_cpt_plant_field(): void {
 		'menu_position'      => 5,
 		'menu_icon'          => 'dashicons-location-alt',
 		'supports'           => [ 'title', 'revisions', 'custom-fields' ],
-		'show_in_rest'       => false, // Portal uses classic templates; REST not needed for v1.
+		'show_in_rest'       => true,
 	];
 
 	register_post_type( 'plant_field', $args );
+}
+
+add_action( 'rest_api_init', 'trufield_register_plant_field_rest_fields' );
+function trufield_register_plant_field_rest_fields(): void {
+	register_rest_field(
+		'plant_field',
+		'portal_meta',
+		[
+			'get_callback' => 'trufield_get_plant_field_rest_meta',
+			'schema'       => [
+				'description'          => __( 'Non-protected custom fields for this plant field.', 'trufield-portal' ),
+				'type'                 => 'object',
+				'context'              => [ 'view', 'edit' ],
+				'readonly'             => true,
+				'additionalProperties' => true,
+			],
+		]
+	);
+}
+
+function trufield_get_plant_field_rest_meta( array $post_arr ): array {
+	$post_id = isset( $post_arr['id'] ) ? (int) $post_arr['id'] : 0;
+	if ( $post_id <= 0 || ! current_user_can( 'read_plant_field', $post_id ) ) {
+		return [];
+	}
+
+	$meta    = get_post_meta( $post_id );
+	$payload = [];
+
+	foreach ( $meta as $meta_key => $values ) {
+		if ( is_protected_meta( (string) $meta_key, 'post' ) ) {
+			continue;
+		}
+
+		$normalized_values = array_map( 'maybe_unserialize', (array) $values );
+		$payload[ $meta_key ] = 1 === count( $normalized_values )
+			? $normalized_values[0]
+			: $normalized_values;
+	}
+
+	return $payload;
+}
+
+add_filter( 'rest_request_before_callbacks', 'trufield_restrict_plant_field_rest_requests', 10, 3 );
+function trufield_restrict_plant_field_rest_requests( $response, array $handler, WP_REST_Request $request ) {
+	unset( $handler );
+
+	if ( ! trufield_is_plant_field_rest_request( $request ) ) {
+		return $response;
+	}
+
+	if ( ! is_user_logged_in() ) {
+		return new WP_Error(
+			'rest_forbidden',
+			__( 'Authentication is required for the plant field API.', 'trufield-portal' ),
+			[ 'status' => rest_authorization_required_code() ]
+		);
+	}
+
+	$post_id = trufield_get_plant_field_rest_request_post_id( $request );
+	if ( $post_id > 0 && in_array( $request->get_method(), [ 'GET', 'HEAD' ], true ) && ! current_user_can( 'read_plant_field', $post_id ) ) {
+		return new WP_Error(
+			'rest_forbidden',
+			__( 'You do not have permission to view this plant field.', 'trufield-portal' ),
+			[ 'status' => rest_authorization_required_code() ]
+		);
+	}
+
+	return $response;
+}
+
+function trufield_is_plant_field_rest_request( WP_REST_Request $request ): bool {
+	return 0 === strpos( $request->get_route(), '/wp/v2/plant_field' );
+}
+
+function trufield_get_plant_field_rest_request_post_id( WP_REST_Request $request ): int {
+	foreach ( [ 'id', 'parent' ] as $param_name ) {
+		$param_value = $request->get_param( $param_name );
+		if ( is_numeric( $param_value ) ) {
+			return absint( (string) $param_value );
+		}
+	}
+
+	return 0;
+}
+
+add_filter( 'rest_plant_field_query', 'trufield_limit_plant_field_rest_query', 10, 2 );
+function trufield_limit_plant_field_rest_query( array $args, WP_REST_Request $request ): array {
+	unset( $request );
+
+	$user = wp_get_current_user();
+	if ( ! $user->exists() || array_intersect( [ 'administrator', 'leadership' ], (array) $user->roles ) ) {
+		return $args;
+	}
+
+	$visible_args                   = $args;
+	$visible_args['posts_per_page'] = -1;
+	$visible_args['paged']          = 1;
+	unset( $visible_args['offset'] );
+
+	$visible_ids = array_map(
+		'absint',
+		wp_list_pluck( trufield_get_visible_fields( $visible_args ), 'ID' )
+	);
+
+	$args['post__in'] = ! empty( $visible_ids ) ? $visible_ids : [ 0 ];
+
+	return $args;
 }
 
 function trufield_generate_trial_uuid(): string {
