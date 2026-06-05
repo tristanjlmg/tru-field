@@ -647,35 +647,79 @@ function trufield_assignment_user_has_role( WP_User $user, string $field ): bool
 	return [] !== array_intersect( trufield_assignment_user_roles_for_field( $field ), (array) $user->roles );
 }
 
+function trufield_assignment_dropdown_option_key( string $field ): string {
+	return sprintf( 'trufield_assignment_dropdown_%s', sanitize_key( $field ) );
+}
+
+function trufield_default_assignment_dropdown_names( string $field ): array {
+	if ( 'rsm_bam' === $field ) {
+		return [
+			'Anthony Finke',
+			'Beau Matson',
+			'Chris Person',
+			'Chris Pevestorf',
+			'Ethan Noll',
+			'Jesse Wiant',
+			'Joe Duck',
+			'Lane Danielson',
+			'Michael Edens',
+			'Nick Thompson',
+			'Peter White',
+			'Quintin Leffel',
+			'Tim Robie',
+			'Zach Ekeler',
+			'Zach Minnihan',
+		];
+	}
+
+	if ( 'fsa' === $field ) {
+		return [
+			'Chad Becker',
+			'Keith Byerly',
+			'Kip Jacobs',
+			'Roland Leatherwood',
+			'Tryston Beyrer',
+		];
+	}
+
+	return [];
+}
+
+function trufield_sanitize_assignment_dropdown_names( $raw_value, string $field ): array {
+	$values = is_array( $raw_value ) ? $raw_value : preg_split( '/\r\n|\r|\n/', (string) $raw_value );
+	$values = is_array( $values ) ? $values : [];
+	$names  = [];
+
+	foreach ( $values as $value ) {
+		$name = trim( sanitize_text_field( (string) $value ) );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$names[ $name ] = $name;
+	}
+
+	if ( empty( $names ) ) {
+		foreach ( trufield_default_assignment_dropdown_names( $field ) as $default_name ) {
+			$names[ $default_name ] = $default_name;
+		}
+	}
+
+	return array_values( $names );
+}
+
+function trufield_get_assignment_dropdown_names( string $field ): array {
+	$stored = get_option( trufield_assignment_dropdown_option_key( $field ), [] );
+
+	return trufield_sanitize_assignment_dropdown_names( $stored, $field );
+}
+
 function trufield_get_rsm_bam_display_names(): array {
-	return [
-		'Anthony Finke',
-		'Beau Matson',
-		'Chris Person',
-		'Chris Pevestorf',
-		'Ethan Noll',
-		'Jesse Wiant',
-		'Joe Duck',
-		'Lane Danielson',
-		'Michael Edens',
-		'Nick Thompson',
-		'Peter White',
-		'Quintin Leffel',
-		'Tim Robie',
-		'Zach Ekeler',
-		'Zach Minnihan',
-	];
+	return trufield_get_assignment_dropdown_names( 'rsm_bam' );
 }
 
 function trufield_get_fsa_display_names(): array {
-	return [
-		'Chad Becker',
-		'Keith Byerly',
-		'Kip Jacobs',
-		'Roland Leatherwood',
-		'Tryston Beyrer',
-		'Cam Blackford',
-	];
+	return trufield_get_assignment_dropdown_names( 'fsa' );
 }
 
 function trufield_get_fsa_user_ids(): array {
@@ -784,26 +828,61 @@ function trufield_get_assignment_user_options( string $field ): array {
 		$allowed_names = trufield_get_fsa_display_names();
 		$users         = get_users(
 			[
-				'role__in' => trufield_assignment_user_roles_for_field( 'fsa' ),
-				'orderby'  => 'display_name',
-				'order'    => 'ASC',
-				'fields'   => [ 'ID', 'display_name' ],
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+				'fields'  => 'all',
 			]
 		);
 		$users_by_name = [];
 
 		foreach ( $users as $user ) {
-			$name = trim( (string) $user->display_name );
-			if ( '' === $name ) {
+			if ( ! $user instanceof WP_User ) {
+				$user = get_userdata( (int) ( $user->ID ?? 0 ) );
+			}
+
+			if ( ! $user instanceof WP_User ) {
 				continue;
 			}
 
-			$users_by_name[ $name ] = (int) $user->ID;
+			foreach ( trufield_assignment_user_lookup_values( $user ) as $lookup_name ) {
+				$existing_user = $users_by_name[ $lookup_name ] ?? null;
+
+				if ( ! $existing_user instanceof WP_User ) {
+					$users_by_name[ $lookup_name ] = $user;
+					continue;
+				}
+
+				if ( ! trufield_assignment_user_has_role( $existing_user, 'fsa' ) && trufield_assignment_user_has_role( $user, 'fsa' ) ) {
+					$users_by_name[ $lookup_name ] = $user;
+				}
+			}
 		}
 
 		$options = [];
 		foreach ( $allowed_names as $name ) {
-			$user_id = $users_by_name[ $name ] ?? 0;
+			$lookup_name = trufield_normalize_assignment_user_lookup_value( $name );
+			$user        = $users_by_name[ $lookup_name ] ?? null;
+
+			if ( ! $user instanceof WP_User ) {
+				foreach ( $users as $candidate_user ) {
+					if ( ! $candidate_user instanceof WP_User ) {
+						$candidate_user = get_userdata( (int) ( $candidate_user->ID ?? 0 ) );
+					}
+
+					if ( ! $candidate_user instanceof WP_User ) {
+						continue;
+					}
+
+					if ( trufield_assignment_person_name_matches( $name, $candidate_user ) ) {
+						$user = $candidate_user;
+						if ( trufield_assignment_user_has_role( $candidate_user, 'fsa' ) ) {
+							break;
+						}
+					}
+				}
+			}
+
+			$user_id = $user instanceof WP_User ? (int) $user->ID : 0;
 			if ( $user_id <= 0 ) {
 				continue;
 			}

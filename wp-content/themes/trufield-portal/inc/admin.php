@@ -52,6 +52,10 @@ function trufield_retailer_import_admin_url( array $args = [] ): string {
 	return add_query_arg( $args, admin_url( 'edit.php?post_type=plant_field&page=trufield-import-retailers' ) );
 }
 
+function trufield_assignment_dropdowns_admin_url( array $args = [] ): string {
+	return add_query_arg( $args, admin_url( 'edit.php?post_type=plant_field&page=trufield-assignment-dropdowns' ) );
+}
+
 add_action( 'admin_post_trufield_save_product_tested_options', 'trufield_save_product_tested_options' );
 function trufield_save_product_tested_options(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -68,6 +72,30 @@ function trufield_save_product_tested_options(): void {
 			'tf_products_updated',
 			'1',
 			admin_url( 'edit.php?post_type=plant_field&page=trufield-products' )
+		)
+	);
+	exit;
+}
+
+add_action( 'admin_post_trufield_save_assignment_dropdowns', 'trufield_save_assignment_dropdowns' );
+function trufield_save_assignment_dropdowns(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	check_admin_referer( 'trufield_save_assignment_dropdowns' );
+
+	$rsm_bam_names = trufield_sanitize_assignment_dropdown_names( wp_unslash( $_POST['rsm_bam_names'] ?? [] ), 'rsm_bam' );
+	$fsa_names     = trufield_sanitize_assignment_dropdown_names( wp_unslash( $_POST['fsa_names'] ?? [] ), 'fsa' );
+
+	update_option( trufield_assignment_dropdown_option_key( 'rsm_bam' ), $rsm_bam_names, false );
+	update_option( trufield_assignment_dropdown_option_key( 'fsa' ), $fsa_names, false );
+
+	wp_safe_redirect(
+		trufield_assignment_dropdowns_admin_url(
+			[
+				'tf_assignment_dropdowns_updated' => '1',
+			]
 		)
 	);
 	exit;
@@ -417,6 +445,15 @@ __( 'Export CSV', 'trufield-portal' ),
 		'trufield-products',
 		'trufield_product_tested_page_render'
 	);
+
+	add_submenu_page(
+		'edit.php?post_type=plant_field',
+		__( 'Assignment Dropdowns', 'trufield-portal' ),
+		__( 'Assignment Dropdowns', 'trufield-portal' ),
+		'manage_options',
+		'trufield-assignment-dropdowns',
+		'trufield_assignment_dropdowns_page_render'
+	);
 }
 
 function trufield_retailer_import_page_render(): void {
@@ -608,6 +645,47 @@ function trufield_product_tested_page_render(): void {
 			<input type="hidden" name="action" value="trufield_save_product_tested_options">
 			<textarea name="product_tested_options" rows="10" class="large-text code"><?php echo esc_textarea( implode( "\n", array_values( $choices ) ) ); ?></textarea>
 			<?php submit_button( __( 'Save Products', 'trufield-portal' ) ); ?>
+		</form>
+	</div>
+	<?php
+}
+
+function trufield_assignment_dropdowns_page_render(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Access denied.', 'trufield-portal' ) );
+	}
+
+	$rsm_bam_names = trufield_get_rsm_bam_display_names();
+	$fsa_names     = trufield_get_fsa_display_names();
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Assignment Dropdowns', 'trufield-portal' ); ?></h1>
+		<?php if ( ! empty( $_GET['tf_assignment_dropdowns_updated'] ) ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Assignment dropdowns updated.', 'trufield-portal' ); ?></p></div>
+		<?php endif; ?>
+		<p><?php esc_html_e( 'Manage the names shown in the RSM / BAM and FSA dropdowns. Enter one name per line. Duplicate names are removed automatically.', 'trufield-portal' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'trufield_save_assignment_dropdowns' ); ?>
+			<input type="hidden" name="action" value="trufield_save_assignment_dropdowns">
+			<table class="form-table" role="presentation">
+				<tbody>
+					<tr>
+						<th scope="row"><label for="trufield-rsm-bam-names"><?php esc_html_e( 'RSM / BAM Names', 'trufield-portal' ); ?></label></th>
+						<td>
+							<textarea id="trufield-rsm-bam-names" name="rsm_bam_names" rows="12" class="large-text code"><?php echo esc_textarea( implode( "\n", $rsm_bam_names ) ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'These names populate the RSM / BAM assignment dropdowns.', 'trufield-portal' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="trufield-fsa-names"><?php esc_html_e( 'FSA Names', 'trufield-portal' ); ?></label></th>
+						<td>
+							<textarea id="trufield-fsa-names" name="fsa_names" rows="12" class="large-text code"><?php echo esc_textarea( implode( "\n", $fsa_names ) ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'These names populate the FSA assignment dropdowns.', 'trufield-portal' ); ?></p>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<?php submit_button( __( 'Save Assignment Dropdowns', 'trufield-portal' ) ); ?>
 		</form>
 	</div>
 	<?php
