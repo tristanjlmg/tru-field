@@ -30,7 +30,7 @@ function trufield_import_page_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import Trial Data', 'trufield-portal' ); ?></h1>
-		<p><?php esc_html_e( 'Upload the trial-data XLSX sheet to create Plant Field records in bulk. Imports are create-only, and Phase 1 or Phase 2 will auto-complete when the imported row already satisfies that phase.', 'trufield-portal' ); ?></p>
+		<p><?php esc_html_e( 'Upload the trial-data XLSX sheet to create or update Plant Field records in bulk. Imports preserve existing values when the incoming row is blank, and Phase 1 or Phase 2 will auto-complete when the imported row already satisfies that phase.', 'trufield-portal' ); ?></p>
 
 		<?php if ( 'saved' === $maps_notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Google Maps API key saved.', 'trufield-portal' ); ?></p></div>
@@ -68,8 +68,10 @@ function trufield_import_page_render(): void {
 				<p>
 					<?php
 					printf(
-						esc_html__( 'Import finished. Created: %1$d. Skipped: %2$d. Warnings: %3$d.', 'trufield-portal' ),
+						esc_html__( 'Import finished. Created: %1$d. Updated: %2$d. Unchanged: %3$d. Skipped: %4$d. Warnings: %5$d.', 'trufield-portal' ),
 						(int) ( $results['created'] ?? 0 ),
+						(int) ( $results['updated'] ?? 0 ),
+						(int) ( $results['unchanged'] ?? 0 ),
 						(int) ( $results['skipped'] ?? 0 ),
 						(int) ( $results['warnings'] ?? 0 )
 					);
@@ -121,7 +123,9 @@ function trufield_import_page_render(): void {
 
 		<h2><?php esc_html_e( 'Trial Import Behavior', 'trufield-portal' ); ?></h2>
 		<ul>
-			<li><?php esc_html_e( 'Creates new Plant Field records only. Re-importing the same workbook will create duplicates.', 'trufield-portal' ); ?></li>
+			<li><?php esc_html_e( 'Creates new Plant Field records for rows that do not match existing trials.', 'trufield-portal' ); ?></li>
+			<li><?php esc_html_e( 'Updates matched trials with non-empty import values and preserves existing values when the import cell is blank.', 'trufield-portal' ); ?></li>
+			<li><?php esc_html_e( 'Leaves matched trials unchanged when no imported values differ.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Auto-completes Phase 1 and Phase 2 when the imported row already includes the required data for that phase.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Matches the Email column to an existing WordPress user and assigns the record when a match is found.', 'trufield-portal' ); ?></li>
 			<li><?php esc_html_e( 'Uses Address as the primary geocode input and falls back to the full mailing address when needed.', 'trufield-portal' ); ?></li>
@@ -539,12 +543,175 @@ function trufield_import_cell_value( SimpleXMLElement $cell, array $shared_strin
 	return isset( $cell_children->v ) ? (string) $cell_children->v : '';
 }
 
+function trufield_import_normalize_match_component( string $value ): string {
+	$value = strtolower( trim( $value ) );
+	$value = preg_replace( '/[^a-z0-9]+/', ' ', $value );
+	if ( ! is_string( $value ) ) {
+		return '';
+	}
+
+	return trim( preg_replace( '/\s+/', ' ', $value ) );
+}
+
+function trufield_import_match_key_from_meta( array $meta ): string {
+	$retailer = trufield_import_normalize_match_component( (string) ( $meta['retailer_name'] ?? '' ) );
+	if ( '' === $retailer ) {
+		return '';
+	}
+
+	$branch = trufield_import_normalize_match_component( (string) ( $meta['retailer_branch_location'] ?? '' ) );
+	$state  = trufield_import_normalize_match_component( (string) ( $meta['phase_1_state_region'] ?? '' ) );
+	$seed   = '';
+
+	foreach ( [ 'field_name', 'farm_name', 'field_location_address' ] as $location_key ) {
+		$candidate = trufield_import_normalize_match_component( (string) ( $meta[ $location_key ] ?? '' ) );
+		if ( '' !== $candidate ) {
+			$seed = $candidate;
+			break;
+		}
+	}
+
+	if ( '' === $seed ) {
+		$seed = trufield_import_normalize_match_component( (string) ( $meta['retailer_address'] ?? '' ) );
+	}
+
+	if ( '' === $seed ) {
+		return '';
+	}
+
+	return implode( '|', [ $retailer, $branch, $seed, $state ] );
+}
+
+function trufield_import_find_existing_post_id( array $prepared ): int {
+	$match_key = (string) ( $prepared['match_key'] ?? '' );
+	if ( '' !== $match_key ) {
+		$matched_ids = get_posts(
+			[
+				'post_type'      => 'plant_field',
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+				'posts_per_page' => 1,
+				'meta_key'       => 'import_match_key_v1',
+				'meta_value'     => $match_key,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			]
+		);
+
+		if ( ! empty( $matched_ids ) ) {
+			return (int) $matched_ids[0];
+		}
+	}
+
+	$retailer = (string) ( $prepared['meta']['retailer_name'] ?? '' );
+	if ( '' === $retailer ) {
+		return 0;
+	}
+
+	$meta_query = [
+		[
+			'key'   => 'retailer_name',
+			'value' => $retailer,
+		],
+	];
+
+	$branch = (string) ( $prepared['meta']['retailer_branch_location'] ?? '' );
+	if ( '' !== $branch ) {
+		$meta_query[] = [
+			'key'   => 'retailer_branch_location',
+			'value' => $branch,
+		];
+	}
+
+	$candidate_ids = get_posts(
+		[
+			'post_type'      => 'plant_field',
+			'post_status'    => 'any',
+			'fields'         => 'ids',
+			'posts_per_page' => 200,
+			'meta_query'     => $meta_query,
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+		]
+	);
+
+	if ( empty( $candidate_ids ) ) {
+		return 0;
+	}
+
+	foreach ( $candidate_ids as $candidate_id ) {
+		$candidate_id = (int) $candidate_id;
+		$existing_key = trim( (string) get_post_meta( $candidate_id, 'import_match_key_v1', true ) );
+		if ( '' === $existing_key ) {
+			$existing_key = trufield_import_match_key_from_meta(
+				[
+					'retailer_name'             => (string) get_post_meta( $candidate_id, 'retailer_name', true ),
+					'retailer_branch_location'  => (string) get_post_meta( $candidate_id, 'retailer_branch_location', true ),
+					'field_name'                => (string) get_post_meta( $candidate_id, 'field_name', true ),
+					'farm_name'                 => (string) get_post_meta( $candidate_id, 'farm_name', true ),
+					'field_location_address'    => (string) get_post_meta( $candidate_id, 'field_location_address', true ),
+					'retailer_address'          => (string) get_post_meta( $candidate_id, 'retailer_address', true ),
+					'phase_1_state_region'      => (string) get_post_meta( $candidate_id, 'phase_1_state_region', true ),
+				]
+			);
+		}
+
+		if ( '' !== $match_key && $existing_key === $match_key ) {
+			return $candidate_id;
+		}
+	}
+
+	return 0;
+}
+
+function trufield_import_meta_is_empty( $value ): bool {
+	if ( null === $value ) {
+		return true;
+	}
+
+	if ( is_string( $value ) ) {
+		return '' === trim( $value );
+	}
+
+	if ( is_array( $value ) ) {
+		return [] === $value;
+	}
+
+	return false;
+}
+
+function trufield_import_apply_meta_updates( int $post_id, array $meta ): int {
+	$changes = 0;
+
+	foreach ( $meta as $meta_key => $meta_value ) {
+		if ( trufield_import_meta_is_empty( $meta_value ) ) {
+			continue;
+		}
+
+		$current_value = get_post_meta( $post_id, $meta_key, true );
+		if ( is_numeric( $current_value ) && is_numeric( $meta_value ) ) {
+			if ( (string) +$current_value === (string) +$meta_value ) {
+				continue;
+			}
+		} elseif ( (string) $current_value === (string) $meta_value ) {
+			continue;
+		}
+
+		update_post_meta( $post_id, $meta_key, $meta_value );
+		$changes++;
+	}
+
+	return $changes;
+}
+
 function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array {
 	$results = [
-		'created'  => 0,
-		'skipped'  => 0,
-		'warnings' => 0,
-		'rows'     => [],
+		'created'   => 0,
+		'updated'   => 0,
+		'unchanged' => 0,
+		'skipped'   => 0,
+		'warnings'  => 0,
+		'rows'      => [],
 	];
 
 	$api_key = trufield_get_google_maps_api_key();
@@ -560,6 +727,46 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 				'status'   => 'Skipped',
 				'title'    => (string) ( $row['Location'] ?? '' ),
 				'messages' => [ $prepared->get_error_message() ],
+			];
+			continue;
+		}
+
+		$match_key = (string) ( $prepared['match_key'] ?? '' );
+		$existing_post_id = trufield_import_find_existing_post_id( $prepared );
+
+		if ( $existing_post_id > 0 ) {
+			$changed_fields = trufield_import_apply_meta_updates( $existing_post_id, $prepared['meta'] );
+			if ( '' !== $match_key ) {
+				update_post_meta( $existing_post_id, 'import_match_key_v1', $match_key );
+			}
+
+			trufield_sync_imported_phase_states( $existing_post_id );
+
+			$results['warnings'] += count( $prepared['warnings'] );
+			$messages = [];
+			if ( $changed_fields > 0 ) {
+				$results['updated']++;
+				$messages[] = sprintf(
+					/* translators: %d = number of meta fields changed. */
+					__( 'Record updated (%d fields changed).', 'trufield-portal' ),
+					$changed_fields
+				);
+				$status = [] === $prepared['warnings'] ? 'Updated' : 'Updated with warnings';
+			} else {
+				$results['unchanged']++;
+				$messages[] = __( 'No changes were needed for this existing record.', 'trufield-portal' );
+				$status = [] === $prepared['warnings'] ? 'Unchanged' : 'Unchanged with warnings';
+			}
+
+			if ( [] !== $prepared['warnings'] ) {
+				$messages = array_merge( $messages, $prepared['warnings'] );
+			}
+
+			$results['rows'][] = [
+				'row'      => $row_number,
+				'status'   => $status,
+				'title'    => get_the_title( $existing_post_id ),
+				'messages' => $messages,
 			];
 			continue;
 		}
@@ -585,12 +792,9 @@ function trufield_import_retailer_demo_rows( array $rows, int $user_id ): array 
 			continue;
 		}
 
-		foreach ( $prepared['meta'] as $meta_key => $meta_value ) {
-			if ( $meta_value === '' || $meta_value === null ) {
-				continue;
-			}
-
-			update_post_meta( $post_id, $meta_key, $meta_value );
+		trufield_import_apply_meta_updates( (int) $post_id, $prepared['meta'] );
+		if ( '' !== $match_key ) {
+			update_post_meta( (int) $post_id, 'import_match_key_v1', $match_key );
 		}
 
 		trufield_sync_imported_phase_states( $post_id );
@@ -759,6 +963,11 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 		'import_notes'                => sanitize_textarea_field( trufield_import_row_value( $row, [ 'Notes', 'Column1' ] ) ),
 	];
 
+	$match_key = trufield_import_match_key_from_meta( $meta );
+	if ( '' === $match_key ) {
+		$warnings[] = __( 'A stable trial match key could not be derived from this row, so future updates may create a new record.', 'trufield-portal' );
+	}
+
 	if ( '' === $meta['contact_phone'] ) {
 		$meta['contact_phone'] = $contact_phone;
 	}
@@ -813,6 +1022,7 @@ function trufield_prepare_import_row( array $row, string $api_key ) {
 	return [
 		'post_title' => $post_title,
 		'meta'       => $meta,
+		'match_key'  => $match_key,
 		'warnings'   => $warnings,
 	];
 }
