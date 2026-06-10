@@ -557,6 +557,38 @@ function trufield_get_retailer_name_options( int $post_id = 0 ): array {
 	return $options;
 }
 
+function trufield_upsert_retailer_directory_entry( string $retailer_name, array $entry = [] ): string {
+	$retailer_name = trim( sanitize_text_field( $retailer_name ) );
+	if ( '' === $retailer_name ) {
+		return '';
+	}
+
+	$directory = trufield_get_retailer_directory();
+	$current   = isset( $directory[ $retailer_name ] ) && is_array( $directory[ $retailer_name ] ) ? $directory[ $retailer_name ] : [];
+	$directory[ $retailer_name ] = array_merge(
+		[
+			'name'                     => $retailer_name,
+			'retailer_branch_location' => '',
+			'retailer_key_contact'     => '',
+			'retailer_contact_phone'   => '',
+			'retailer_address'         => '',
+			'retailer_city'            => '',
+			'phase_1_state_region'     => '',
+			'rsm_bam'                  => '',
+		],
+		$current,
+		$entry,
+		[
+			'name' => $retailer_name,
+		]
+	);
+
+	$sanitized_directory = trufield_sanitize_retailer_directory_entries( array_values( $directory ) );
+	update_option( trufield_retailer_directory_option_key(), array_values( $sanitized_directory ), false );
+
+	return $retailer_name;
+}
+
 function trufield_assignment_user_roles_for_field( string $field ): array {
 	$map = [
 		'rsm_bam' => [ 'sales_rep', 'administrator' ],
@@ -2056,7 +2088,17 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		$retailer_manual    = trim( sanitize_text_field( wp_unslash( $_POST['retailer_name_manual'] ?? '' ) ) );
 
 		if ( 'other' === strtolower( $retailer_selection ) ) {
-			$_POST['retailer_name'] = $retailer_manual;
+			$directory_entry = [
+				'retailer_branch_location' => sanitize_text_field( wp_unslash( $_POST['retailer_branch_location'] ?? '' ) ),
+				'retailer_key_contact'     => sanitize_text_field( wp_unslash( $_POST['retailer_key_contact'] ?? '' ) ),
+				'retailer_contact_phone'   => wp_unslash( $_POST['retailer_contact_phone'] ?? '' ),
+				'retailer_address'         => sanitize_text_field( wp_unslash( $_POST['retailer_address'] ?? '' ) ),
+				'retailer_city'            => sanitize_text_field( wp_unslash( $_POST['retailer_city'] ?? '' ) ),
+				'phase_1_state_region'     => sanitize_text_field( wp_unslash( $_POST['phase_1_state_region'] ?? '' ) ),
+				'rsm_bam'                  => (string) absint( wp_unslash( $_POST['rsm_bam'] ?? get_post_meta( $post_id, 'rsm_bam', true ) ) ),
+			];
+
+			$_POST['retailer_name'] = trufield_upsert_retailer_directory_entry( $retailer_manual, $directory_entry );
 		} else {
 			$_POST['retailer_name'] = $retailer_selection;
 		}
