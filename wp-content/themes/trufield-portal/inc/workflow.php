@@ -1366,8 +1366,10 @@ function trufield_sync_phase_verification_state( int $post_id, int $phase ): arr
 		}
 
 		if ( $was_completed ) {
-			update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
-			delete_post_meta( $post_id, "phase_{$phase}_completed_at" );
+			if ( 2 !== $phase ) {
+				update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
+				delete_post_meta( $post_id, "phase_{$phase}_completed_at" );
+			}
 		}
 	}
 
@@ -1610,18 +1612,31 @@ function trufield_admin_only_phase_fields( int $phase ): array {
 }
 
 function trufield_validate_date_value( string $value ): string {
-$value = sanitize_text_field( $value );
-if ( $value === '' ) {
-return '';
-}
+	$value = trim( sanitize_text_field( $value ) );
+	if ( '' === $value ) {
+		return '';
+	}
 
-$date = DateTime::createFromFormat( 'Y-m-d', $value );
-$errors = DateTime::getLastErrors();
-if ( ! $date || ( is_array( $errors ) && ( ! empty( $errors['warning_count'] ) || ! empty( $errors['error_count'] ) ) ) ) {
-return '';
-}
+	$formats = [
+		'Y-m-d',
+		'm/d/Y',
+		'n/j/Y',
+	];
 
-return $date->format( 'Y-m-d' ) === $value ? $value : '';
+	foreach ( $formats as $format ) {
+		$date = DateTime::createFromFormat( $format, $value );
+		$errors = DateTime::getLastErrors();
+		if ( ! $date || ( is_array( $errors ) && ( ! empty( $errors['warning_count'] ) || ! empty( $errors['error_count'] ) ) ) ) {
+			continue;
+		}
+
+		$normalized_input = trim( (string) $date->format( $format ) );
+		if ( $normalized_input === $value ) {
+			return $date->format( 'Y-m-d' );
+		}
+	}
+
+	return '';
 }
 
 function trufield_normalize_phone_value( string $value ): string {
@@ -2043,6 +2058,19 @@ function trufield_admin_action_redirect_url( int $post_id, string $query_key, in
 	return admin_url( "post.php?post={$post_id}&action=edit&{$query_key}={$phase}" );
 }
 
+function trufield_temp_submit_log( string $event, array $context = [] ): void {
+	if ( defined( 'TRUFIELD_TEMP_SUBMIT_LOGGING' ) && ! TRUFIELD_TEMP_SUBMIT_LOGGING ) {
+		return;
+	}
+
+	$payload = wp_json_encode( $context );
+	if ( ! is_string( $payload ) ) {
+		$payload = '{}';
+	}
+
+	error_log( '[TruField Temp Submit] ' . $event . ' ' . $payload );
+}
+
 function trufield_handle_save_phase_nopriv(): void {
 wp_safe_redirect( wp_login_url( wp_get_referer() ) );
 exit;
@@ -2066,6 +2094,9 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 		wp_die( esc_html__( 'Please sign in to continue.', 'trufield-portal' ), 403 );
 	}
 
+	$should_temp_log = in_array( $phase, [ 2, 3 ], true );
+	$log_request_id  = 'p' . $phase . '-post' . $post_id . '-u' . $user_id . '-' . substr( wp_hash( (string) microtime( true ) . ':' . (string) wp_rand() ), 0, 8 );
+
 	$phase_auto_verifies = trufield_phase_auto_verifies( $phase );
 	$was_verified        = (bool) get_post_meta( $post_id, "phase_{$phase}_verified", true );
 
@@ -2078,9 +2109,26 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	$phase_step_query_arg = sprintf( 'phase_%d_step', $phase );
 	$redirect_clean = remove_query_arg( [ 'phase_step', $phase_step_query_arg ], $redirect_base );
 	$redirect      = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $phase_step, $redirect_clean ) : $redirect_clean;
-	$action        = sanitize_key( $_POST['phase_action_intent'] ?? ( $_POST['phase_action'] ?? 'save' ) );
+	$action_source = $_POST['phase_action'] ?? ( $_POST['phase_action_intent'] ?? 'save' );
+	$action        = sanitize_key( (string) $action_source );
 	if ( ! in_array( $action, [ 'save', 'complete', 'verify_address' ], true ) ) {
 		$action = 'save';
+	}
+
+	if ( $should_temp_log ) {
+		trufield_temp_submit_log(
+			'handle_save_phase:start',
+			[
+				'request_id'    => $log_request_id,
+				'phase'         => $phase,
+				'post_id'       => $post_id,
+				'user_id'       => $user_id,
+				'action'        => $action,
+				'phase_action'  => sanitize_key( (string) ( $_POST['phase_action'] ?? '' ) ),
+				'action_intent' => sanitize_key( (string) ( $_POST['phase_action_intent'] ?? '' ) ),
+				'phase_step'    => $phase_step,
+			]
+		);
 	}
 
 	if ( 1 === $phase && array_key_exists( 'retailer_name', $_POST ) ) {
@@ -2126,6 +2174,19 @@ $phase   = (int) ( $_POST['phase'] ?? 0 );
 	if ( [] !== $field_errors ) {
 		$error_step = trufield_get_phase_step_for_fields( $phase, $invalid_fields, $phase_step );
 		$error_redirect = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $error_step, $redirect_clean ) : $redirect;
+		if ( $should_temp_log ) {
+			trufield_temp_submit_log(
+				'handle_save_phase:field_validation_error',
+				[
+					'request_id'      => $log_request_id,
+					'phase'           => $phase,
+					'action'          => $action,
+					'invalid_fields'  => $invalid_fields,
+					'field_error_cnt' => count( $field_errors ),
+					'redirect'        => $error_redirect,
+				]
+			);
+		}
 		wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( implode( ' ', $field_errors ) ), $error_redirect ) );
 		exit;
 	}
@@ -2161,6 +2222,18 @@ update_post_meta( $post_id, $field, $sanitized );
 
 		$upload_result = trufield_handle_phase_photo_upload( $post_id, $file_field, $file_field . '_upload' );
 		if ( is_wp_error( $upload_result ) ) {
+			if ( $should_temp_log ) {
+				trufield_temp_submit_log(
+					'handle_save_phase:upload_error',
+					[
+						'request_id' => $log_request_id,
+						'phase'      => $phase,
+						'action'     => $action,
+						'file_field' => $file_field,
+						'error'      => $upload_result->get_error_message(),
+					]
+				);
+			}
 			wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $upload_result->get_error_message() ), $redirect ) );
 			exit;
 		}
@@ -2201,11 +2274,34 @@ if ( $action === 'verify_address' ) {
 }
 
 if ( $action === 'complete' ) {
+	if ( $should_temp_log ) {
+		trufield_temp_submit_log(
+			'handle_save_phase:complete_requested',
+			[
+				'request_id' => $log_request_id,
+				'phase'      => $phase,
+				'post_id'    => $post_id,
+				'user_id'    => $user_id,
+			]
+		);
+	}
 $result = trufield_complete_phase( $post_id, $phase, $user_id );
 if ( is_wp_error( $result ) ) {
 	$missing_fields = trufield_get_missing_required_fields( $post_id, $phase );
 	$error_step = trufield_get_phase_step_for_fields( $phase, $missing_fields, $phase_step );
 	$error_redirect = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $error_step, $redirect_clean ) : $redirect;
+	if ( $should_temp_log ) {
+		trufield_temp_submit_log(
+			'handle_save_phase:complete_failed',
+			[
+				'request_id'     => $log_request_id,
+				'phase'          => $phase,
+				'error'          => $result->get_error_message(),
+				'missing_fields' => $missing_fields,
+				'redirect'       => $error_redirect,
+			]
+		);
+	}
 	wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $result->get_error_message() ), $error_redirect ) );
 exit;
 }
@@ -2222,6 +2318,17 @@ exit;
 		if ( $followup_phase > 0 ) {
 			$completion_redirect .= '#tf-phase-' . $followup_phase;
 		}
+		if ( $should_temp_log ) {
+			trufield_temp_submit_log(
+				'handle_save_phase:complete_success_auto_verify',
+				[
+					'request_id'    => $log_request_id,
+					'phase'         => $phase,
+					'followup_phase'=> $followup_phase,
+					'redirect'      => $completion_redirect,
+				]
+			);
+		}
 		wp_safe_redirect( $completion_redirect );
 		exit;
 	}
@@ -2234,6 +2341,17 @@ exit;
 	$completion_redirect = add_query_arg( 'tf_success', "phase_{$phase}_completed", $completion_redirect_base );
 	if ( $followup_phase > 0 ) {
 		$completion_redirect .= '#tf-phase-' . $followup_phase;
+	}
+	if ( $should_temp_log ) {
+		trufield_temp_submit_log(
+			'handle_save_phase:complete_success',
+			[
+				'request_id'    => $log_request_id,
+				'phase'         => $phase,
+				'followup_phase'=> $followup_phase,
+				'redirect'      => $completion_redirect,
+			]
+		);
 	}
 	wp_safe_redirect( $completion_redirect );
 exit;
@@ -2254,6 +2372,18 @@ if ( trufield_get_phase_status( $post_id, $phase ) === 'pending' ) {
 update_post_meta( $post_id, "phase_{$phase}_status", 'in_progress' );
 }
 update_post_meta( $post_id, 'current_phase', min( 3, max( 1, $phase ) ) );
+
+if ( $should_temp_log ) {
+	trufield_temp_submit_log(
+		'handle_save_phase:save_success',
+		[
+			'request_id' => $log_request_id,
+			'phase'      => $phase,
+			'action'     => $action,
+			'redirect'   => add_query_arg( 'tf_success', 'saved', $redirect ),
+		]
+	);
+}
 
 wp_safe_redirect( add_query_arg( 'tf_success', 'saved', $redirect ) );
 exit;

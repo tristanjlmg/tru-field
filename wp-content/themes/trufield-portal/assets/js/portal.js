@@ -585,9 +585,11 @@
           return;
         }
 
-        if (!validatePanel(panel, { shouldShowErrors: true })) {
-          event.preventDefault();
-        }
+		if (actionValue !== 'complete') {
+		  if (!validatePanel(panel, { shouldShowErrors: true })) {
+			event.preventDefault();
+		  }
+		}
       });
     });
       });
