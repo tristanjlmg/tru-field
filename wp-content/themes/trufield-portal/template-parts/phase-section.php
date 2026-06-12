@@ -26,7 +26,9 @@ $validation_missing_keys = 2 === $phase
 	? trufield_get_phase_2_missing_scoring_field_keys( $post_id )
 	: trufield_get_missing_validation_field_keys( $post_id, $phase );
 $validation_missing = trufield_get_missing_field_navigation_items( $phase, $validation_missing_keys );
-$validation_missing_lookup = array_fill_keys( $validation_missing_keys, true );
+$validation_missing_lookup = 2 === $phase
+	? trufield_get_phase_2_scoring_blockers( $post_id )
+	: array_fill_keys( $validation_missing_keys, 'missing' );
 $validation_ok = empty( $validation_missing_keys );
 $labels       = trufield_field_labels();
 $schema       = trufield_phase_field_schema();
@@ -160,12 +162,12 @@ $field_groups = [
 ],
 ];
 
-$render_missing_indicator = static function ( bool $is_missing ): void {
-	if ( ! $is_missing ) {
+$render_missing_indicator = static function ( string $reason ): void {
+	if ( '' === $reason ) {
 		return;
 	}
 	?>
-	<span class="tf-field-group__missing-indicator"><?php esc_html_e( 'Missing field', 'trufield-portal' ); ?></span>
+	<span class="tf-field-group__missing-indicator tf-field-group__missing-indicator--<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( 'needs_yes' === $reason ? __( 'Needs Yes', 'trufield-portal' ) : __( 'Missing field', 'trufield-portal' ) ); ?></span>
 	<?php
 };
 
@@ -348,7 +350,8 @@ $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_
 $required_markup = $required ? ' required aria-required="true"' : '';
 $input_type_markup = $input_type;
 $validation_markup = '';
-$is_missing = isset( $validation_missing_lookup[ $field ] );
+$validation_reason = (string) ( $validation_missing_lookup[ $field ] ?? '' );
+$is_missing = '' !== $validation_reason;
 
 if ( $input_type === 'file' ) {
 	$help = trim( $help . ' ' . trufield_get_phase_upload_help_text( $field, $post_id ) );
@@ -378,7 +381,7 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 <?php if ( $required ) : ?>
 <span class="tf-required">*</span>
 <?php endif; ?>
-<?php $render_missing_indicator( $is_missing ); ?>
+<?php $render_missing_indicator( $validation_reason ); ?>
 </label>
 <?php if ( $input_type === 'select' ) : ?>
 <?php $select_options = $schema[ $field ]['options'] ?? []; ?>
@@ -490,7 +493,8 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	$selected      = $is_known ? $current_value : ( '' !== $current_value ? 'other' : '' );
 	$manual_value  = $is_known ? '' : $current_value;
 	$directory_json = wp_json_encode( $retailer_directory );
-	$is_missing = isset( $validation_missing_lookup['retailer_name'] );
+	$validation_reason = (string) ( $validation_missing_lookup['retailer_name'] ?? '' );
+	$is_missing = '' !== $validation_reason;
 	?>
 	<div
 		class="tf-field-group tf-retailer-picker<?php echo $is_missing ? ' is-missing' : ''; ?>"
@@ -506,7 +510,7 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 	<?php if ( $required ) : ?>
 	<span class="tf-required">*</span>
 	<?php endif; ?>
-	<?php $render_missing_indicator( $is_missing ); ?>
+	<?php $render_missing_indicator( $validation_reason ); ?>
 	</label>
 	<select id="retailer_name_select" name="retailer_name" class="tf-select"<?php echo $required ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-tf-retailer-select>
 	<option value=""><?php esc_html_e( 'Select Retailer', 'trufield-portal' ); ?></option>
@@ -533,14 +537,16 @@ $render_retailer_name_field = static function ( bool $required = false ) use ( $
 };
 
 $render_phase_one_location = static function () use ( $labels, $post_id, $validation_missing_lookup, $render_missing_indicator ): void {
-	$lat_missing = isset( $validation_missing_lookup['field_location_lat'] );
-	$lng_missing = isset( $validation_missing_lookup['field_location_lng'] );
+	$lat_reason = (string) ( $validation_missing_lookup['field_location_lat'] ?? '' );
+	$lng_reason = (string) ( $validation_missing_lookup['field_location_lng'] ?? '' );
+	$lat_missing = '' !== $lat_reason;
+	$lng_missing = '' !== $lng_reason;
 	?>
 	<div class="tf-phase-location tf-phase-location--coords-only">
 	<div class="tf-phase-location__coords">
 	<div class="tf-field-group<?php echo $lat_missing ? ' is-missing' : ''; ?>" data-tf-field-group="field_location_lat">
 	<label for="field_location_lat"><?php echo esc_html( $labels['field_location_lat'] ?? 'Field Latitude' ); ?></label>
-	<?php $render_missing_indicator( $lat_missing ); ?>
+	<?php $render_missing_indicator( $lat_reason ); ?>
 	<input
 	type="number"
 	id="field_location_lat"
@@ -554,7 +560,7 @@ $render_phase_one_location = static function () use ( $labels, $post_id, $valida
 	</div>
 	<div class="tf-field-group<?php echo $lng_missing ? ' is-missing' : ''; ?>" data-tf-field-group="field_location_lng">
 	<label for="field_location_lng"><?php echo esc_html( $labels['field_location_lng'] ?? 'Field Longitude' ); ?></label>
-	<?php $render_missing_indicator( $lng_missing ); ?>
+	<?php $render_missing_indicator( $lng_reason ); ?>
 	<input
 	type="number"
 	id="field_location_lng"
@@ -690,12 +696,13 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 
 <?php if ( ! $is_verified && $prereq_met && ! empty( $validation_missing ) ) : ?>
 <div class="tf-missing-fields" data-tf-missing-summary>
-<strong><?php echo esc_html( 2 === $phase ? __( 'Missing scoring fields in this phase', 'trufield-portal' ) : __( 'Missing fields in this phase', 'trufield-portal' ) ); ?></strong>
+<strong><?php echo esc_html( 2 === $phase ? __( 'Scoring fields needing attention in this phase', 'trufield-portal' ) : __( 'Missing fields in this phase', 'trufield-portal' ) ); ?></strong>
 <div class="tf-missing-fields__list">
 <?php foreach ( $validation_missing as $missing_item ) : ?>
+<?php $missing_reason = (string) ( $validation_missing_lookup[ $missing_item['field'] ] ?? 'missing' ); ?>
 <?php if ( $can_edit ) : ?>
 <a
-	class="tf-missing-fields__link"
+	class="tf-missing-fields__link tf-missing-fields__link--<?php echo esc_attr( $missing_reason ); ?>"
 	href="#<?php echo esc_attr( $missing_item['target_id'] ); ?>"
 	data-tf-missing-field-link
 	data-target-phase="<?php echo esc_attr( (string) $phase ); ?>"
@@ -703,14 +710,14 @@ $verify_url = $is_admin ? trufield_admin_phase_badge_verify_url( $post_id, $phas
 	data-target-field="<?php echo esc_attr( $missing_item['field'] ); ?>"
 	data-target-id="<?php echo esc_attr( $missing_item['target_id'] ); ?>"
 >
-	<?php echo esc_html( $missing_item['label'] ); ?>
+	<?php echo esc_html( $missing_item['label'] . ( 'needs_yes' === $missing_reason ? ': select Yes' : '' ) ); ?>
 </a>
 <?php else : ?>
-<span class="tf-missing-fields__chip"><?php echo esc_html( $missing_item['label'] ); ?></span>
+<span class="tf-missing-fields__chip tf-missing-fields__chip--<?php echo esc_attr( $missing_reason ); ?>"><?php echo esc_html( $missing_item['label'] . ( 'needs_yes' === $missing_reason ? ': select Yes' : '' ) ); ?></span>
 <?php endif; ?>
 <?php endforeach; ?>
 </div>
-<p class="tf-missing-fields__note"><?php echo esc_html( $can_edit ? __( 'Select a field name to jump straight to the missing input.', 'trufield-portal' ) : __( 'These fields still need to be filled in before this phase is complete.', 'trufield-portal' ) ); ?></p>
+<p class="tf-missing-fields__note"><?php echo esc_html( $can_edit ? __( 'Select a field name to jump straight to the input that still needs attention.', 'trufield-portal' ) : __( 'These fields still need attention before this phase is complete.', 'trufield-portal' ) ); ?></p>
 </div>
 <?php endif; ?>
 

@@ -101,12 +101,12 @@ function trufield_phase_2_scoring_field_is_yes( int $post_id, string $field ): b
 	return 'yes' === strtolower( trufield_get_phase_2_scoring_field_value( $post_id, $field ) );
 }
 
-function trufield_get_phase_2_missing_scoring_field_keys( int $post_id ): array {
-	$missing = [];
+function trufield_get_phase_2_scoring_blockers( int $post_id ): array {
+	$blockers = [];
 
 	foreach ( trufield_get_phase_2_scoring_required_visit_fields() as $field ) {
 		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
-			$missing[] = $field;
+			$blockers[ $field ] = 'missing';
 		}
 	}
 
@@ -119,19 +119,26 @@ function trufield_get_phase_2_missing_scoring_field_keys( int $post_id ): array 
 		'phase_2_stand_count_3_untreated',
 	] as $field ) {
 		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
-			$missing[] = $field;
+			$blockers[ $field ] = 'missing';
 		}
 	}
 
-	if ( ! trufield_phase_2_scoring_field_is_yes( $post_id, 'phase_2_grower_retailer_testimonials' ) ) {
-		$missing[] = 'phase_2_grower_retailer_testimonials';
+	$testimonials_value = strtolower( trufield_get_phase_2_scoring_field_value( $post_id, 'phase_2_grower_retailer_testimonials' ) );
+	if ( '' === $testimonials_value ) {
+		$blockers['phase_2_grower_retailer_testimonials'] = 'missing';
+	} elseif ( 'yes' !== $testimonials_value ) {
+		$blockers['phase_2_grower_retailer_testimonials'] = 'needs_yes';
 	}
 
 	if ( ! trufield_phase_2_scoring_field_present( $post_id, 'phase_2_grower_retailer_comments' ) ) {
-		$missing[] = 'phase_2_grower_retailer_comments';
+		$blockers['phase_2_grower_retailer_comments'] = 'missing';
 	}
 
-	return array_values( array_unique( $missing ) );
+	return $blockers;
+}
+
+function trufield_get_phase_2_missing_scoring_field_keys( int $post_id ): array {
+	return array_keys( trufield_get_phase_2_scoring_blockers( $post_id ) );
 }
 
 function trufield_get_phase_2_scoring_status( int $post_id ): array {
