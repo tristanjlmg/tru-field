@@ -70,6 +70,99 @@
     });
   }
 
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function getFieldTargetId(fieldName) {
+    if (!fieldName) {
+      return '';
+    }
+
+    if (fieldName === 'retailer_name') {
+      return 'retailer_name_select';
+    }
+
+    if (document.getElementById(fieldName + '_upload')) {
+      return fieldName + '_upload';
+    }
+
+    return fieldName;
+  }
+
+  function getFieldGroup(fieldName) {
+    return document.querySelector('[data-tf-field-group="' + fieldName + '"]');
+  }
+
+  function highlightMissingField(fieldName) {
+    var fieldGroup = getFieldGroup(fieldName);
+
+    if (!fieldGroup) {
+      return;
+    }
+
+    fieldGroup.classList.add('is-missing-focus');
+    window.setTimeout(function () {
+      fieldGroup.classList.remove('is-missing-focus');
+    }, 2200);
+  }
+
+  function initMissingFieldLinks() {
+    if (document.body.getAttribute('data-tf-missing-links-bound') === 'true') {
+      return;
+    }
+
+    document.body.setAttribute('data-tf-missing-links-bound', 'true');
+
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest('[data-tf-missing-field-link]');
+
+      if (!link) {
+        return;
+      }
+
+      var targetId = link.getAttribute('data-target-id') || '';
+      var targetField = link.getAttribute('data-target-field') || '';
+      var phase = Number(link.getAttribute('data-target-phase') || '0');
+      var step = Number(link.getAttribute('data-target-step') || '0');
+      var wrapper = phase ? document.querySelector('[data-tf-phase-substeps][data-phase="' + String(phase) + '"]') : null;
+      var tab = wrapper && step ? wrapper.querySelector('[data-tf-phase-step-tab][data-step="' + String(step) + '"]') : null;
+
+      event.preventDefault();
+
+      if (tab) {
+        tab.click();
+      }
+
+      window.setTimeout(function () {
+        var target = document.getElementById(targetId || getFieldTargetId(targetField));
+
+        highlightMissingField(targetField);
+
+        if (!target) {
+          return;
+        }
+
+        if (typeof target.scrollIntoView === 'function') {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        if (typeof target.focus === 'function' && !target.disabled) {
+          try {
+            target.focus({ preventScroll: true });
+          } catch (error) {
+            target.focus();
+          }
+        }
+      }, 80);
+    });
+  }
+
   function initDateInputs() {
     document.querySelectorAll('[data-tf-date-input]').forEach(function (input) {
       function isTouchViewport() {
@@ -275,9 +368,10 @@
           return null;
         }
 
-        var control = form.elements[fieldName];
+        var targetId = getFieldTargetId(fieldName);
+        var control = form.elements[fieldName] || form.elements[targetId];
         if (!control) {
-          return null;
+          return document.getElementById(targetId) || null;
         }
 
         if (typeof control.length === 'number' && !control.tagName) {
@@ -300,9 +394,11 @@
       }
 
       function getFieldLabel(fieldName) {
-        var label = form.querySelector('[for="' + fieldName + '"]');
+        var fieldGroup = form.querySelector('[data-tf-field-group="' + fieldName + '"]');
+        var targetId = getFieldTargetId(fieldName);
+        var label = fieldGroup ? fieldGroup.querySelector('label') : form.querySelector('[for="' + targetId + '"]');
         var text = label ? String(label.textContent || '') : fieldName;
-        return text.replace('*', '').trim();
+        return text.replace('*', '').replace('Missing field', '').trim();
       }
 
       function shouldSkipConditionalField(fieldName) {
@@ -355,7 +451,8 @@
           }
         }
 
-        var visibleControl = document.getElementById(fieldName) || getControl(fieldName);
+        var visibleControl = document.getElementById(getFieldTargetId(fieldName)) || getControl(fieldName);
+        highlightMissingField(fieldName);
         if (visibleControl && typeof visibleControl.focus === 'function' && !visibleControl.disabled) {
           visibleControl.focus();
         }
@@ -370,7 +467,7 @@
           .split(',')
           .map(function (fieldName) { return fieldName.trim(); })
           .filter(Boolean);
-        var invalidLabels = [];
+        var invalidFields = [];
         var firstInvalidField = '';
         var manualOverride = getControl('field_location_manual_override');
         var manualOverrideEnabled = !!(manualOverride && manualOverride.checked);
@@ -401,7 +498,7 @@
             var manualValue = manualControl ? String(manualControl.value || '').trim() : '';
 
             if (manualValue === '') {
-              invalidLabels.push(getFieldLabel(fieldName));
+              invalidFields.push({ fieldName: fieldName, label: getFieldLabel(fieldName) });
               if (!firstInvalidField) {
                 firstInvalidField = fieldName;
               }
@@ -411,7 +508,7 @@
 
           value = String(control.value || '').trim();
           if (value === '') {
-            invalidLabels.push(getFieldLabel(fieldName));
+            invalidFields.push({ fieldName: fieldName, label: getFieldLabel(fieldName) });
             if (!firstInvalidField) {
               firstInvalidField = fieldName;
             }
@@ -420,7 +517,7 @@
 
 		  var invalidMessage = getFieldValidationMessage(control, fieldName);
 		  if (invalidMessage !== '') {
-			invalidLabels.push(invalidMessage);
+			invalidFields.push({ fieldName: fieldName, label: invalidMessage });
 			if (!firstInvalidField) {
 			  firstInvalidField = fieldName;
 			}
@@ -428,12 +525,15 @@
         });
 
         if (errorBox) {
-          if (invalidLabels.length && panel.getAttribute('data-tf-validation-attempted') === 'true') {
+          if (invalidFields.length && panel.getAttribute('data-tf-validation-attempted') === 'true') {
             errorBox.hidden = false;
-			var summary = invalidLabels.length === fieldNames.length
+			var summary = invalidFields.length === fieldNames.length
 			  ? 'Complete the required fields in this section before continuing.'
 			  : 'Correct the highlighted fields in this section before continuing.';
-			errorBox.innerHTML = '<strong>' + summary + '</strong><span>' + invalidLabels.join(', ') + '</span>';
+			var linkMarkup = invalidFields.map(function (item) {
+			  return '<a class="tf-missing-fields__link" href="#' + escapeHtml(getFieldTargetId(item.fieldName)) + '" data-tf-missing-field-link data-target-phase="' + escapeHtml(String(phase || 0)) + '" data-target-step="' + escapeHtml(String(currentStep)) + '" data-target-field="' + escapeHtml(item.fieldName) + '" data-target-id="' + escapeHtml(getFieldTargetId(item.fieldName)) + '">' + escapeHtml(item.label) + '</a>';
+			}).join('');
+			errorBox.innerHTML = '<strong>' + escapeHtml(summary) + '</strong><div class="tf-missing-fields__list">' + linkMarkup + '</div>';
           } else {
             errorBox.hidden = true;
             errorBox.innerHTML = '';
@@ -444,7 +544,7 @@
           focusControl(firstInvalidField);
         }
 
-        return invalidLabels.length === 0;
+        return invalidFields.length === 0;
       }
 
       function syncStepQuery(step) {
@@ -1402,6 +1502,7 @@
     initRetailerPickers();
     initPhaseFormActions();
     initPhaseSubsteps();
+    initMissingFieldLinks();
     initStandCountDelta();
     initTrialSearch();
     initLeaderboardSearch();

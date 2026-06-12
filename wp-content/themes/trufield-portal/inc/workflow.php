@@ -1274,37 +1274,48 @@ function trufield_phase_3_workshop_requires_details( int $post_id ): bool {
 	return 'yes' === strtolower( trim( (string) get_post_meta( $post_id, 'phase_3_event_type', true ) ) );
 }
 
-function trufield_get_missing_required_fields( int $post_id, int $phase ): array {
-$labels  = trufield_field_labels();
-$missing = [];
-
-foreach ( trufield_get_required_fields( $phase ) as $field ) {
-	if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) && ! trufield_phase_3_workshop_requires_details( $post_id ) ) {
-		continue;
-	}
-
-$value = get_post_meta( $post_id, $field, true );
-if ( trim( (string) $value ) === '' ) {
-$missing[] = $labels[ $field ] ?? $field;
-}
-}
-
-return $missing;
-}
-
-function trufield_get_missing_validation_fields( int $post_id, int $phase ): array {
-	$labels  = trufield_field_labels();
+function trufield_get_missing_phase_field_keys( int $post_id, int $phase, array $fields ): array {
 	$missing = [];
 
-	foreach ( trufield_get_validation_fields( $phase ) as $field ) {
+	foreach ( $fields as $field ) {
 		if ( 3 === $phase && in_array( $field, [ 'phase_3_event_date', 'phase_3_event_location', 'phase_3_attendee_count' ], true ) && ! trufield_phase_3_workshop_requires_details( $post_id ) ) {
 			continue;
 		}
 
 		$value = get_post_meta( $post_id, $field, true );
 		if ( trim( (string) $value ) === '' ) {
-			$missing[] = $labels[ $field ] ?? $field;
+			$missing[] = $field;
 		}
+	}
+
+	return $missing;
+}
+
+function trufield_get_missing_required_field_keys( int $post_id, int $phase ): array {
+	return trufield_get_missing_phase_field_keys( $post_id, $phase, trufield_get_required_fields( $phase ) );
+}
+
+function trufield_get_missing_validation_field_keys( int $post_id, int $phase ): array {
+	return trufield_get_missing_phase_field_keys( $post_id, $phase, trufield_get_validation_fields( $phase ) );
+}
+
+function trufield_get_missing_required_fields( int $post_id, int $phase ): array {
+	$labels  = trufield_field_labels();
+	$missing = [];
+
+	foreach ( trufield_get_missing_required_field_keys( $post_id, $phase ) as $field ) {
+		$missing[] = $labels[ $field ] ?? $field;
+	}
+
+	return $missing;
+}
+
+function trufield_get_missing_validation_fields( int $post_id, int $phase ): array {
+	$labels  = trufield_field_labels();
+	$missing = [];
+
+	foreach ( trufield_get_missing_validation_field_keys( $post_id, $phase ) as $field ) {
+			$missing[] = $labels[ $field ] ?? $field;
 	}
 
 	return $missing;
@@ -1465,9 +1476,9 @@ function trufield_complete_phase( int $post_id, int $phase, int $user_id ) {
 			'trufield_required_fields',
 			sprintf(
 				/* translators: %d = phase number. */
-				__( 'Before you can mark Phase %d complete, add the remaining required fields: ', 'trufield-portal' ),
+				__( 'Before you can mark Phase %d complete, add the remaining required fields below.', 'trufield-portal' ),
 				$phase
-			) . implode( ', ', trufield_get_missing_required_fields( $post_id, $phase ) )
+			)
 		);
 	}
 
@@ -1922,6 +1933,40 @@ function trufield_get_phase_step_for_fields( int $phase, array $fields, int $fal
 	return max( 1, $fallback_step );
 }
 
+function trufield_get_field_input_id( string $field ): string {
+	if ( 'retailer_name' === $field ) {
+		return 'retailer_name_select';
+	}
+
+	foreach ( [ 1, 2, 3 ] as $phase ) {
+		if ( in_array( $field, trufield_phase_file_fields( $phase ), true ) ) {
+			return $field . '_upload';
+		}
+	}
+
+	return $field;
+}
+
+function trufield_get_missing_field_navigation_items( int $phase, array $fields ): array {
+	$labels = trufield_field_labels();
+	$items  = [];
+
+	foreach ( array_values( array_unique( $fields ) ) as $field ) {
+		if ( ! is_string( $field ) || '' === $field ) {
+			continue;
+		}
+
+		$items[] = [
+			'field'     => $field,
+			'label'     => $labels[ $field ] ?? $field,
+			'target_id' => trufield_get_field_input_id( $field ),
+			'step'      => trufield_get_phase_step_for_fields( $phase, [ $field ], 1 ),
+		];
+	}
+
+	return $items;
+}
+
 function trufield_delete_phase_photo_value( int $post_id, string $field ): void {
 	delete_post_meta( $post_id, $field );
 	delete_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ) );
@@ -2287,7 +2332,7 @@ if ( $action === 'complete' ) {
 	}
 $result = trufield_complete_phase( $post_id, $phase, $user_id );
 if ( is_wp_error( $result ) ) {
-	$missing_fields = trufield_get_missing_required_fields( $post_id, $phase );
+	$missing_fields = trufield_get_missing_required_field_keys( $post_id, $phase );
 	$error_step = trufield_get_phase_step_for_fields( $phase, $missing_fields, $phase_step );
 	$error_redirect = trufield_get_phase_step_count( $phase ) > 1 ? add_query_arg( $phase_step_query_arg, $error_step, $redirect_clean ) : $redirect;
 	if ( $should_temp_log ) {
@@ -2302,7 +2347,16 @@ if ( is_wp_error( $result ) ) {
 			]
 		);
 	}
-	wp_safe_redirect( add_query_arg( 'tf_error', rawurlencode( $result->get_error_message() ), $error_redirect ) );
+	wp_safe_redirect(
+		add_query_arg(
+			[
+				'tf_error'          => rawurlencode( $result->get_error_message() ),
+				'tf_error_phase'    => $phase,
+				'tf_missing_fields' => implode( ',', $missing_fields ),
+			],
+			$error_redirect
+		)
+	);
 exit;
 }
 

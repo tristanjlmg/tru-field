@@ -101,7 +101,41 @@ function trufield_phase_2_scoring_field_is_yes( int $post_id, string $field ): b
 	return 'yes' === strtolower( trufield_get_phase_2_scoring_field_value( $post_id, $field ) );
 }
 
+function trufield_get_phase_2_missing_scoring_field_keys( int $post_id ): array {
+	$missing = [];
+
+	foreach ( trufield_get_phase_2_scoring_required_visit_fields() as $field ) {
+		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
+			$missing[] = $field;
+		}
+	}
+
+	foreach ( [
+		'phase_2_stand_count_1_treated',
+		'phase_2_stand_count_2_treated',
+		'phase_2_stand_count_3_treated',
+		'phase_2_stand_count_1_untreated',
+		'phase_2_stand_count_2_untreated',
+		'phase_2_stand_count_3_untreated',
+	] as $field ) {
+		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
+			$missing[] = $field;
+		}
+	}
+
+	if ( ! trufield_phase_2_scoring_field_is_yes( $post_id, 'phase_2_grower_retailer_testimonials' ) ) {
+		$missing[] = 'phase_2_grower_retailer_testimonials';
+	}
+
+	if ( ! trufield_phase_2_scoring_field_present( $post_id, 'phase_2_grower_retailer_comments' ) ) {
+		$missing[] = 'phase_2_grower_retailer_comments';
+	}
+
+	return array_values( array_unique( $missing ) );
+}
+
 function trufield_get_phase_2_scoring_status( int $post_id ): array {
+	$missing_scoring_fields = trufield_get_phase_2_missing_scoring_field_keys( $post_id );
 	$required_visits_ok = true;
 	foreach ( trufield_get_phase_2_scoring_required_visit_fields() as $field ) {
 		if ( ! trufield_phase_2_scoring_field_present( $post_id, $field ) ) {
@@ -144,6 +178,7 @@ function trufield_get_phase_2_scoring_status( int $post_id ): array {
 		'media_proof_ok'      => $media_proof_ok,
 		'completion_ok'       => $completion_ok,
 		'valid_trial'         => $valid_trial,
+		'missing_fields'      => $missing_scoring_fields,
 		'points'              => ( $valid_trial && $completion_ok ) ? trufield_get_phase_points_award( 2 ) : 0,
 	];
 }

@@ -22,6 +22,16 @@ $is_admin = trufield_user_is_admin( $user_id );
 
 $success = sanitize_key( $_GET['tf_success'] ?? '' );
 $error   = sanitize_text_field( rawurldecode( $_GET['tf_error'] ?? '' ) );
+$error_phase = max( 0, (int) ( $_GET['tf_error_phase'] ?? 0 ) );
+$error_missing_fields = array_values(
+	array_filter(
+		array_map(
+			'sanitize_key',
+			explode( ',', (string) wp_unslash( $_GET['tf_missing_fields'] ?? '' ) )
+		)
+	)
+);
+$error_missing_navigation = $error_phase > 0 ? trufield_get_missing_field_navigation_items( $error_phase, $error_missing_fields ) : [];
 
 $assigned_rep_id = (int) get_post_meta( $post_id, 'assigned_sales_rep', true );
 $assigned_rep    = $assigned_rep_id ? get_userdata( $assigned_rep_id ) : false;
@@ -64,11 +74,13 @@ foreach ( array_reverse( $active_phases ) as $phase ) {
 $current_phase_status   = $phase_statuses[ $current_phase ] ?? 'pending';
 $current_phase_verified = $phase_verified[ $current_phase ] ?? false;
 $current_phase_missing  = trufield_get_missing_required_fields( $post_id, $current_phase );
+$current_phase_missing_count = count( $current_phase_missing );
 $current_phase_can_edit = trufield_can_edit_phase( $post_id, $current_phase, $user_id );
 
 if ( 2 === $current_phase ) {
 	$phase_2_scoring_status = trufield_get_phase_2_scoring_status( $post_id );
 	$phase_2_points_ready   = ! empty( $phase_2_scoring_status['points'] );
+	$current_phase_missing_count = count( $phase_2_scoring_status['missing_fields'] ?? [] );
 
 	if ( $current_phase_verified ) {
 		$phase_panel_title = __( 'Phase 2 complete', 'trufield-portal' );
@@ -87,10 +99,10 @@ if ( 2 === $current_phase ) {
 				_n(
 					'%d required Phase 2 field still needs attention before this phase can be submitted.',
 					'%d required Phase 2 fields still need attention before this phase can be submitted.',
-					count( $current_phase_missing ),
+					$current_phase_missing_count,
 					'trufield-portal'
 				),
-				count( $current_phase_missing )
+				$current_phase_missing_count
 			);
 	} else {
 		$phase_panel_title = __( 'Start Phase 2', 'trufield-portal' );
@@ -188,7 +200,27 @@ if ( preg_match( '/^phase_(\d)_completed$/', $success, $matches ) ) {
 <?php endif; ?>
 
 <?php if ( $error ) : ?>
-<div class="tf-alert tf-alert--error" role="alert"><?php echo esc_html( $error ); ?></div>
+<div class="tf-alert tf-alert--error" role="alert">
+<p><?php echo esc_html( $error ); ?></p>
+<?php if ( ! empty( $error_missing_navigation ) ) : ?>
+<div class="tf-alert__links">
+<?php foreach ( $error_missing_navigation as $missing_item ) : ?>
+<a
+	class="tf-missing-fields__link"
+	href="#<?php echo esc_attr( $missing_item['target_id'] ); ?>"
+	data-tf-missing-field-link
+	data-target-phase="<?php echo esc_attr( (string) $error_phase ); ?>"
+	data-target-step="<?php echo esc_attr( (string) $missing_item['step'] ); ?>"
+	data-target-field="<?php echo esc_attr( $missing_item['field'] ); ?>"
+	data-target-id="<?php echo esc_attr( $missing_item['target_id'] ); ?>"
+>
+	<?php echo esc_html( $missing_item['label'] ); ?>
+</a>
+<?php endforeach; ?>
+</div>
+<p class="tf-alert__hint"><?php esc_html_e( 'Select a field name to open the right phase section and jump to the missing input.', 'trufield-portal' ); ?></p>
+<?php endif; ?>
+</div>
 <?php endif; ?>
 
 <div class="tf-record-header">
