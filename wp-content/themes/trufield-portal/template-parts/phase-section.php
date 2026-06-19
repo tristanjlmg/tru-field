@@ -93,7 +93,9 @@ $field_groups = [
 'phase_2_rsm_visit_2_upload_photos'        => [ 'input' => 'file', 'accept' => 'image/*', 'help' => 'Select a photo type to enable the upload prompt.' ],
 ],
 'optional' => [
+'phase_2_rsm_visit_1_other_photos'         => [ 'input' => 'file', 'accept' => 'image/*', 'multiple' => true, 'help' => 'Upload any additional visit 1 photos here.' ],
 'phase_2_rsm_visit_1_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
+'phase_2_rsm_visit_2_other_photos'         => [ 'input' => 'file', 'accept' => 'image/*', 'multiple' => true, 'help' => 'Upload any additional visit 2 photos here.' ],
 'phase_2_rsm_visit_2_photo_type'           => [ 'input' => 'select', 'placeholder' => 'Select photo type' ],
 'phase_2_residue_degradation_observed'     => [ 'input' => 'select' ],
 'phase_2_emergence_stand_collected'        => [ 'input' => 'select' ],
@@ -255,9 +257,11 @@ if ( 1 === $phase ) {
 				'phase_2_rsm_visit_1_date',
 				'phase_2_rsm_visit_1_photo_type',
 				'phase_2_rsm_visit_1_upload_photos',
+				'phase_2_rsm_visit_1_other_photos',
 				'phase_2_rsm_visit_2_date',
 				'phase_2_rsm_visit_2_photo_type',
 				'phase_2_rsm_visit_2_upload_photos',
+				'phase_2_rsm_visit_2_other_photos',
 				'phase_2_residue_degradation_observed',
 				'phase_2_emergence_stand_collected',
 			],
@@ -344,9 +348,12 @@ $accept      = $config['accept'] ?? '';
 $help        = $config['help'] ?? '';
 $readonly    = ! empty( $config['readonly'] );
 $disabled    = ! empty( $config['disabled'] );
+$multiple    = ! empty( $config['multiple'] );
 $static_value = $config['static_value'] ?? null;
 $attributes  = (array) ( $config['attributes'] ?? [] );
 $attachment_id = (int) get_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), true );
+$attachment_ids = 'file' === $input_type ? trufield_get_phase_photo_attachment_ids( $post_id, $field ) : [];
+$file_urls = 'file' === $input_type ? trufield_get_phase_photo_urls( $post_id, $field ) : [];
 $required_markup = $required ? ' required aria-required="true"' : '';
 $input_type_markup = $input_type;
 $validation_markup = '';
@@ -413,31 +420,35 @@ if ( ( '' === trim( (string) $value ) || null === $value ) && null !== $static_v
 <?php if ( $file_prompt ) : ?>
 <p class="tf-upload-field__prompt" data-tf-upload-prompt <?php echo '' !== $selected_photo_type ? '' : 'hidden'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html( sprintf( __( 'Upload %1$s image. Max file size: %2$s.', 'trufield-portal' ), $file_prompt, trufield_get_max_upload_size_label() ) ); ?></p>
 <?php endif; ?>
-<?php if ( $value ) : ?>
+<?php if ( ! empty( $file_urls ) ) : ?>
+<?php foreach ( $file_urls as $file_index => $file_url ) : ?>
+<?php $current_attachment_id = $attachment_ids[ $file_index ] ?? ( ! $multiple && 0 === $file_index ? $attachment_id : 0 ); ?>
 <div class="tf-upload-field__preview">
-<a href="<?php echo esc_url( (string) $value ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__image-link">
-<img src="<?php echo esc_url( (string) $value ); ?>" alt="<?php echo esc_attr( $label ); ?>" class="tf-upload-field__image">
+<a href="<?php echo esc_url( $file_url ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__image-link">
+<img src="<?php echo esc_url( $file_url ); ?>" alt="<?php echo esc_attr( $label ); ?>" class="tf-upload-field__image">
 </a>
 <div class="tf-upload-field__meta">
-<a href="<?php echo esc_url( (string) $value ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__link"><?php esc_html_e( 'View current photo', 'trufield-portal' ); ?></a>
-<?php if ( $attachment_id > 0 ) : ?>
+<a href="<?php echo esc_url( $file_url ); ?>" target="_blank" rel="noopener noreferrer" class="tf-upload-field__link"><?php echo esc_html( $multiple ? sprintf( __( 'View photo %d', 'trufield-portal' ), $file_index + 1 ) : __( 'View current photo', 'trufield-portal' ) ); ?></a>
+<?php if ( $current_attachment_id > 0 ) : ?>
 <span class="tf-upload-field__caption"><?php esc_html_e( 'Stored in the WordPress media library.', 'trufield-portal' ); ?></span>
 <?php endif; ?>
 <label class="tf-upload-field__remove">
-<input type="checkbox" name="<?php echo esc_attr( $field ); ?>_remove" value="1">
-<span><?php esc_html_e( 'Remove current photo', 'trufield-portal' ); ?></span>
+<input type="checkbox" name="<?php echo esc_attr( $field ); ?><?php echo $multiple ? '_remove_urls[]' : '_remove'; ?>" value="<?php echo esc_attr( $multiple ? $file_url : '1' ); ?>">
+<span><?php echo esc_html( $multiple ? __( 'Remove this photo', 'trufield-portal' ) : __( 'Remove current photo', 'trufield-portal' ) ); ?></span>
 </label>
 </div>
 </div>
+<?php endforeach; ?>
 <?php endif; ?>
 <input
 type="file"
 id="<?php echo esc_attr( $field ); ?>_upload"
-name="<?php echo esc_attr( $field ); ?>_upload"
+name="<?php echo esc_attr( $field ); ?>_upload<?php echo $multiple ? '[]' : ''; ?>"
 class="tf-input tf-input--file"
 <?php echo $photo_type_field ? ' data-tf-photo-upload-field="' . esc_attr( $photo_type_field ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-<?php echo $required && ! $value ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $required && empty( $file_urls ) ? ' required aria-required="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php echo $multiple ? ' multiple' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php echo $attribute_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
 </div>

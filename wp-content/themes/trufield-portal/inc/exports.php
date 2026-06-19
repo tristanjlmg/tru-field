@@ -68,8 +68,10 @@ return [
 'Retailer Product Training/Discussion',
 'RSM Visit Date 1',
 'RSM Visit 1 Date Photos Taken Treated/Untreated',
+'RSM Visit 1 Other Photos',
 'RSM Visit Date 2',
 'RSM Visit 2 Date Photos Taken Treated/Untreated',
+'RSM Visit 2 Other Photos',
 'Optional Visit Date 3',
 'Optional Visit 3 Date Photos Taken Treated/Untreated',
 'Visit 3 Notes',
@@ -123,6 +125,10 @@ return [
 ];
 }
 
+function trufield_csv_photo_cell_value( int $post_id, string $field ): string {
+	return implode( "\n", trufield_get_phase_photo_urls( $post_id, $field ) );
+}
+
 function trufield_csv_row( WP_Post $post ): array {
 $id      = $post->ID;
 $schema  = trufield_phase_field_schema();
@@ -165,8 +171,10 @@ get_post_meta( $id, 'phase_1_application_date', true ),
 get_post_meta( $id, 'phase_1_retailer_training_discussion_date', true ),
 get_post_meta( $id, 'phase_2_rsm_visit_1_date', true ),
 get_post_meta( $id, 'phase_2_rsm_visit_1_upload_photos', true ),
+trufield_csv_photo_cell_value( $id, 'phase_2_rsm_visit_1_other_photos' ),
 get_post_meta( $id, 'phase_2_rsm_visit_2_date', true ),
 get_post_meta( $id, 'phase_2_rsm_visit_2_upload_photos', true ),
+trufield_csv_photo_cell_value( $id, 'phase_2_rsm_visit_2_other_photos' ),
 get_post_meta( $id, 'phase_2_rsm_visit_3_date', true ),
 get_post_meta( $id, 'phase_2_rsm_visit_3_upload_photos', true ),
 get_post_meta( $id, 'phase_2_rsm_visit_3_comments', true ),

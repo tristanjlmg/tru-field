@@ -456,6 +456,15 @@ acf_add_local_field_group( [
 'placeholder'  => 'Uploaded photo URL',
 'instructions' => 'The portal upload stores the final media URL here.',
 ],
+[
+'key'          => 'field_tf_phase_2_rsm_visit_1_other_photos',
+'label'        => 'RSM Visit 1 Other Photos',
+'name'         => 'phase_2_rsm_visit_1_other_photos',
+'type'         => 'textarea',
+'required'     => 0,
+'rows'         => 4,
+'instructions' => 'The portal stores one uploaded media URL per line for additional visit 1 photos.',
+],
 [ 
 'key'            => 'field_tf_phase_2_rsm_visit_1_photos_taken_date',
 'label'          => 'RSM Visit Date 1 Photos Taken Date',
@@ -501,6 +510,15 @@ acf_add_local_field_group( [
 'required'     => 1,
 'placeholder'  => 'Uploaded photo URL',
 'instructions' => 'The portal upload stores the final media URL here.',
+],
+[
+'key'          => 'field_tf_phase_2_rsm_visit_2_other_photos',
+'label'        => 'RSM Visit 2 Other Photos',
+'name'         => 'phase_2_rsm_visit_2_other_photos',
+'type'         => 'textarea',
+'required'     => 0,
+'rows'         => 4,
+'instructions' => 'The portal stores one uploaded media URL per line for additional visit 2 photos.',
 ],
 [ 
 'key'            => 'field_tf_phase_2_rsm_visit_2_photos_taken_date',

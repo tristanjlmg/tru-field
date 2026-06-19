@@ -203,9 +203,11 @@ return [
 'phase_1_planting_speed'              => 'Planting Speed',
 'phase_2_rsm_visit_1_date'            => 'RSM Visit Date 1',
 'phase_2_rsm_visit_1_upload_photos'   => 'RSM Visit 1 Date Photos Taken Treated/Untreated',
+'phase_2_rsm_visit_1_other_photos'    => 'RSM Visit 1 Other Photos',
 'phase_2_rsm_visit_1_photo_type'      => 'RSM Visit Date 1 Photo Type',
 'phase_2_rsm_visit_2_date'            => 'RSM Visit Date 2',
 'phase_2_rsm_visit_2_upload_photos'   => 'RSM Visit 2 Date Photos Taken Treated/Untreated',
+'phase_2_rsm_visit_2_other_photos'    => 'RSM Visit 2 Other Photos',
 'phase_2_rsm_visit_2_photo_type'      => 'RSM Visit Date 2 Photo Type',
 'phase_2_rsm_visit_3_date'            => 'Optional Visit Date 3',
 'phase_2_rsm_visit_3_upload_photos'   => 'Optional Visit 3 Upload Photos Treated/Untreated',
@@ -1093,6 +1095,7 @@ return [
 'phase_1_planting_speed' => [ 'type' => 'number' ],
 'phase_2_rsm_visit_1_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_1_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_1_other_photos' => [ 'type' => 'textarea' ],
 'phase_2_rsm_visit_1_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -1108,6 +1111,7 @@ return [
 ],
 'phase_2_rsm_visit_2_date' => [ 'type' => 'date' ],
 'phase_2_rsm_visit_2_upload_photos' => [ 'type' => 'url' ],
+'phase_2_rsm_visit_2_other_photos' => [ 'type' => 'textarea' ],
 'phase_2_rsm_visit_2_photo_type' => [
 'type'    => 'select',
 'options' => [
@@ -1544,9 +1548,11 @@ $fields = [
 2 => [
 'phase_2_rsm_visit_1_date',
 'phase_2_rsm_visit_1_upload_photos',
+'phase_2_rsm_visit_1_other_photos',
 'phase_2_rsm_visit_1_photo_type',
 'phase_2_rsm_visit_2_date',
 'phase_2_rsm_visit_2_upload_photos',
+'phase_2_rsm_visit_2_other_photos',
 'phase_2_rsm_visit_2_photo_type',
 'phase_2_rsm_visit_3_date',
 'phase_2_rsm_visit_3_upload_photos',
@@ -1775,6 +1781,137 @@ function trufield_phase_photo_attachment_meta_key( string $field ): string {
 	return $field . '_attachment_id';
 }
 
+function trufield_phase_multi_file_fields(): array {
+	return [
+		'phase_2_rsm_visit_1_other_photos',
+		'phase_2_rsm_visit_2_other_photos',
+	];
+}
+
+function trufield_phase_file_field_is_multiple( string $field ): bool {
+	return in_array( $field, trufield_phase_multi_file_fields(), true );
+}
+
+function trufield_get_phase_photo_urls( int $post_id, string $field ): array {
+	$value = get_post_meta( $post_id, $field, true );
+
+	if ( is_array( $value ) ) {
+		$raw_urls = $value;
+	} else {
+		$value = trim( (string) $value );
+		$raw_urls = '' === $value ? [] : preg_split( '/\r\n|\r|\n/', $value );
+	}
+
+	if ( ! is_array( $raw_urls ) ) {
+		return [];
+	}
+
+	$urls = [];
+	foreach ( $raw_urls as $raw_url ) {
+		$url = trim( (string) $raw_url );
+		if ( '' === $url ) {
+			continue;
+		}
+
+		$urls[] = esc_url_raw( $url );
+	}
+
+	return array_values( array_filter( $urls ) );
+}
+
+function trufield_get_phase_photo_attachment_ids( int $post_id, string $field ): array {
+	$value = get_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), true );
+
+	if ( is_array( $value ) ) {
+		$raw_ids = $value;
+	} elseif ( '' !== trim( (string) $value ) ) {
+		$raw_ids = [ $value ];
+	} else {
+		$raw_ids = [];
+	}
+
+	return array_values(
+		array_filter(
+			array_map( 'absint', $raw_ids ),
+			static function ( int $attachment_id ): bool {
+				return $attachment_id > 0;
+			}
+		)
+	);
+}
+
+function trufield_store_phase_photo_value( int $post_id, string $field, array $urls, array $attachment_ids ): void {
+	$urls = array_values(
+		array_filter(
+			array_map(
+				static function ( $url ): string {
+					return esc_url_raw( trim( (string) $url ) );
+				},
+				$urls
+			),
+			static function ( string $url ): bool {
+				return '' !== $url;
+			}
+		)
+	);
+	$attachment_ids = array_values(
+		array_filter(
+			array_map( 'absint', $attachment_ids ),
+			static function ( int $attachment_id ): bool {
+				return $attachment_id > 0;
+			}
+		)
+	);
+
+	if ( [] === $urls ) {
+		trufield_delete_phase_photo_value( $post_id, $field );
+		return;
+	}
+
+	if ( trufield_phase_file_field_is_multiple( $field ) ) {
+		update_post_meta( $post_id, $field, implode( "\n", $urls ) );
+		update_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), $attachment_ids );
+		return;
+	}
+
+	update_post_meta( $post_id, $field, $urls[0] );
+	update_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), $attachment_ids[0] ?? 0 );
+}
+
+function trufield_remove_phase_photo_urls( int $post_id, string $field, array $remove_urls ): void {
+	$remove_lookup = [];
+	foreach ( $remove_urls as $remove_url ) {
+		$remove_url = esc_url_raw( trim( (string) $remove_url ) );
+		if ( '' === $remove_url ) {
+			continue;
+		}
+
+		$remove_lookup[ $remove_url ] = true;
+	}
+
+	if ( [] === $remove_lookup ) {
+		return;
+	}
+
+	$existing_urls = trufield_get_phase_photo_urls( $post_id, $field );
+	$existing_attachment_ids = trufield_get_phase_photo_attachment_ids( $post_id, $field );
+	$new_urls = [];
+	$new_attachment_ids = [];
+
+	foreach ( $existing_urls as $index => $url ) {
+		if ( isset( $remove_lookup[ $url ] ) ) {
+			continue;
+		}
+
+		$new_urls[] = $url;
+		if ( isset( $existing_attachment_ids[ $index ] ) ) {
+			$new_attachment_ids[] = $existing_attachment_ids[ $index ];
+		}
+	}
+
+	trufield_store_phase_photo_value( $post_id, $field, $new_urls, $new_attachment_ids );
+}
+
 function trufield_calculate_phase_2_stand_count_delta( $treated_value, $untreated_value ): string {
 	$treated_values = is_array( $treated_value ) ? $treated_value : [ $treated_value ];
 	$untreated_values = is_array( $untreated_value ) ? $untreated_value : [ $untreated_value ];
@@ -1836,7 +1973,9 @@ function trufield_phase_file_fields( int $phase ): array {
 		1 => [ 'phase_1_field_overview_photo' ],
 		2 => [
 			'phase_2_rsm_visit_1_upload_photos',
+			'phase_2_rsm_visit_1_other_photos',
 			'phase_2_rsm_visit_2_upload_photos',
+			'phase_2_rsm_visit_2_other_photos',
 			'phase_2_rsm_visit_3_upload_photos',
 			'phase_2_rsm_visit_4_upload_photos',
 			'phase_2_pictures_at_application_upload',
@@ -1895,8 +2034,10 @@ function trufield_get_phase_step_field_map( int $phase ): array {
 			1 => [
 				'phase_2_rsm_visit_1_date',
 				'phase_2_rsm_visit_1_upload_photos',
+				'phase_2_rsm_visit_1_other_photos',
 				'phase_2_rsm_visit_2_date',
 				'phase_2_rsm_visit_2_upload_photos',
+				'phase_2_rsm_visit_2_other_photos',
 			],
 			2 => [
 				'phase_2_stand_count_1_treated',
@@ -2015,14 +2156,14 @@ function trufield_get_phase_upload_prompt_label( string $field ): string {
 function trufield_get_phase_upload_help_text( string $field, int $post_id = 0 ): string {
 	unset( $post_id );
 
-	if ( strpos( $field, 'phase_2_rsm_visit_' ) === 0 ) {
+	if ( strpos( $field, 'phase_2_rsm_visit_' ) === 0 && '' !== trufield_phase_photo_type_field_for_upload( $field ) ) {
 		return sprintf( __( 'The uploaded file will be renamed to the trial UUID plus the selected type. Max file size: %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() );
 	}
 
 	return sprintf( __( 'Max file size: %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() );
 }
 
-function trufield_build_phase_photo_filename( int $post_id, string $field, string $original_name ): string {
+function trufield_build_phase_photo_filename( int $post_id, string $field, string $original_name, string $suffix = '' ): string {
 	$extension = strtolower( pathinfo( $original_name, PATHINFO_EXTENSION ) );
 	$trial_uuid = trim( (string) get_post_meta( $post_id, 'trial_uuid', true ) );
 	$trial_uuid = '' !== $trial_uuid ? $trial_uuid : trim( (string) get_the_title( $post_id ) );
@@ -2030,7 +2171,20 @@ function trufield_build_phase_photo_filename( int $post_id, string $field, strin
 	$photo_type_value = $photo_type_field ? (string) get_post_meta( $post_id, $photo_type_field, true ) : '';
 	$schema = trufield_phase_field_schema();
 	$photo_type_label = $schema[ $photo_type_field ]['options'][ $photo_type_value ] ?? $photo_type_value;
-	$base_name = sanitize_title( trim( $trial_uuid ) . ' ' . trim( (string) $photo_type_label ) );
+	$labels = trufield_field_labels();
+	$base_parts = [ trim( $trial_uuid ) ];
+
+	if ( '' !== trim( (string) $photo_type_label ) ) {
+		$base_parts[] = trim( (string) $photo_type_label );
+	} elseif ( trufield_phase_file_field_is_multiple( $field ) ) {
+		$base_parts[] = $labels[ $field ] ?? $field;
+	}
+
+	if ( '' !== trim( $suffix ) ) {
+		$base_parts[] = trim( $suffix );
+	}
+
+	$base_name = sanitize_title( implode( ' ', array_filter( $base_parts ) ) );
 
 	if ( '' === $base_name ) {
 		$base_name = sanitize_title( trim( $trial_uuid ) );
@@ -2045,6 +2199,78 @@ function trufield_handle_phase_photo_upload( int $post_id, string $field, string
 	}
 
 	$file = $_FILES[ $file_input ];
+	$is_multiple = trufield_phase_file_field_is_multiple( $field );
+
+	if ( $is_multiple ) {
+		$file_names = $file['name'] ?? [];
+		$file_tmp_names = $file['tmp_name'] ?? [];
+		$file_errors = $file['error'] ?? [];
+		$file_sizes = $file['size'] ?? [];
+		$file_types = $file['type'] ?? [];
+
+		if ( ! is_array( $file_names ) ) {
+			return null;
+		}
+
+		$existing_urls = trufield_get_phase_photo_urls( $post_id, $field );
+		$existing_attachment_ids = trufield_get_phase_photo_attachment_ids( $post_id, $field );
+		$new_urls = [];
+		$new_attachment_ids = [];
+		$max_upload_size = trufield_get_max_upload_size_bytes();
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		foreach ( array_keys( $file_names ) as $index ) {
+			$error = (int) ( $file_errors[ $index ] ?? UPLOAD_ERR_NO_FILE );
+			if ( UPLOAD_ERR_NO_FILE === $error ) {
+				continue;
+			}
+
+			if ( UPLOAD_ERR_OK !== $error ) {
+				return new WP_Error( 'trufield_upload_error', __( 'One of the photo uploads could not be processed.', 'trufield-portal' ) );
+			}
+
+			$size = (int) ( $file_sizes[ $index ] ?? 0 );
+			if ( $max_upload_size > 0 && $size > $max_upload_size ) {
+				return new WP_Error( 'trufield_upload_too_large', sprintf( __( 'One of the uploaded photos exceeds the maximum file size of %s.', 'trufield-portal' ), trufield_get_max_upload_size_label() ) );
+			}
+
+			$temp_input = $file_input . '_' . $index;
+			$_FILES[ $temp_input ] = [
+				'name'     => trufield_build_phase_photo_filename( $post_id, $field, (string) ( $file_names[ $index ] ?? '' ), (string) ( $index + 1 ) ),
+				'tmp_name' => $file_tmp_names[ $index ] ?? '',
+				'error'    => $error,
+				'size'     => $size,
+				'type'     => $file_types[ $index ] ?? '',
+			];
+
+			$attachment_id = media_handle_upload( $temp_input, $post_id );
+			unset( $_FILES[ $temp_input ] );
+
+			if ( is_wp_error( $attachment_id ) ) {
+				return $attachment_id;
+			}
+
+			$image_url = wp_get_attachment_url( $attachment_id );
+			if ( ! $image_url ) {
+				return new WP_Error( 'trufield_upload_url_missing', __( 'One of the uploaded photos could not be linked to this trial.', 'trufield-portal' ) );
+			}
+
+			$new_urls[] = esc_url_raw( $image_url );
+			$new_attachment_ids[] = $attachment_id;
+		}
+
+		if ( [] === $new_urls ) {
+			return null;
+		}
+
+		trufield_store_phase_photo_value( $post_id, $field, array_merge( $existing_urls, $new_urls ), array_merge( $existing_attachment_ids, $new_attachment_ids ) );
+
+		return $new_attachment_ids;
+	}
+
 	if ( (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) === UPLOAD_ERR_NO_FILE ) {
 		return null;
 	}
@@ -2074,8 +2300,7 @@ function trufield_handle_phase_photo_upload( int $post_id, string $field, string
 		return new WP_Error( 'trufield_upload_url_missing', __( 'The uploaded photo could not be linked to this trial.', 'trufield-portal' ) );
 	}
 
-	update_post_meta( $post_id, $field, esc_url_raw( $image_url ) );
-	update_post_meta( $post_id, trufield_phase_photo_attachment_meta_key( $field ), $attachment_id );
+	trufield_store_phase_photo_value( $post_id, $field, [ esc_url_raw( $image_url ) ], [ $attachment_id ] );
 
 	return $attachment_id;
 }
@@ -2261,7 +2486,9 @@ update_post_meta( $post_id, $field, $sanitized );
 	}
 
 	foreach ( trufield_phase_file_fields( $phase ) as $file_field ) {
-		if ( ! empty( $_POST[ $file_field . '_remove' ] ) ) {
+		if ( trufield_phase_file_field_is_multiple( $file_field ) && ! empty( $_POST[ $file_field . '_remove_urls' ] ) && is_array( $_POST[ $file_field . '_remove_urls' ] ) ) {
+			trufield_remove_phase_photo_urls( $post_id, $file_field, wp_unslash( $_POST[ $file_field . '_remove_urls' ] ) );
+		} elseif ( ! empty( $_POST[ $file_field . '_remove' ] ) ) {
 			trufield_delete_phase_photo_value( $post_id, $file_field );
 		}
 
