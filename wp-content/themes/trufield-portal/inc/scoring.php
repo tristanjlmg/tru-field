@@ -305,6 +305,183 @@ $agg['completed_fields']++;
 return $agg;
 }
 
+function trufield_user_can_view_rep_report( int $rep_user_id, int $viewer_user_id = 0 ): bool {
+	if ( $rep_user_id <= 0 ) {
+		return false;
+	}
+
+	if ( $viewer_user_id <= 0 ) {
+		$viewer_user_id = get_current_user_id();
+	}
+
+	if ( $viewer_user_id <= 0 ) {
+		return false;
+	}
+
+	if ( $viewer_user_id === $rep_user_id ) {
+		return true;
+	}
+
+	if ( trufield_user_is_admin( $viewer_user_id ) ) {
+		return true;
+	}
+
+	$viewer = get_userdata( $viewer_user_id );
+
+	return $viewer && in_array( 'leadership', (array) $viewer->roles, true );
+}
+
+function trufield_get_field_report_label( int $post_id ): string {
+	$farm_name  = trim( (string) get_post_meta( $post_id, 'farm_name', true ) );
+	$field_name = trim( (string) get_post_meta( $post_id, 'field_name', true ) );
+	$title      = trim( (string) get_the_title( $post_id ) );
+
+	if ( '' !== $farm_name && '' !== $field_name ) {
+		return sprintf(
+			/* translators: 1: farm name, 2: field name. */
+			__( '%1$s / %2$s', 'trufield-portal' ),
+			$farm_name,
+			$field_name
+		);
+	}
+
+	if ( '' !== $farm_name ) {
+		return $farm_name;
+	}
+
+	if ( '' !== $field_name ) {
+		return $field_name;
+	}
+
+	if ( '' !== $title ) {
+		return $title;
+	}
+
+	return sprintf(
+		/* translators: %d: record ID. */
+		__( 'Record #%d', 'trufield-portal' ),
+		$post_id
+	);
+}
+
+function trufield_get_rep_report( int $rep_user_id ): array {
+	$rep = get_userdata( $rep_user_id );
+
+	if ( ! $rep ) {
+		return [];
+	}
+
+	$fields               = trufield_get_assigned_fields( $rep_user_id );
+	$score_summary        = trufield_get_rep_score( $rep_user_id );
+	$phase_1_award        = trufield_get_retailer_points_award();
+	$phase_1_threshold    = trufield_get_retailer_points_threshold();
+	$phase_2_award        = trufield_get_phase_points_award( 2 );
+	$retailer_breakdowns  = [];
+	$phase_2_points_total = 0;
+
+	foreach ( $fields as $post ) {
+		$field_score       = trufield_get_field_score( $post->ID );
+		$retailer_name     = trim( (string) get_post_meta( $post->ID, 'retailer_name', true ) );
+		$retailer_key      = '' !== $retailer_name ? trufield_normalize_retailer_key( $retailer_name ) : '__unassigned__';
+		$retailer_label    = '' !== $retailer_name ? $retailer_name : __( 'Unassigned retailer', 'trufield-portal' );
+		$record_permalink  = get_permalink( $post->ID );
+		$record_title      = trufield_get_field_report_label( $post->ID );
+		$record_base_entry = [
+			'post_id'    => (int) $post->ID,
+			'title'      => $record_title,
+			'permalink'  => $record_permalink ? $record_permalink : '',
+			'farm_name'  => trim( (string) get_post_meta( $post->ID, 'farm_name', true ) ),
+			'field_name' => trim( (string) get_post_meta( $post->ID, 'field_name', true ) ),
+		];
+
+		if ( ! isset( $retailer_breakdowns[ $retailer_key ] ) ) {
+			$retailer_breakdowns[ $retailer_key ] = [
+				'name'               => $retailer_label,
+				'phase_1_entries'    => 0,
+				'phase_1_awards'     => 0,
+				'phase_1_points'     => 0,
+				'phase_2_trials'     => 0,
+				'phase_2_points'     => 0,
+				'total_points'       => 0,
+				'phase_1_records'    => [],
+				'phase_2_records'    => [],
+			];
+		}
+
+		if ( ! empty( $field_score['valid_phase_1'] ) ) {
+			$retailer_breakdowns[ $retailer_key ]['phase_1_entries']++;
+			$retailer_breakdowns[ $retailer_key ]['phase_1_records'][] = $record_base_entry;
+		}
+
+		if ( ! empty( $field_score['valid_phase_2'] ) && ! empty( $field_score['phase_2_points'] ) ) {
+			$phase_2_points_total += (int) $field_score['phase_2_points'];
+			$retailer_breakdowns[ $retailer_key ]['phase_2_trials']++;
+			$retailer_breakdowns[ $retailer_key ]['phase_2_points'] += (int) $field_score['phase_2_points'];
+			$retailer_breakdowns[ $retailer_key ]['phase_2_records'][] = array_merge(
+				$record_base_entry,
+				[
+					'points' => (int) $field_score['phase_2_points'],
+				]
+			);
+		}
+	}
+
+	foreach ( $retailer_breakdowns as &$retailer_breakdown ) {
+		$retailer_breakdown['phase_1_awards'] = trufield_get_valid_entry_award_count( (int) $retailer_breakdown['phase_1_entries'] );
+		$retailer_breakdown['phase_1_points'] = (int) $retailer_breakdown['phase_1_awards'] * $phase_1_award;
+		$retailer_breakdown['total_points']   = (int) $retailer_breakdown['phase_1_points'] + (int) $retailer_breakdown['phase_2_points'];
+
+		usort(
+			$retailer_breakdown['phase_1_records'],
+			static function ( array $a, array $b ): int {
+				return strcasecmp( (string) $a['title'], (string) $b['title'] );
+			}
+		);
+
+		usort(
+			$retailer_breakdown['phase_2_records'],
+			static function ( array $a, array $b ): int {
+				return strcasecmp( (string) $a['title'], (string) $b['title'] );
+			}
+		);
+	}
+	unset( $retailer_breakdown );
+
+	$retailers = array_values( $retailer_breakdowns );
+
+	usort(
+		$retailers,
+		static function ( array $a, array $b ): int {
+			if ( $b['total_points'] !== $a['total_points'] ) {
+				return $b['total_points'] <=> $a['total_points'];
+			}
+
+			return strcasecmp( (string) $a['name'], (string) $b['name'] );
+		}
+	);
+
+	return [
+		'rep'      => [
+			'user_id'      => (int) $rep->ID,
+			'display_name' => $rep->display_name,
+		],
+		'summary'  => [
+			'points'                  => (int) $score_summary['points'],
+			'field_count'             => (int) $score_summary['field_count'],
+			'retailer_count'          => (int) $score_summary['retailer_count'],
+			'valid_phase_1_entries'   => (int) $score_summary['valid_entries'],
+			'phase_1_awards'          => (int) $score_summary['awarded_retailers'],
+			'phase_1_points'          => (int) $score_summary['awarded_retailers'] * $phase_1_award,
+			'valid_phase_2_trials'    => (int) $score_summary['valid_phase_2_trials'],
+			'phase_2_points'          => $phase_2_points_total,
+			'phase_1_threshold'       => $phase_1_threshold,
+			'phase_1_award_points'    => $phase_1_award,
+			'phase_2_award_points'    => $phase_2_award,
+		],
+		'retailers' => $retailers,
+	];
+}
+
 function trufield_get_leaderboard( int $sales_rep_id = 0 ): array {
 	$reps = trufield_get_sales_rep_users();
 
